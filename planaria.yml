@@ -1,0 +1,29 @@
+version: '3.5'
+services:
+  planaria:
+    image: ${PLANARIA}
+    stdin_open: true
+    volumes:
+      - ${DATA_DIR}:/data/db
+      - ./genes:/planaria/genes
+      - ${ASSETS_DIR}:/planaria/public/assets
+      - ${FS_DIR}:/fs
+      - ./.env:/planaria/child.env
+    environment:
+#      - NODE_ADDRESS={{NODE_ADDRESS}}
+      - ADDRESS=${ADDRESS}
+      - HOST=${HOST}
+      - FAT=${FAT}
+      - DOMAIN=${DOMAIN}
+      - BITCOIN_USER=${BITCOIN_USER}
+      - BITCOIN_PASSWORD=${BITCOIN_PASSWORD}
+    entrypoint: ["/planaria/entrypoint.sh", "start", "${MAX_MEMORY}", "${ARG1}", "${ARG2}", "${ARG3}"]
+    ports:
+      - "127.0.0.1:27017:27017"
+      - "28337:28337"
+      - "28339:28339"
+    networks:
+      - planaria
+networks:
+  planaria:
+    name: planaria

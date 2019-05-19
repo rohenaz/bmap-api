@@ -1,0 +1,10 @@
+{
+  "name": "planarian",
+  "version": "0.0.0",
+  "description": "Stem cell",
+  "main": "planaria.js",
+  "license": "ISC",
+  "dependencies": {
+    "bcode": "0.0.7"
+  }
+}

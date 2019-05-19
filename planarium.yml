@@ -1,0 +1,26 @@
+version: '3.5'
+services:
+  planarium:
+    image: ${PLANARIUM}
+    stdin_open: true
+    volumes:
+      - ./genes:/app/genes
+      - ${ASSETS_DIR}:/app/public/assets
+      - ${FS_DIR}:/fs
+      - ./.env:/app/child.env
+    environment:
+#      - NODE_ADDRESS={{NODE_ADDRESS}}
+      - ADDRESS=${ADDRESS}
+      - HOST=${HOST}
+      - DOMAIN=${DOMAIN}
+      - MONGO_HOST=planaria
+      - MONGO_PORT=27017
+    entrypoint: ["/app/entrypoint.sh"]
+    networks:
+      - planaria
+    ports:
+      - "${PLANARIUM_PORT}:3000"
+networks:
+  planaria:
+    external:
+      name: planaria
