@@ -9,15 +9,16 @@ var kv
 // Also supports compact mode for socket responses
 var bmapTransform = function (items) {
   let newItems = []
+  console.log('transform', items.length, 'items')
   items.forEach((item) => {
-    if (item.out.length > 0 && item.out.some(out => { return (out && out.b0 && out.b0.op === 106) && (out.s1 === '19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut' || out.s1 === '1PuQa7K62MiKCtssSLKy1kh56WWU7MtUR5') })) {
-      let bmapItem = bmap.TransformTx(item)
-      if (bmapItem && bmapItem.B['content-type'] && bmapItem.hasOwnProperty('MAP')) {
-        console.log('Storing BMAP', bmapItem.B['content-type'])
-        delete bmapItem.in
-        delete bmapItem.out
-        newItems.push(bmapItem)
-      }
+    console.log('transforming', item.tx.h)
+    let bmapItem = bmap.TransformTx(item)
+    console.log('transformed: ', bmapItem.MAP, bmapItem.B)
+    if (bmapItem && (bmapItem.hasOwnProperty('B') || bmapItem.hasOwnProperty('MAP'))) {
+      console.log('Storing BMAP', bmapItem.B['content-type'])
+      delete bmapItem.in
+      delete bmapItem.out
+      newItems.push(bmapItem)
     }
   })
   return newItems
@@ -26,7 +27,7 @@ var bmapTransform = function (items) {
 const connect = function(cb) {
   MongoClient.connect('mongodb://localhost:27017', {useNewUrlParser: true}, function(err, client) {
     if (err) {
-      console.log('retrying...')
+      console.log('DB Error. retrying...')
       setTimeout(function() {
         connect(cb)
       }, 1000)
@@ -55,7 +56,6 @@ planaria.start({
   },
   onstart: function(e) {
     return new Promise(async function(resolve, reject) {
-      console.log('in onstart')
       if (!e.tape.self.start) {
         await planaria.exec("docker", ["pull", "mongo:4.0.4"])
         await planaria.exec("docker", ["run", "-d", "-p", "27017-27019:27017-27019", "-v", process.cwd() + "/db:/data/db", "mongo:4.0.4"])
