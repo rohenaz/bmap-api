@@ -3,7 +3,7 @@
     "bitquery": "^0.3.136",
     "bmapjs": "^0.0.13",
     "mongodb": "^3.2.7",
-    "neonplanaria": "^0.0.13"
+    "neonplanaria": "^0.0.15"
   },
   "name": "bmap-planaria",
   "version": "0.0.1",
