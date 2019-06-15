@@ -1279,10 +1279,10 @@ bluebird@^3.5.3:
   resolved "https://registry.yarnpkg.com/bluebird/-/bluebird-3.5.5.tgz#a8d0afd73251effbbd5fe384a77d73003c17a71f"
   integrity sha512-5am6HnnfN+urzt4yfg7IgTbotDjIT/u8AJpEt0sIU9FtXfVeezXAPKswrG+xKUCOYAINpSdgZVDU6QFh+cuH3w==
 
-bmapjs@^0.0.11:
-  version "0.0.11"
-  resolved "https://registry.yarnpkg.com/bmapjs/-/bmapjs-0.0.11.tgz#cd31faf411904c14d56cfa0f5882a4ae8a7fd33b"
-  integrity sha512-0Uc+cYWq3czO/k3OThNCHL1LURIY39mrytgWkBAJIYyq3wE6BIfALeSpOgKvcxOQieyvJpLnxqvWSByEqEysQw==
+bmapjs@^0.0.17:
+  version "0.0.17"
+  resolved "https://registry.yarnpkg.com/bmapjs/-/bmapjs-0.0.17.tgz#a6397a71567fdb5c7d7657d43facbfc1dadf307d"
+  integrity sha512-wQqedC5UHxETqYUXgm5kis8wpIlUV2u6qWgh7JIarAiXBDgRvVECNSlRanhgR/pbb52y6liQlUBuuBVRna96Yw==
 
 bn.js@=2.0.4:
   version "2.0.4"
@@ -5207,10 +5207,10 @@ neo-async@^2.5.0:
   resolved "https://registry.yarnpkg.com/neo-async/-/neo-async-2.6.1.tgz#ac27ada66167fa8849a6addd837f6b189ad2081c"
   integrity sha512-iyam8fBuCUpWeKPGpaNMetEocMt364qkCsfL9JuhjXX6dRnguRVOfk2GZaDpPjcOKiiXCPINZC1GczQ7iTq3Zw==
 
-neonplanaria@^0.0.13:
-  version "0.0.13"
-  resolved "https://registry.yarnpkg.com/neonplanaria/-/neonplanaria-0.0.13.tgz#790d697435b877fe5d2bf4ba895574d9e13c1d56"
-  integrity sha512-1mh3+haQ6yiyv6EfYed4mEXUyPF/HaPNqc7tfFQ59WZNW1B7MeIEBPG83lIinowv0G164HBPBqcdgk5lGrtwmQ==
+neonplanaria@^0.0.15:
+  version "0.0.15"
+  resolved "https://registry.yarnpkg.com/neonplanaria/-/neonplanaria-0.0.15.tgz#54a2ad2ff8a7d82a6cb92bcf1ce16ae5b0fb299c"
+  integrity sha512-qZ38rCW+wqFJVo30bvzasHWSNt8GE/V/ZnN242633j5WtKjsgJ5dl6YF1wbMyv4nc6L1WJuM/dmiVPs6AcUvsg==
   dependencies:
     better-queue "^3.8.10"
     bitbus "0.0.78"

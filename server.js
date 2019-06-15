@@ -3,7 +3,7 @@ const { planarium } = require('neonplanaria')
 const bitquery = require('bitquery')
 planarium.start({
   name: 'BMAP',
-  port: 3000,
+  port: 80,
   onstart: async function() {
     let db = await bitquery.init({ url: 'mongodb://localhost:27017', address: 'planaria' })
     return { db: db }

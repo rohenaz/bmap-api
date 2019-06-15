@@ -11,9 +11,7 @@ var bmapTransform = function (items) {
   let newItems = []
   console.log('transform', items.length, 'items')
   items.forEach((item) => {
-    console.log('transforming', item.tx.h)
     let bmapItem = bmap.TransformTx(item)
-    console.log('transformed: ', bmapItem.MAP, bmapItem.B)
     if (bmapItem && (bmapItem.hasOwnProperty('B') || bmapItem.hasOwnProperty('MAP'))) {
       console.log('Storing BMAP', bmapItem.B['content-type'])
       delete bmapItem.in
@@ -39,18 +37,16 @@ const connect = function(cb) {
 }
 planaria.start({
   filter: {
-    "from": 585000,
+    "from": 570000,
     "q": {
       "find": { "out.s1": { "$in": ["19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", "1PuQa7K62MiKCtssSLKy1kh56WWU7MtUR5"] } }
     }
   },
   onmempool: async function(e) {
-    console.log('onmempool')
     let bmaps = bmapTransform([e.tx])
     await db.collection("u").insertMany(bmaps)
   },
   onblock: async function(e) {
-    console.log('onblock')
     let bmaps = bmapTransform(e.tx)
     await db.collection("c").insertMany(bmaps)
   },
