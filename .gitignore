@@ -3,3 +3,6 @@ bus
 db
 node_modules
 tape.txt
+yarn-error.log
+yarn.lock
+
