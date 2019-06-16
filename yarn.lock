@@ -1279,10 +1279,10 @@ bluebird@^3.5.3:
   resolved "https://registry.yarnpkg.com/bluebird/-/bluebird-3.5.5.tgz#a8d0afd73251effbbd5fe384a77d73003c17a71f"
   integrity sha512-5am6HnnfN+urzt4yfg7IgTbotDjIT/u8AJpEt0sIU9FtXfVeezXAPKswrG+xKUCOYAINpSdgZVDU6QFh+cuH3w==
 
-bmapjs@^0.0.17:
-  version "0.0.17"
-  resolved "https://registry.yarnpkg.com/bmapjs/-/bmapjs-0.0.17.tgz#a6397a71567fdb5c7d7657d43facbfc1dadf307d"
-  integrity sha512-wQqedC5UHxETqYUXgm5kis8wpIlUV2u6qWgh7JIarAiXBDgRvVECNSlRanhgR/pbb52y6liQlUBuuBVRna96Yw==
+bmapjs@^0.0.18:
+  version "0.0.18"
+  resolved "https://registry.yarnpkg.com/bmapjs/-/bmapjs-0.0.18.tgz#db457f71c5b84efe78680ad3558d1aaa0f838277"
+  integrity sha512-abbBMNkEv2LDSDme9CzKIphZq4w4cxlmA8INqJdu2nzdYWAxHGGMPcNUdxi1yE5AoL5zR0uvMmcmAX0bea9SwA==
 
 bn.js@=2.0.4:
   version "2.0.4"
