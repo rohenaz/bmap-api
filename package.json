@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "bitquery": "^0.3.136",
-    "bmapjs": "^0.0.19",
+    "bmapjs": "^0.0.20",
     "mongodb": "^3.2.7",
     "neonplanaria": "https://github.com/rohenaz/neonplanaria/tarball/patch-1"
   },
