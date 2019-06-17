@@ -2,8 +2,9 @@
   "dependencies": {
     "bitquery": "^0.3.136",
     "bmapjs": "^0.0.22",
+    "cors": "^2.8.5",
     "mongodb": "^3.2.7",
-    "neonplanaria": "https://github.com/rohenaz/neonplanaria/tarball/patch-1",
+    "neonplanaria": "^0.0.18",
     "winston": "^3.2.1"
   },
   "name": "bmap-planaria",
