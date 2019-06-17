@@ -3,7 +3,8 @@
     "bitquery": "^0.3.136",
     "bmapjs": "^0.0.20",
     "mongodb": "^3.2.7",
-    "neonplanaria": "https://github.com/rohenaz/neonplanaria/tarball/patch-1"
+    "neonplanaria": "https://github.com/rohenaz/neonplanaria/tarball/patch-1",
+    "winston": "^3.2.1"
   },
   "name": "bmap-planaria",
   "version": "0.0.1",

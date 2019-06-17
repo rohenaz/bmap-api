@@ -2,21 +2,43 @@ const { planaria } = require('neonplanaria')
 const MongoClient = require('mongodb')
 const path = require('path')
 const bmap = require('bmapjs')
+const winston = require('winston')
 var db
 var kv
+
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.json(),
+  defaultMeta: { service: 'user-service' },
+  transports: [
+    //
+    // - Write to all logs with level `info` and below to `combined.log` 
+    // - Write all logs error (and below) to `error.log`.
+    //
+    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'combined.log' })
+  ]
+})
+
 // Filter non BMAP txs. 
 // Returns bmap versions of each tx
-// Also supports compact mode for socket responses
 var bmapTransform = function (items) {
   let newItems = []
   console.log('transform', items.length, 'items')
   items.forEach((item) => {
-    let bmapItem = bmap.TransformTx(item)
-    if (bmapItem && (bmapItem.hasOwnProperty('B') || bmapItem.hasOwnProperty('MAP'))) {
-      console.log('Storing BMAP', bmapItem.B['content-type'])
-      delete bmapItem.in
-      delete bmapItem.out
-      newItems.push(bmapItem)
+    try {
+      let bmapItem = bmap.TransformTx(item)
+      if (bmapItem && (bmapItem.hasOwnProperty('B') || bmapItem.hasOwnProperty('MAP'))) {
+        console.log('Storing BMAP', bmapItem.B['content-type'])
+        delete bmapItem.in
+        delete bmapItem.out
+        newItems.push(bmapItem)
+      }
+    } catch (e) {
+      logger.log({
+        level: 'error',
+        message: 'tx: ' + item.tx.h + ' e: ' + e
+      })    
     }
   })
   return newItems
@@ -51,6 +73,11 @@ planaria.start({
     await db.collection("c").insertMany(bmaps)
   },
   onstart: function(e) {
+    if (process.env.NODE_ENV !== 'production') {
+      logger.add(new winston.transports.Console({
+        format: winston.format.simple()
+      }))
+    }
     return new Promise(async function(resolve, reject) {
       if (!e.tape.self.start) {
         await planaria.exec("docker", ["pull", "mongo:4.0.4"])
