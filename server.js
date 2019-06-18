@@ -24,7 +24,7 @@ planarium.start({
     e.app.get('/ping', (req, res) => {
       logger.log({
         level: 'info',
-        message: 'Referrer: ' + res.header('Referrer')
+        message: 'Referrer: ' + req.header('Referrer')
       })
     })
   },
