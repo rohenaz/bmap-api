@@ -38,15 +38,14 @@ planarium.start({
     let req = JSON.parse(code)
     if (req.q && req.q.find) {
       // ToDo - Move this to the tonicpow planaria
-      if (req.q.find.MAP && req.q.find.MAP.app === 'tonicpow') {
-        console.log('log referrer', e.req.res.headers.referrer)
+      // if (req.q.find.MAP && req.q.find.MAP.app === 'tonicpow') {
+        console.log('log referrer', e.res.req.headers.referrer)
         // record referrer
         logger.log({
           level: 'info',
-          message: 'Referrer: ' + e.req.res.headers.referrer
+          message: 'Referrer: ' + e.res.req.headers.referrer
         })
-      }
-      
+      // }
       e.core.db.read('planaria', req).then(function(result) {
         e.res.json(result)
       })
