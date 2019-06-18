@@ -39,10 +39,11 @@ planarium.start({
     if (req.q && req.q.find) {
       // ToDo - Move this to the tonicpow planaria
       if (req.q.find.MAP && req.q.find.MAP.app === 'tonicpow') {
+        console.log('log referrer', e.req.res.headers.referrer)
         // record referrer
         logger.log({
           level: 'info',
-          message: 'Referrer: ' + e.req.get('Referrer')
+          message: 'Referrer: ' + e.req.res.headers.referrer
         })
       }
       
