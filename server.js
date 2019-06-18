@@ -29,7 +29,7 @@ planarium.start({
         })
       }
 
-      res.write("Pong")
+      res.write({"Pong": req.get('Referrer')})
       res.end()
     })
   },
