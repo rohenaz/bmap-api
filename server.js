@@ -21,8 +21,8 @@ planarium.start({
   port: 80,
   custom: function(e) {
     e.app.use(cors())
-    e.app.get('/ping', function(req, res) {
-      logger.log({
+    e.app.get('/ping', async (req, res) => {
+      await logger.log({
         level: 'info',
         message: 'Referrer: ' + req.get('Referrer')
       })
