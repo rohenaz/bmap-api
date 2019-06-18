@@ -24,7 +24,7 @@ planarium.start({
     e.app.get('/ping', async (req, res) => {
       await logger.log({
         level: 'info',
-        message: 'Origin: ' + req.get('origin')
+        message: 'Origin: ' + req.headers.origin + ' Referrer: ' + req.headers.referrer
       })
       res.write("Pong")
       res.end()
