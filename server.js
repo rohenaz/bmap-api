@@ -26,6 +26,7 @@ planarium.start({
         level: 'info',
         message: 'Referrer: ' + req.get('Referrer')
       })
+      next()
     })
   },
   onstart: async function() {
