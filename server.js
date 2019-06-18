@@ -22,11 +22,13 @@ planarium.start({
   custom: function(e) {
     e.app.use(cors())
     e.app.get('/ping', async (req, res) => {
-      console.log('req', e, req, res)
-      await logger.log({
-        level: 'info',
-        message: 'Origin: ' + e.res.req.headers.origin + ' Referrer: ' + e.res.req.headers.referrer
-      })
+      if (req.get('Referrer')) {
+        await logger.log({
+          level: 'info',
+          message: 'Referrer: ' + req.get('Referrer')
+        })
+      }
+
       res.write("Pong")
       res.end()
     })
