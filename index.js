@@ -61,12 +61,8 @@ planaria.start({
   filter: {
     "from": 570000,
     "q": {
-      "find": { "out.s1": { "$in": ["19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", "1PuQa7K62MiKCtssSLKy1kh56WWU7MtUR5"] } }
+      "find": { "out.s1": { "$in": ["meta", "19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", "1PuQa7K62MiKCtssSLKy1kh56WWU7MtUR5"] } }
     }
-  },
-  src: {
-    from: 570000,
-    path: "/var/nfs/bitbus"
   },
   onmempool: async function(e) {
     let bmaps = bmapTransform([e.tx])
