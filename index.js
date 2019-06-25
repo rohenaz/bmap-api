@@ -29,7 +29,7 @@ var bmapTransform = function (items) {
     try {
       let bmapItem = bmap.TransformTx(item)
       if (bmapItem && (bmapItem.hasOwnProperty('B') || bmapItem.hasOwnProperty('MAP') || bmapItem.hasOwnProperty('METANET'))) {
-        console.log('Storing BMAP', tx.h)
+        console.log('Storing BMAP', bmapItem.tx.h)
         delete bmapItem.in
         delete bmapItem.out
         newItems.push(bmapItem)
