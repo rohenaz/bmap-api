@@ -64,6 +64,10 @@ planaria.start({
       "find": { "out.s1": { "$in": ["19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", "1PuQa7K62MiKCtssSLKy1kh56WWU7MtUR5"] } }
     }
   },
+  src: {
+    from: 570000,
+    path: "/var/nfs/bitbus"
+  },
   onmempool: async function(e) {
     let bmaps = bmapTransform([e.tx])
     await db.collection("u").insertMany(bmaps)
