@@ -1,10 +1,10 @@
 {
   "dependencies": {
-    "bitquery": "^0.3.136",
+    "bitquery": "^0.3.138",
     "bmapjs": "^0.1.5",
     "cors": "^2.8.5",
-    "mongodb": "^3.2.7",
-    "neonplanaria": "0.0.27",
+    "mongodb": "^3.3.0-beta2",
+    "neonplanaria": "0.0.31",
     "winston": "^3.2.1"
   },
   "name": "bmap-planaria",

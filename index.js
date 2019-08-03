@@ -69,13 +69,15 @@ planaria.start({
     await db.collection("u").insertMany(bmaps)
   },
   onblock: async function(e) {
-    // Delete unconfirmed records that match hashed in this block
-    let hashes = e.tx.map(t => { return t.tx.h })
-    await db.collection("u").deleteMany({
-      "tx.h": { "$in": hashes }
-    })
+    await db.collection("u").deleteMany({ })
+
     let bmaps = bmapTransform(e.tx)
     await db.collection("c").insertMany(bmaps)
+
+    if (e.mem.length) {
+      let bmapsMem = bmapTransform(e.mem)
+      await db.collection("u").insertMany(bmapsMem)
+    }
   },
   onstart: function(e) {
     if (process.env.NODE_ENV !== 'production') {
