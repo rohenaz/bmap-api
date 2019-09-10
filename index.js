@@ -64,7 +64,13 @@ planaria.start({
   filter: {
     "from": 580000,
     "q": {
-      "find": { "out.s1": { "$in": ["meta", "19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", "1PuQa7K62MiKCtssSLKy1kh56WWU7MtUR5"] } }
+      "find": { 
+        "$or": [
+          {"$and": [{"out.s1": "19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut"},{"out.s6": "1PuQa7K62MiKCtssSLKy1kh56WWU7MtUR5"}]},
+          {"$and": [{"out.s1": "19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut"},{"out.s7": "1PuQa7K62MiKCtssSLKy1kh56WWU7MtUR5"}]},
+          {"out.s1": "1PuQa7K62MiKCtssSLKy1kh56WWU7MtUR5"  }
+        ]
+      }
     }
   },
   onmempool: async function(e) {
