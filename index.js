@@ -28,7 +28,10 @@ var bmapTransform = function (items) {
   items.forEach((item) => {
     try {
       let bmapItem = bmap.TransformTx(item)
-      if (bmapItem && (bmapItem.hasOwnProperty('B') || bmapItem.hasOwnProperty('MAP') || bmapItem.hasOwnProperty('METANET'))) {
+      let hasMap = bmapItem.hasOwnProperty('MAP')
+      // let hasB = bmapItem.hasOwnProperty('B')
+      // let hasMeta = bmapItem.hasOwnProperty('METANET')
+      if (bmapItem && hasMap) {
         console.log('Storing BMAP', bmapItem.tx.h)
         delete bmapItem.in
         delete bmapItem.out
@@ -59,7 +62,7 @@ const connect = function(cb) {
 }
 planaria.start({
   filter: {
-    "from": 570000,
+    "from": 580000,
     "q": {
       "find": { "out.s1": { "$in": ["meta", "19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", "1PuQa7K62MiKCtssSLKy1kh56WWU7MtUR5"] } }
     }
