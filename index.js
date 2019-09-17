@@ -62,7 +62,7 @@ const connect = function(cb) {
 }
 planaria.start({
   filter: {
-    "from": 580000,
+    "from": 570000,
     "q": {
       "find": { 
         "$or": [
