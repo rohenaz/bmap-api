@@ -25,9 +25,9 @@ const logger = winston.createLogger({
 var bmapTransform = function (items) {
   let newItems = []
   console.log('transform', items.length, 'items')
-  items.forEach((item) => {
+  items.forEach(async (item) => {
     try {
-      let bmapItem = bmap.TransformTx(item)
+      let bmapItem = await bmap.TransformTx(item)
       let hasMap = bmapItem.hasOwnProperty('MAP')
       // let hasB = bmapItem.hasOwnProperty('B')
       // let hasMeta = bmapItem.hasOwnProperty('METANET')
@@ -61,15 +61,16 @@ const connect = function(cb) {
   })
 }
 planaria.start({
-  filter: {
-    "from": 570000,
+  filter:  {
+    "from": 585000,
+    "host": {
+      "bitbus": "https://bob.bitbus.network"
+    },
     "q": {
       "find": { 
-        "$or": [
-          {"$and": [{"out.s1": "19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut"},{"out.s6": "1PuQa7K62MiKCtssSLKy1kh56WWU7MtUR5"}]},
-          {"$and": [{"out.s1": "19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut"},{"out.s7": "1PuQa7K62MiKCtssSLKy1kh56WWU7MtUR5"}]},
-          {"out.s1": "1PuQa7K62MiKCtssSLKy1kh56WWU7MtUR5"  }
-        ]
+        "out.tape.cell.s": { 
+          "$in": ["19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", "1PuQa7K62MiKCtssSLKy1kh56WWU7MtUR5"] 
+        }
       }
     }
   },
@@ -97,7 +98,7 @@ planaria.start({
     return new Promise(async function(resolve, reject) {
       if (!e.tape.self.start) {
         await planaria.exec("docker", ["pull", "mongo:4.0.4"])
-        await planaria.exec("docker", ["run", "-d", "-p", "27017-27019:27017-27019", "-v", process.cwd() + "/db:/data/db", "mongo:4.0.4"])
+        await planaria.exec("docker", ["run", "-d", "-p", "27017-27019:27017-27019", "-v", process.cwd() + (process.platform === 'win32' ? "/db" : "/db:data/db"), "mongo:4.0.4"])
       }
       connect(function() {
         if (e.tape.self.start) {

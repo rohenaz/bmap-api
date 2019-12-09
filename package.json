@@ -3,12 +3,12 @@
     "bitquery": "^0.3.138",
     "bmapjs": "^0.1.5",
     "cors": "^2.8.5",
-    "mongodb": "^3.3.2",
-    "neonplanaria": "0.0.39",
+    "mongodb": "^3.3.5",
+    "neonplanaria": "0.0.42",
     "winston": "^3.2.1"
   },
   "name": "bmap-planaria",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "index.js",
   "devDependencies": {
     "mocha": "^5.2.0"
