@@ -98,7 +98,7 @@ planaria.start({
     return new Promise(async function(resolve, reject) {
       if (!e.tape.self.start) {
         await planaria.exec("docker", ["pull", "mongo:4.0.4"])
-        await planaria.exec("docker", ["run", "-d", "-p", "27017-27019:27017-27019", "-v", process.cwd() + (process.platform === 'win32' ? "/db" : "/db:data/db"), "mongo:4.0.4"])
+        await planaria.exec("docker", ["run", "-d", "-p", "27017-27019:27017-27019", "-v", process.cwd() + (process.platform === 'win32' ? "/db" : "/db:/data/db"), "mongo:4.0.4"])
       }
       connect(function() {
         if (e.tape.self.start) {
