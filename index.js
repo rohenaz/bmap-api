@@ -3,11 +3,10 @@ const MongoClient = require('mongodb')
 const path = require('path')
 const bmap = require('bmapjs')
 const winston = require('winston')
-var db
-var kv
+let db
 
 const logger = winston.createLogger({
-  level: 'info',
+  level: 'error',
   format: winston.format.json(),
   defaultMeta: { service: 'planaria' },
   transports: [
@@ -22,19 +21,21 @@ const logger = winston.createLogger({
 
 // Filter non BMAP txs. 
 // Returns bmap versions of each tx
-var bmapTransform = function (items) {
+const bmapTransform = function (items) {
   let newItems = []
-  console.log('transform', items.length, 'items')
+
   items.forEach(async (item) => {
     try {
       let bmapItem = await bmap.TransformTx(item)
+      if (!bmapItem) {
+        logger.log({level: 'error', message: 'failed to transform this ' + bmapItem })
+        return []
+      }
       let hasMap = bmapItem.hasOwnProperty('MAP')
       // let hasB = bmapItem.hasOwnProperty('B')
       // let hasMeta = bmapItem.hasOwnProperty('METANET')
       if (bmapItem && hasMap) {
-        console.log('Storing BMAP', bmapItem.tx.h)
-        delete bmapItem.in
-        delete bmapItem.out
+        logger.log({ level: 'info', message: 'Storing BMAP ' + bmapItem.tx.h })
         newItems.push(bmapItem)
       }
     } catch (e) {
@@ -50,7 +51,7 @@ var bmapTransform = function (items) {
 const connect = function(cb) {
   MongoClient.connect('mongodb://localhost:27017', {useNewUrlParser: true}, function(err, client) {
     if (err) {
-      console.log('DB Error. retrying...')
+      logger.log({ level: 'info', message: 'DB Error. retrying...' })
       setTimeout(function() {
         connect(cb)
       }, 1000)
@@ -82,7 +83,11 @@ planaria.start({
     await db.collection("u").deleteMany({ })
 
     let bmaps = bmapTransform(e.tx)
-    await db.collection("c").insertMany(bmaps)
+    try {
+      await db.collection("c").insertMany(bmaps)
+    } catch (err) {
+      logger.log({ level: 'error', message: 'error saving on block: ' + err + 'items: ' + bmaps.length })      
+    }
 
     if (e.mem.length) {
       let bmapsMem = bmapTransform(e.mem)
@@ -97,10 +102,11 @@ planaria.start({
     }
     return new Promise(async function(resolve, reject) {
       if (!e.tape.self.start) {
-        await planaria.exec("docker", ["pull", "mongo:4.0.4"])
-        await planaria.exec("docker", ["run", "-d", "-p", "27017-27019:27017-27019", "-v", process.cwd() + (process.platform === 'win32' ? "/db" : "/db:/data/db"), "mongo:4.0.4"])
+        await planaria.exec("docker", ["pull", "mongo:latest"])
+        await planaria.exec("docker", ["run", "-d", "-p", "27017-27019:27017-27019", "-v", process.cwd() + (process.platform === 'win32' ? "/db" : "/db:/data/db"), "mongo:latest"])
       }
       connect(function() {
+        logger.log({ level: 'info', message: 'Connected' })
         if (e.tape.self.start) {
           db.collection("c").deleteMany({
             "blk.i": { "$gt": e.tape.self.end }
