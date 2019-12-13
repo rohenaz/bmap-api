@@ -53,7 +53,7 @@ const bmapTransform = async function (items) {
 const connect = function(cb) {
   MongoClient.connect('mongodb://localhost:27017', {useNewUrlParser: true}, function(err, client) {
     if (err) {
-      logger.log({ level: 'info', message: 'db retrying...' })
+      console.log('db retrying...')
       setTimeout(function() {
         connect(cb)
       }, 1000)
@@ -71,7 +71,7 @@ planaria.start({
     },
     "q": {
       "find": { 
-        "out.tape.cell.s": { 
+        "out.tape.cell.0.s": { 
           "$in": ["1PuQa7K62MiKCtssSLKy1kh56WWU7MtUR5", "13SrNDkVzY5bHBRKNu5iXTQ7K7VqTh5tJC", "18pAqbYqhzErT6Zk3a5dwxHtB9icv8jH2p", "1GvFYzwtFix3qSAZhESQVTz9DeudHZNoh1", "$"] 
         }
       },
