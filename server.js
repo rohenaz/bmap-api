@@ -39,7 +39,7 @@ planarium.start({
           "Connection": "keep-alive",
         })
         let data = { type: "open", data: [] }
-        res.write(JSON.stringify(data) + '\n\n')
+        res.write(`data: ${JSON.stringify(data)}\n\n`)
       }
       next()
     })
@@ -86,8 +86,11 @@ planarium.start({
               try {
                 if (query.q && query.q.find) {
                   let cursor = mingo.find([m], query.q.find)
-                  let items = cursor.all()
-                  res.write(JSON.stringify(items) + '\n\n')
+                  let items = {
+                    type: 't',
+                    data: cursor.all()
+                  }
+                  res.write(`data: ${JSON.stringify(items)}\n\n`)
                 } else {
                   console.log('\n\nSOCKET: NO MATCH\n\n')
                 }
@@ -98,7 +101,8 @@ planarium.start({
             }
 
             // No db lookup, just send it
-            res.write(JSON.stringify(m) + '\n\n')
+            let data = { type: 't', data: m }
+            res.write(`data: ${JSON.stringify(data)}\n\n`)
           }
         })
       } catch (e) {
