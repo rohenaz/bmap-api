@@ -86,11 +86,14 @@ planarium.start({
               try {
                 if (query.q && query.q.find) {
                   let cursor = mingo.find([m], query.q.find)
-                  let items = {
-                    type: 't',
-                    data: cursor.all()
+                  let items = cursor.all()
+                  if (items.length) {
+                    let t = {
+                      type: 't',
+                      data: items
+                    }
+                    res.write(`data: ${JSON.stringify(t)}\n\n`)
                   }
-                  res.write(`data: ${JSON.stringify(items)}\n\n`)
                 } else {
                   console.log('\n\nSOCKET: NO MATCH\n\n')
                 }
