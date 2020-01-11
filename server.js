@@ -3,7 +3,12 @@ const { planarium } = require('neonplanaria')
 const bitquery = require('bitquery')
 const cors = require('cors')
 const winston = require('winston')
+const bsv = require('bsv')
+const mingo = require('mingo')
+
 const id = 'bmap'
+
+// Set up local filesystem logs
 const logger = winston.createLogger({
   level: 'info',
   format: winston.format.json(),
@@ -16,14 +21,97 @@ const logger = winston.createLogger({
   ]
 })
 
+// all events
+const defaultb64 = 'ewogICJ2IjogMywKICAicSI6IHsKICAgICJmaW5kIjoge30sCiAgICAibGltaXQiOiAxMAogIH0KfQ=='
+let connections = { pool: {} }
+
 planarium.start({
   name: 'BMAP',
   port: 80,
   custom: function(e) {
     e.app.use(cors())
+    e.app.use(function (req, res, next) {
+      res.sseSend = function(data) {
+        res.write(JSON.stringify(data) + '\n\n')
+      }
+      next()
+    })
+    e.app.use(function (req, res, next) {
+      res.sseSetup = function() {
+        res.writeHead(200, {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "X-Accel-Buffering": "no",
+          "Connection": "keep-alive",
+        })
+        res.sseSend({ type: "open", data: [] })
+      }
+      next()
+    })
+    e.app.get("/s/:b64(*)", function(req, res) {
+      try {
+
+        // bitcoin address as fingerprint
+        const privateKey = new bsv.PrivateKey()
+        const fingerprint = privateKey.toAddress().toString()
+
+        let b64 = req.params.b64 ? req.params.b64 : defaultb64
+        res.sseSetup(b64)
+        let json = Buffer.from(b64, "base64").toString()
+        let query = JSON.parse(json)
+
+        res.$fingerprint = fingerprint
+        connections.pool[fingerprint] = { res: res, query: query }
+        console.log("## Opening connection from: " + fingerprint)
+        console.log("## Pool size is now", Object.keys(connections.pool).length)
+        console.log(JSON.stringify(req.headers, null, 2))
+
+        req.on("close", function() {
+          console.log("## Closing connection from: " + res.$fingerprint)
+          console.log(JSON.stringify(req.headers, null, 2))
+          delete connections.pool[res.$fingerprint]
+          console.log(".. Pool size is now", Object.keys(connections.pool).length)
+        })
+
+        process.on('message', async (m, socket) => {
+          if (m === 'socket') {
+            if (socket) {
+              // Check that the client socket exists.
+              // It is possible for the socket to be closed between the time it is
+              // sent and the time it is received in the child process.
+              socket.end(`Request handled with ${process.argv[2]} priority`)
+            }
+          } else {
+            // Lookup the query in the db
+            // TODO - filter the results without connecting to mongo
+            if (req.params.b64) {
+              console.log("\n\nFILTER PROVIDED. FILTER FOR QUERY:", query, '\n\n')
+
+              try {
+                if (query.q && query.q.find) {
+                  let cursor = mingo.find([m], query.q.find)
+                  let stuff = cursor.all()
+                  res.sseSend(stuff)
+                } else {
+                  console.log('\n\nSOCKET: NO MATCH\n\n')
+                }
+              } catch (e) {
+                console.log('failed', e)
+              }
+              return
+            }
+
+            // No db lookup, just send it
+            res.sseSend(m)
+          }
+        })
+      } catch (e) {
+        console.log(e)
+      }
+    })
     e.app.get('/ping', async (req, res) => {
       if (req.get('Referrer')) {
-        await logger.log({
+        logger.log({
           level: 'info',
           message: 'Referrer: ' + req.get('Referrer')
         })
@@ -32,6 +120,7 @@ planarium.start({
       res.write(JSON.stringify({Pong: req.get('Referrer')}))
       res.end()
     })
+
   },
   onstart: async function() {
     if (process.env.NODE_ENV !== 'production') {

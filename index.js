@@ -1,8 +1,20 @@
 const { planaria } = require('neonplanaria')
 const MongoClient = require('mongodb')
-const path = require('path')
 const bmap = require('bmapjs')
 const winston = require('winston')
+
+// Socket to Planarium
+const { fork } = require('child_process')
+const planarium = fork('server.js')
+
+// Open up the server and send sockets to child. Use pauseOnConnect to prevent
+// the sockets from being read before they are sent to the child process.
+const server = require('net').createServer({ pauseOnConnect: true })
+server.on('connection', (socket) => {
+  planarium.send('socket', socket)
+})
+server.listen(1337)
+
 let db
 
 const logger = winston.createLogger({
@@ -71,7 +83,7 @@ planaria.start({
     },
     "q": {
       "find": { 
-        "out.tape.cell.0.s": { 
+        "out.tape.cell.s": { 
           "$in": ["1PuQa7K62MiKCtssSLKy1kh56WWU7MtUR5", "13SrNDkVzY5bHBRKNu5iXTQ7K7VqTh5tJC", "18pAqbYqhzErT6Zk3a5dwxHtB9icv8jH2p", "1GvFYzwtFix3qSAZhESQVTz9DeudHZNoh1", "$"] 
         }
       },
@@ -82,7 +94,9 @@ planaria.start({
     try {
       let bmaps = await bmapTransform([e.tx])
       if (bmaps.length > 0) {
+        console.log('bmaps detected', bmaps.length)
         await db.collection("u").insertMany(bmaps)
+        planarium.send(bmaps)
       } else {
         logger.log({ level: 'info', message: 'no bmaps ####### ' + bmaps })
       }

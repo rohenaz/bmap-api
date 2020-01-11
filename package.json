@@ -2,7 +2,9 @@
   "dependencies": {
     "bitquery": "^0.3.138",
     "bmapjs": "^0.2.0",
+    "bsv": "^1.1.0",
     "cors": "^2.8.5",
+    "mingo": "^2.4.0",
     "mongodb": "^3.3.2",
     "neonplanaria": "0.0.42",
     "winston": "^3.2.1"
