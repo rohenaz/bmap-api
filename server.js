@@ -90,7 +90,7 @@ planarium.start({
                   if (items.length) {
                     let t = {
                       type: 't',
-                      data: items
+                      data: items[0]
                     }
                     res.write(`data: ${JSON.stringify(t)}\n\n`)
                   }
