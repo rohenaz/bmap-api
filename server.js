@@ -31,12 +31,6 @@ planarium.start({
   custom: function(e) {
     e.app.use(cors())
     e.app.use(function (req, res, next) {
-      res.sseSend = function(data) {
-        res.write(JSON.stringify(data) + '\n\n')
-      }
-      next()
-    })
-    e.app.use(function (req, res, next) {
       res.sseSetup = function() {
         res.writeHead(200, {
           "Content-Type": "text/event-stream",
@@ -44,7 +38,8 @@ planarium.start({
           "X-Accel-Buffering": "no",
           "Connection": "keep-alive",
         })
-        res.sseSend({ type: "open", data: [] })
+        let data = { type: "open", data: [] }
+        res.write(JSON.stringify(data) + '\n\n')
       }
       next()
     })
@@ -79,7 +74,8 @@ planarium.start({
               // Check that the client socket exists.
               // It is possible for the socket to be closed between the time it is
               // sent and the time it is received in the child process.
-              socket.end(`Request handled with ${process.argv[2]} priority`)
+              // socket.end(`Request handled with ${process.argv[2]} priority`)
+              console.log('socket')
             }
           } else {
             // Lookup the query in the db
@@ -90,8 +86,8 @@ planarium.start({
               try {
                 if (query.q && query.q.find) {
                   let cursor = mingo.find([m], query.q.find)
-                  let stuff = cursor.all()
-                  res.sseSend(stuff)
+                  let items = cursor.all()
+                  res.write(JSON.stringify(items) + '\n\n')
                 } else {
                   console.log('\n\nSOCKET: NO MATCH\n\n')
                 }
@@ -102,7 +98,7 @@ planarium.start({
             }
 
             // No db lookup, just send it
-            res.sseSend(m)
+            res.write(JSON.stringify(m) + '\n\n')
           }
         })
       } catch (e) {
