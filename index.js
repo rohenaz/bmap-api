@@ -4,9 +4,9 @@ const MongoClient = require('mongodb')
 const bmap = require('bmapjs')
 const winston = require('winston')
 
-// Socket to Planarium
-const { fork } = require('child_process')
-const planarium = fork('server.js')
+// // Socket to Planarium
+// const { fork } = require('child_process')
+// const planarium = fork('server.js')
 
 // Open up the server and send sockets to child. Use pauseOnConnect to prevent
 // the sockets from being read before they are sent to the child process.
