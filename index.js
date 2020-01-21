@@ -1,3 +1,4 @@
+const planarium = require('child_process').fork('server.js')
 const { planaria } = require('neonplanaria')
 const MongoClient = require('mongodb')
 const path = require('path')
@@ -65,13 +66,13 @@ const connect = function(cb) {
 }
 planaria.start({
   filter:  {
-    "from": 585000,
+    "from": 555555,
     "host": {
       "bitbus": "https://bob.bitbus.network"
     },
     "q": {
       "find": { 
-        "out.tape.cell.0.s": { 
+        "out.tape.cell.s": { 
           "$in": ["1PuQa7K62MiKCtssSLKy1kh56WWU7MtUR5", "13SrNDkVzY5bHBRKNu5iXTQ7K7VqTh5tJC", "18pAqbYqhzErT6Zk3a5dwxHtB9icv8jH2p", "1GvFYzwtFix3qSAZhESQVTz9DeudHZNoh1", "$"] 
         }
       },

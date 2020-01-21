@@ -4,7 +4,7 @@
     "bmapjs": "^0.2.0",
     "cors": "^2.8.5",
     "mongodb": "^3.3.2",
-    "neonplanaria": "0.0.42",
+    "neonplanaria": "0.0.43",
     "winston": "^3.2.1"
   },
   "name": "bmap-planaria",
