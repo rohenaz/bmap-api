@@ -81,7 +81,7 @@ planarium.start({
             // Lookup the query in the db
             // TODO - filter the results without connecting to mongo
             if (req.params.b64) {
-              console.log("\n\nFILTER PROVIDED. FILTER FOR QUERY:", query, '\n\n')
+              // console.log("\n\nFILTER PROVIDED. FILTER FOR QUERY:", query, '\n\n')
 
               try {
                 if (query.q && query.q.find) {
