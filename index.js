@@ -78,7 +78,7 @@ const connect = function(cb) {
 }
 planaria.start({
   filter:  {
-    "from": 555555,
+    "from": 566775, // 566775 is first bitcom, 571735 is first MAP block
     "host": {
       "bitbus": "https://bob.bitbus.network"
     },
