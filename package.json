@@ -6,7 +6,7 @@
     "cors": "^2.8.5",
     "mingo": "^2.4.0",
     "mongodb": "^3.3.2",
-    "neonplanaria": "0.0.43",
+    "neonplanaria": "0.0.45",
     "winston": "^3.2.1"
   },
   "name": "bmap-planaria",
