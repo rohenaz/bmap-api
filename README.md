@@ -1,31 +1,95 @@
 # bmap-planaria
-BMAPjs based Planaria for building 'BMAP' Bitcoin apps.
 
-In a nutshell, this [Planaria](https://github.com/interplanaria/neonplanaria) takes BOB transactions as an input, and filters for only transactions containing MAP attribute data. It then provides support for a number of known OP_RETURN protocols making queries nicer:
+ A [Planaria](https://github.com/interplanaria) for building 'BMAP' Bitcoin apps. It uses bitbus 2.0 to crawl for transactions and transforms them with bmapjs. It runs two processes:
 
-```
+## Planaria
+  A crawler and indexer that saves transaction data into a MongoDB database.
+ 
+ ## Planarium
+ A 'Planarium' (REST API) supporting BitQuery syntax.
+
+![alt text](public/screen.png "Screenshot")
+
+```json
 {
-  find: {
+  "find": {
     "MAP.app": "tonicpow"
   }
 }
-
 ```
 
-# Examples
+ It then provides support for a number of known OP_RETURN protocols making queries nicer:
+
+ ```json
+{
+  "find": {
+    "BITPIC.paymail": "satchmo@moneybutton.com"
+  }
+}
+ ```
+For a full list of what protocols are supported see [bmapjs.com](https://bmapjs.com)
+
+It also makes working with the results from your frontend much friendlier
+
+```js
+  let res = await fetch('https://b.map.sv/q/...')
+  let j = res.json()
+  console.log('Got tx', j.tx.h, 'app:', j.MAP.app)
+```
+
+# Install
+
+#### Install Node Dependencies
+```bash
+yarn
+```
+
+#### Install MongoDB
+
+See their [installation guide](https://docs.mongodb.com/manual/installation)
+
+
+# Config
+Set the following environmental variables:
+
+  - `PLANARIA_TOKEN` Get this from [planaria token](https://token.planaria.network)
+  - `MONGO_URL` A connection string to your mongo database.
+
+
+# Run
+```bash
+node index
+```
+# More Examples
+
 [MAP.app = TonicPow](https://b.map.sv/query/ewogICJ2IjogMywKICAicSI6IHsKICAgICJmaW5kIjogewogICAgICAiTUFQLmFwcCI6ICJ0b25pY3BvdyIKICAgIH0sCiAgICAic29ydCI6IHsgImJsay5pIjogLTEgfSwKICAgICJsaW1pdCI6IDEwCiAgfQp9)
 
-[BITPIC.paymail = satchmo@moneybutton](https://b.map.sv/query/ewogICJ2IjogMywKICAicSI6IHsKICAgICJmaW5kIjogewogICAgICAiQklUUElDLnBheW1haWwiOiAic2F0Y2htb0Btb25leWJ1dHRvbi5jb20iCiAgICB9LAogICAgImxpbWl0IjogMTAKICB9Cn0=)
+[BITPIC.paymail = satchmo@moneybutton.com](https://b.map.sv/query/ewogICJ2IjogMywKICAicSI6IHsKICAgICJmaW5kIjogewogICAgICAiQklUUElDLnBheW1haWwiOiAic2F0Y2htb0Btb25leWJ1dHRvbi5jb20iCiAgICB9LAogICAgImxpbWl0IjogMTAKICB9Cn0=)
 
-[BITKEY.paymail = satchmo@moneybutton](https://b.map.sv/query/ewogICJ2IjogMywKICAicSI6IHsKICAgICJmaW5kIjogewogICAgICAiQklUS0VZLnBheW1haWwiOiAic2F0Y2htb0Btb25leWJ1dHRvbi5jb20iCiAgICB9LAogICAgImxpbWl0IjogMTAKICB9Cn0=)
+[BITKEY.paymail = satchmo@moneybutton.com](https://b.map.sv/query/ewogICJ2IjogMywKICAicSI6IHsKICAgICJmaW5kIjogewogICAgICAiQklUS0VZLnBheW1haWwiOiAic2F0Y2htb0Btb25leWJ1dHRvbi5jb20iCiAgICB9LAogICAgImxpbWl0IjogMTAKICB9Cn0=)
 
+With BitQuery you can search in all sorts of ways.
+
+#### Records within the last 24 hours:
+
+1. Set a timestamp in the expected format.
+
+```js
+let timestamp = Math.floor((new Date().getTime() / 1000) - 86400)
+```
+
+2. Search for records since that timestamp:
+```json
+{
+  "v": 3,
+  "q": {
+    "blk.t": { "$gt": <timestamp> }
+  }
+}
+```
 
 # BMAPjs
-This Planaria returns data in BMAP format:
-[BMAPjs](https://github.com/rohenaz/bmap) - [BOB](https://github.com/interplanaria/bpu) Parser
+This Planaria returns data in BMAP format which is a derivative of [BOB](https://github.com/interplanaria/bpu):
+[BMAPjs](https://github.com/rohenaz/bmap)
 
-# Warning
-*This planaria is a work in progress. It is not ready for production use.*
-It requires a fundemental solution to [this problem](https://github.com/interplanaria/planaria/issues/12) in order to be fully realized.
-
-See readme in genes folder for planaria information
+[bmapjs.com](https://bmapjs.com)

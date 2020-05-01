@@ -1,11 +1,16 @@
-const { planaria } = require('neonplanaria')
-const MongoClient = require('mongodb')
+const fetch = require('node-fetch')
 const bmap = require('bmapjs')
-const winston = require('winston')
-
-// Socket to Planarium
+const es = require('event-stream')
+const mongo = require('mongodb')
+const fs = require('fs')
+const chalk = require('chalk')
+const Queue = require('better-queue')
+const prompt = require('prompt-async')
 const { fork } = require('child_process')
-const planarium = fork('server.js')
+const planarium = fork('planarium.js')
+const EventSource = require('eventsource')
+const { config } = require('./config')
+let synced = false
 
 // Open up the server and send sockets to child. Use pauseOnConnect to prevent
 // the sockets from being read before they are sent to the child process.
@@ -15,174 +20,283 @@ server.on('connection', (socket) => {
 })
 server.listen(1337)
 
-let db
+const { query, sock } = require('./queries')
 
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.json(),
-  defaultMeta: { service: 'planaria' },
-  transports: [
-    //
-    // - Write to all logs with level `info` and below to `combined.log` 
-    // - Write all logs error (and below) to `error.log`.
-    //
-    new winston.transports.File({ filename: 'error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'combined.log', options: { flags: 'w' } })
-  ]
-})
+// ToDo - Using a queue so if the file download fails for some reason we can add it back to the queue?
+let q = new Queue(function (file, cb) {
+  let path = 'data/' + file + ".bitfs"
 
-// Filter non BMAP txs. 
-// Returns bmap versions of each tx
-const bmapTransform = async function (items) {
-  let newItems = []
-
-  await items.forEach(async (item) => {
-    try {
-      let bmapItem = await bmap.TransformTx(item)
-      if (!bmapItem) {
-        logger.log({level: 'error', message: 'failed to transform this ' + bmapItem })
-        return []
+  // See if the file exists already before fetching it          
+  try {
+    fs.access(path, fs.F_OK, async (err) => {
+      if (err) {
+        // Fetch from BitFS and store to local file
+        console.log(chalk.cyan('saving https://bitfs.network/' + file))
+        let res = await fetch("https://x.bitfs.network/" + file)
+        res.body.pipe(fs.createWriteStream(path))
+        return
       }
+      // file exists
+      console.log(chalk.cyan('file already exists'))
+    })
+  } catch(err) {
+    console.log('error checking or writing file', err)
+  }
+ 
+  cb(null, result)
+}, { afterProcessDelay: 10 })
 
-      // protocol whitelist
-      let list = ['AIP', 'B', 'BITCOM', 'BITPIC', 'BITKEY', 'HAIP', 'MAP', 'METANET', 'RON', 'SYMRE', '$']
-
-      let hasSupportedProtocol = Object.keys(bmapItem).some((k) => { return list.indexOf(k) !== -1 })
-      if (bmapItem && hasSupportedProtocol) {
-        logger.log({ level: 'info', message: 'Storing BMAP ' + bmapItem.tx.h })
-        newItems.push(bmapItem)
-      }
-    } catch (e) {
-      logger.log({
-        level: 'error',
-        message: 'tx: ' + item.tx.h + ' e: ' + e
-      })    
-    }
-  })
-  return newItems
-}
-
-const connect = function(cb) {
-  MongoClient.connect('mongodb://localhost:27017', {useNewUrlParser: true}, function(err, client) {
-    if (err) {
-      console.log('db retrying...')
-      setTimeout(function() {
-        connect(cb)
-      }, 1000)
-    } else {
-      db = client.db('bmap')
-      cb()
-    }
-  })
-}
-planaria.start({
-  filter:  {
-    "from": 585000,
-    "host": {
-      "bitbus": "https://bob.bitbus.network"
-    },
-    "q": {
-      "find": { 
-        "out.tape.cell.s": { 
-          "$in": ["1PuQa7K62MiKCtssSLKy1kh56WWU7MtUR5", "13SrNDkVzY5bHBRKNu5iXTQ7K7VqTh5tJC", "18pAqbYqhzErT6Zk3a5dwxHtB9icv8jH2p", "1GvFYzwtFix3qSAZhESQVTz9DeudHZNoh1", "$"] 
-        }
-      },
-      "project": { "out": 1, "tx": 1, "blk": 1, "in": 1}
-    }
-  },
-  onmempool: async function(e) {
-    try {
-      let bmaps = await bmapTransform([e.tx])
-      if (bmaps.length > 0) {
-        console.log('bmaps detected', bmaps.length)
-        await db.collection("u").insertMany(bmaps)
-        planarium.send(bmaps)
-      } else {
-        logger.log({ level: 'info', message: 'no bmaps ####### ' + bmaps })
-      }
-    } catch (e) {
-      logger.log({ level: 'error', message: 'onmempool: error transforming ' + e })
-    }
-  },
-  onblock: async function(e) {
-    return new Promise(async (resolve, reject) => {
-
-      let bmaps
-      try {
-        bmaps = await bmapTransform(e.tx)
-      } catch (e) {
-        logger.log({ level: 'error', message: 'onblock: error transforming ' + e })
-      }
-      if (bmaps.length > 0) {
-        let ids = bmaps.map((t) => {
-          return t.tx.h
+const connect = () => {
+  // Base64 encode bitquery
+  const b64 = Buffer.from(JSON.stringify(sock)).toString("base64")
+  // Subscribe
+  let surl = 'https://bob.bitsocket.network/s/'
+  const s = new EventSource(surl + b64)
+  s.onmessage = function(e) {
+    let d = JSON.parse(e.data)
+    switch (d.type) {
+      case 'open':
+        console.log(chalk.green('bitsocket opened'), 'to', chalk.cyan(surl))
+      break
+      case 'push':
+        // save latest_block
+        d.data.forEach(async (item) => {
+          try {
+            await saveTx(item, d.type === 'block' ? 'c' : 'u')
+          } catch (e) {
+            // record already exists in the db
+          }
         })
-        console.log('delete c')
-        await db.collection("c").deleteMany({
-          "tx.h": {
-            "$in": ids
+      break
+    }
+  }
+}
+
+let current_block = 0
+
+let db = null
+
+const start = async () => {
+  
+  // Make sure we have a data directory
+  if (!fs.existsSync('./data')){
+    fs.mkdirSync('./data')
+  }
+
+  if (!process.env.PLANARIA_TOKEN) {
+    prompt.start()
+    try {
+      console.log(chalk.red('Enter Planaria Token:'))
+      const { PLANARIA_TOKEN } = await prompt.get(['PLANARIA_TOKEN'])
+      process.env.PLANARIA_TOKEN = PLANARIA_TOKEN
+    } catch(e) {
+      console.log('failed to get token')
+    }
+  } 
+
+  if (!process.env.MONGO_URL) {
+    prompt.start()
+    try {
+      console.log(chalk.red('Enter MongoDB URL:'))
+      const { MONGO_URL } = await prompt.get(['MONGO_URL'])
+      process.env.MONGO_URL = MONGO_URL
+    } catch(e) {
+      console.log('failed to get mongo url')
+    }
+  }
+
+  mongo.MongoClient.connect(process.env.MONGO_URL, {
+    useUnifiedTopology: true,
+    useNewUrlParser: true,
+    }, function(err, res) {
+      if (err) throw err
+      
+      db = res
+      let dbo = db.db('bmap')
+  
+      // Create collections
+      dbo.createCollection("c", function(err, res) {
+        if (err) throw err
+      })
+      
+      dbo.createCollection("u", function(err, res) {
+        if (err) throw err
+      })
+
+      dbo.collection('c').find().sort({'blk.i':-1}).limit(1).toArray(async function(err, result) {
+        if (err) throw err
+        
+        if (result && result.length > 0) {
+          // onle clear unconfirmed when block is higher than last item from socket too latest_block
+          current_block = result[0].blk.i
+        } else {
+          console.log('No existing records. Crawling from the beginning.')
+        }
+        console.log(chalk.cyan('crawling from', current_block))
+        crawler()
+      })
+  })
+}
+
+const saveFiles = (bitfs) => {
+  for(let file of bitfs) {
+    q.push(file)
+  }
+}
+
+const crawl = (query, height) => {
+  return new Promise(async (resolve, reject) => {
+    if (!db) { reject() }
+    // Create a timestamped query by applying the "$gt" (greater than) operator with the height
+    query.q.find["blk.i"] = { $gt: height }
+
+    let res = await fetch("https://bob.bitbus.network/block", {
+      method: "post",
+      headers: {
+        'Content-type': 'application/json; charset=utf-8',
+        'token': config.token
+      },
+      body: JSON.stringify(query)
+    })
+
+    // The promise is resolved when the stream ends.
+    res.body.on("end", () => {
+      resolve()
+    })
+    // Split NDJSON into an array stream
+    .pipe(es.split())
+    // Apply the logic for each line
+    .pipe(es.mapSync(async (t) => {
+      if (t) {
+        let j
+        try {
+          j = JSON.parse(t)
+        } catch (e) {
+          // Invalid response
+          console.error('Invalid response', e, t)
+          return null
+        }
+        // New block
+        if (j.blk.i > current_block) {
+          current_block = j.blk.i
+          console.log(chalk.blue('######################################################################'))
+          console.log(chalk.blue('####  '), chalk.magenta("NEW BLOCK "), chalk.green(current_block))
+          console.log(chalk.blue('######################################################################'))
+          if (synced) {
+            await clearUnconfirmed()
+          }
+          // planarium.send('socket', {type: 'block', block: current_block})
+        }
+
+        // Extract BitFS URIs
+        // Iterate through all outputs and find chunks whose names start with "f"
+        let bitfs = []
+        j.out.forEach((out) => {
+          for(let tape of out.tape) {
+            let cell = tape.cell
+            for (let pushdata of cell) {
+              if (pushdata.hasOwnProperty('f')) {
+                bitfs.push(pushdata.f)
+              }
+            }
           }
         })
 
-        console.log("inserting", bmaps.length)
+        // Crawl BitFS
+        saveFiles(bitfs)
+        
         try {
-          await db.collection("c").insertMany(bmaps)
-        } catch (err) {
-          logger.log({ level: 'info', message: 'error saving on block: ' + err + ' items: ' + bmaps.length })      
-        }
-    
-        // if (e.mem.length) {
-        //   let bmapsMem = bmapTransform(e.mem)
-        //   await db.collection("u").insertMany(bmapsMem)
-        // }
-        // console.log("inserted u", bmapsMem)
-
-      } else {
-        logger.log({ level: 'info', message: 'no bmaps ####### ' + bmaps })
-      }
-
-      console.log("block End", e.height)
-      db.collection("u").deleteMany({}).then(() => {
-        resolve()
-      })
-    })
-  },
-  onstart: function(e) {
-    if (process.env.NODE_ENV !== 'production') {
-      logger.add(new winston.transports.Console({
-        format: winston.format.simple()
-      }))
-    }
-    return new Promise(async function(resolve, reject) {
-      if (!e.tape.self.start) {
-        logger.log({ level: 'info', message: 'Starting mongodb via docker. Platform ' + process.platform})
-        await planaria.exec("docker", ["pull", "mongo:4.0.4"])
-
-        try {
-          await planaria.exec("docker", ["run", "-d", "-p", "27017-27019:27017-27019", "-v", process.cwd() + "/db:/data/db", "mongo:4.0.4"])
+          let tx = await saveTx(j, 'c')
+          return tx
         } catch (e) {
-          logger.log({ level: 'error', message: 'Failed to start docker container for mongodb: ' + e})
-        }        
+          return null
+        }          
       }
-      connect(async () => {
-        console.log("creating index")
-        await db.collection("c").createIndex({"tx.h": 1}, { unique: true})
-        await db.collection("c").createIndex({"blk.i": 1})
-        await db.collection("c").createIndex({"MAP.app": 1})
-        await db.collection("c").createIndex({"BITPIC": 1})
-        await db.collection("u").createIndex({"tx.h": 1}, { unique: true})
-        await db.collection("u").createIndex({"MAP.app": 1})
-        await db.collection("u").createIndex({"BITPIC": 1})
-        logger.log({ level: 'info', message: 'Connected' })
-        if (e.tape.self.start) {
-          await db.collection("c").deleteMany({
-            "blk.i": { "$gt": e.tape.self.end }
-          })
-          resolve()
-        } else {
-          resolve()
+    }))
+  })
+}
+
+const clearUnconfirmed = () => {
+  let dbo = db.db('bmap')
+  return new Promise((res, rej) => {
+    dbo.listCollections({name:'u'}).toArray(async function(err, collections) {      
+      if (collections.map(c => { return c.name }).indexOf('u') !== -1) {
+        try {
+          // await dbo.collection('u').drop(function(err, delOK) {
+          //   if (err) rej(err)
+          //   if (delOK) res()
+          // })
+          res()
+        } catch(e) {
+          rej(e)
         }
-      })
+      }
     })
-  },
+  })
+  
+}
+
+const saveTx = async (tx, collection) => {
+  let t
+  // Transform
+  try {
+    t = await bmap.TransformTx(tx)
+  } catch (e) {
+    throw new Error('Failed to transform', e, t)
+  }
+
+  let dbo = db.db('bmap')
+  if (t) {
+    await dbo.collection(collection).insertOne(t)
+    console.log(
+     collection === 'u' ?  (chalk.green('saved'), chalk.magenta('unconfirmed')) : '', ( chalk.cyan('saved'), chalk.green(t.tx.h))
+    )
+    return t
+  } else { throw new Error('Invalid tx') }
+}
+
+const crawler = () => {  
+  crawl(query, current_block)
+  .then(() => {
+
+    if (!synced) {
+      console.log(chalk.green("SYNC COMPLETE"))
+      synced = true
+      connect()
+    }
+
+    setTimeout(() => {
+      crawler()
+    }, 10000)
+  })
+}
+
+ // Handle interrupt
+ if (process.platform === "win32") {
+  let rl = require("readline").createInterface({
+    input: process.stdin,
+    output: process.stdout
+  })
+
+  rl.on("SIGINT", function () {
+    process.emit("SIGINT")
+  })
+}
+
+process.on("SIGINT", function () {
+  // graceful shutdown
+  db.close()
+  process.exit()
 })
+
+console.log(chalk.yellow(`
+:::::::::  ::::    ::::      :::     :::::::::  
+  :+:    :+: +:+:+: :+:+:+   :+: :+:   :+:    :+: 
+  +:+    +:+ +:+ +:+:+ +:+  +:+   +:+  +:+    +:+ 
+  +#++:++#+  +#+  +:+  +#+ +#++:++#++: +#++:++#+  
+  +#+    +#+ +#+       +#+ +#+     +#+ +#+        
+  #+#    #+# #+#       #+# #+#     #+# #+#        
+  #########  ###       ### ###     ### ###
+`))
+
+setTimeout(start, 1000)
