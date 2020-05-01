@@ -12,5 +12,8 @@
     "mongodb": "^3.5.7",
     "node-fetch": "^2.6.0",
     "prompt-async": "^0.9.9"
+  },
+  "scripts": {
+    "start": "PLANARIA_TOKEN=eyJhbGciOiJFUzI1NksiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiIxNVBTRkRWQ0U1WkRXeEZWZEF3Mkw3bnlXUXJZNU1maDhEIiwiaXNzdWVyIjoiZ2VuZXJpYy1iaXRhdXRoIn0.SU05ZHJjcmJpZWhybUlnOHppUlN3WUUyZ3YwM3RRc2NiQTU1SE1KZ3NtdUNMSDdqT0JnaVU1N3lRWE9mK1hZYktXTVhKbC9yTjJnVVphNVgwZDVmZFcwPQ MONGO_URL=mongodb://localhost:27017/bmap node index"
   }
 }
