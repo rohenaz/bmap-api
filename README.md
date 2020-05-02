@@ -54,10 +54,10 @@ Install dependencies
 yarn
 ```
 
-Start the app
+Start the app (make sure your env vars are set first)
 
 ```bash
-yarn install
+yarn start
 ```
 
 ### Run in docker
