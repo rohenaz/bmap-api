@@ -3,6 +3,7 @@ const app = express();
 const mongo = require("mongodb");
 const { defaultQuery } = require("./queries");
 const chalk = require("chalk");
+const cors = require("cors");
 
 process.on("message", async (m, socket) => {
   console.log("message received!", m, socket);
@@ -25,6 +26,7 @@ const start = async function () {
   app.set("host", process.env.HOST || "localhost");
   app.set("view engine", "ejs");
   app.set("views", __dirname + "/views");
+  app.use(cors())
   app.use(express.static(__dirname + "/public"));
   app.get(/^\/q\/(.+)$/, function (req, res) {
     let b64 = req.params[0];
@@ -43,11 +45,32 @@ const start = async function () {
 
         let code = Buffer.from(b64, "base64").toString();
         let req = JSON.parse(code);
+        if (req.q.aggregate) {
+          dbo
+          .collection("c")
+          .aggregate(req.q.aggregate)
+          .sort(req.q.sort || { _id: -1 })
+          .limit(req.q.limit ? req.q.limit : 10)
+          .toArray(function (err, c) {
+            if (err) throw err;
+            dbo
+              .collection("u")
+              .aggregate(req.q.aggregate)
+              .sort(req.q.sort || { _id: -1 })
+              .limit(req.q.limit ? req.q.limit : 10)
+              .toArray(function (err, u) {
+                db.close();
+                res.send({ c: c, u: u });
+              });
+          })
+          return
+        }
+
         dbo
           .collection("c")
           .find(req.q.find)
           .sort(req.q.sort || { _id: -1 })
-          .limit(req.q.limit || 10)
+          .limit(req.q.hasOwnProperty('limit') ? req.q.limit : 10)
           .project(req.q.project || { in: 0, out: 0 })
           .toArray(function (err, c) {
             if (err) throw err;
@@ -55,15 +78,14 @@ const start = async function () {
               .collection("u")
               .find(req.q.find)
               .sort(req.q.sort || { _id: -1 })
-              .limit(req.q.limit || 10)
+              .limit(req.q.hasOwnProperty('limit') ? req.q.limit : 10)
               .project(req.q.project || { in: 0, out: 0 })
               .toArray(function (err, u) {
                 db.close();
                 res.send({ c: c, u: u });
               });
           });
-      }
-    );
+      });
   });
 
   app.get("/query", function (req, res) {

@@ -91,7 +91,7 @@ See their [installation guide](https://docs.mongodb.com/manual/installation)
 Set the following environmental variables:
 
 - `PLANARIA_TOKEN` Get this from [planaria token](https://token.planaria.network)
-- `MONGO_URL` A connection string to your mongo database.
+- `MONGO_URL` A connection string to your mongo database. ex: mongodb://localhost:27017/bmap when running locally, or mongodb://mongo:27017/bmap from within a container.
 
 # Run
 

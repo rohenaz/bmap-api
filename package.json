@@ -4,6 +4,7 @@
     "better-queue": "^3.8.10",
     "bmapjs": "^0.2.1",
     "cli-spinner": "^0.2.10",
+    "cors": "^2.8.5",
     "ejs": "^3.1.2",
     "event-stream": "^4.0.1",
     "eventsource": "^1.0.7",
@@ -17,7 +18,7 @@
     "nodemon": "^2.0.3"
   },
   "scripts": {
-    "start": "MONGO_URL=mongodb://mongo:27017/bmap node index",
-    "dev": "PLANARIA_TOKEN=eyJhbGciOiJFUzI1NksiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiIxNVBTRkRWQ0U1WkRXeEZWZEF3Mkw3bnlXUXJZNU1maDhEIiwiaXNzdWVyIjoiZ2VuZXJpYy1iaXRhdXRoIn0.SU05ZHJjcmJpZWhybUlnOHppUlN3WUUyZ3YwM3RRc2NiQTU1SE1KZ3NtdUNMSDdqT0JnaVU1N3lRWE9mK1hZYktXTVhKbC9yTjJnVVphNVgwZDVmZFcwPQ MONGO_URL=mongodb://localhost:27017/bmap nodemon index"
+    "start": "node index",
+    "dev": "nodemon index"
   }
 }
