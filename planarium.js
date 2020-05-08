@@ -90,7 +90,7 @@ const start = async function () {
 
   app.get('/ping', async (req, res) => {
     if (req.get('Referrer')) {
-      logger.log({
+      console.log({
         level: 'info',
         message: 'Referrer: ' + req.get('Referrer')
       })
