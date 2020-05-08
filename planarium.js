@@ -88,7 +88,7 @@ const start = async function () {
       });
   });
 
-  e.app.get('/ping', async (req, res) => {
+  app.get('/ping', async (req, res) => {
     if (req.get('Referrer')) {
       logger.log({
         level: 'info',
