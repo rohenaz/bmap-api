@@ -196,7 +196,7 @@ const crawl = (query, height) => {
               return;
             }
             // New block
-            if (j.blk.i > current_block) {
+            if (j.blk && j.blk.i > current_block) {
               current_block = j.blk.i;
               console.log(
                 chalk.blue(
@@ -222,18 +222,19 @@ const crawl = (query, height) => {
             // Extract BitFS URIs
             // Iterate through all outputs and find chunks whose names start with "f"
             let bitfs = [];
-            j.out.forEach((out) => {
-              for (let tape of out.tape) {
-                let cell = tape.cell;
-                for (let pushdata of cell) {
-                  if (pushdata.hasOwnProperty("f")) {
-                    bitfs.push(pushdata.f);
+            if (j.out) {
+              j.out.forEach((out) => {
+                for (let tape of out.tape) {
+                  let cell = tape.cell;
+                  for (let pushdata of cell) {
+                    if (pushdata.hasOwnProperty("f")) {
+                      bitfs.push(pushdata.f);
+                    }
                   }
                 }
-              }
-            });
-
-            // Crawl BitFS
+              });  
+            }
+                        // Crawl BitFS
             saveFiles(bitfs);
 
             try {

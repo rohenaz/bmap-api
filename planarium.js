@@ -88,6 +88,18 @@ const start = async function () {
       });
   });
 
+  e.app.get('/ping', async (req, res) => {
+    if (req.get('Referrer')) {
+      logger.log({
+        level: 'info',
+        message: 'Referrer: ' + req.get('Referrer')
+      })
+    }
+
+    res.write(JSON.stringify({Pong: req.get('Referrer')}))
+    res.end()
+  })
+
   app.get("/query", function (req, res) {
     let code = JSON.stringify(defaultQuery, null, 2);
     res.render("explorer", {
