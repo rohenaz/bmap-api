@@ -61,8 +61,6 @@ let q = new Queue(
 
 let current_block = 0
 
-let db = null
-
 const start = async () => {
   // Make sure we have a data directory
   if (!fs.existsSync('./data')) {
@@ -211,7 +209,7 @@ const crawl = (query, height, dbo) => {
             saveFiles(bitfs)
 
             try {
-              let tx = await saveTx(j, 'c')
+              let tx = await saveTx(j, 'c', dbo)
               return tx
             } catch (e) {
               return null

@@ -73,7 +73,7 @@ const connect = async function (leid) {
       socket = new EventSource(url + b64)
     }
     socket.onmessage = async (e) => {
-      if (e.lastEventId) {
+      if (e.lastEventId && e.lastEventId !== 'undefined') {
         try {
           await storage.setItem('lastEventId', e.lastEventId)
         } catch (e) {
@@ -109,7 +109,8 @@ process.on('message', async (m) => {
   if (m.connect) {
     try {
       await storage.init(storageOptions)
-      connect(await storage.getItem('lastEventId'))
+      let lastId = await storage.getItem('lastEventId')
+      connect(lastId || null)
     } catch (e) {
       console.error('Failed to intialize persistent storage.', e)
     }
