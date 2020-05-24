@@ -1,0 +1,15 @@
+version: "2.1"
+services:
+  web:
+    environment:
+      - PLANARIA_TOKEN=${PLANARIA_TOKEN}
+      - MONGO_URL=mongodb://localhost:27017/bmap
+    build: .
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongo
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"

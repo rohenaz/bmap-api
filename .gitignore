@@ -1,10 +1,5 @@
-.env
-bus
-db
+old
 node_modules
-tape.txt
-yarn-error.log
-yarn.lock
-error.log
-combined.log
+data
 .DS_Store
+persist
