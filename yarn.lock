@@ -178,10 +178,10 @@ bl@^2.2.0:
     readable-stream "^2.3.5"
     safe-buffer "^5.1.1"
 
-bmapjs@^0.2.1:
-  version "0.2.1"
-  resolved "https://registry.yarnpkg.com/bmapjs/-/bmapjs-0.2.1.tgz#f3e41618afd74d78d0c11c271632a871e780d746"
-  integrity sha512-K1jfdFQooI8i6/pLUgVGnAPx9cJ9lFHEzRUmoVhqf0WFKz0GTduLwd68XVwBjiZPL9aAsRs5oRt7cISA8Qae4w==
+bmapjs@^0.2.2:
+  version "0.2.2"
+  resolved "https://registry.yarnpkg.com/bmapjs/-/bmapjs-0.2.2.tgz#f15e7c3e498092d7681668cc54cd5a29b09ee404"
+  integrity sha512-jR6CtDLnyr+v1ls6HFb4jAFDA8nsCPWfwfD2BTK2u84p2vR+UljW0JpKu+SujUaYF6RNskq73b6Q6idxiy77XQ==
   dependencies:
     "@msgpack/msgpack" "^1.11.0"
 
@@ -1069,7 +1069,7 @@ minimist@^1.2.0, minimist@^1.2.5:
   resolved "https://registry.yarnpkg.com/minimist/-/minimist-1.2.5.tgz#67d66014b66a6a8aaa0c083c5fd58df4e4e97602"
   integrity sha512-FM9nNUYrRBAELZQT3xeZQ7fmMOBg6nWNmJKTcgsJeaLstP/UODVpGsr5OhXhhXg6f+qtJ8uiZ+PUxkDWcgIXLw==
 
-mkdirp@0.x.x:
+mkdirp@0.x.x, mkdirp@~0.5.1:
   version "0.5.5"
   resolved "https://registry.yarnpkg.com/mkdirp/-/mkdirp-0.5.5.tgz#d91cefd62d1436ca0f41620e251288d420099def"
   integrity sha512-NKmAlESf6jMGym1++R0Ra7wvhV+wFW63FaSOFPwRahvea0gMUcGUhVeAg/0BC0wiv9ih5NYPB1Wn1UEI1/L+xQ==
@@ -1128,6 +1128,13 @@ node-fetch@^2.6.0:
   version "2.6.0"
   resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.6.0.tgz#e633456386d4aa55863f676a7ab0daa8fdecb0fd"
   integrity sha512-8dG4H5ujfvFiqDmVu9fQ5bOHUC15JMjMY/Zumv26oOvvVJjM67KF8koCWIabKQ1GJIa9r2mMZscBq/TbdOcmNA==
+
+node-persist@^3.0.5:
+  version "3.0.5"
+  resolved "https://registry.yarnpkg.com/node-persist/-/node-persist-3.0.5.tgz#ee6128df8e0f9ea45ea80090b8dd9dd338408900"
+  integrity sha512-zJmBA58kI9QAxXLMc4NLswgzXVIqKfsfQtiySMF6eEQ3kVvoM3YHzcP0//L9u30Fqx3cYe1FL/a+fyB3VwO/oQ==
+  dependencies:
+    mkdirp "~0.5.1"
 
 nodemon@^2.0.3:
   version "2.0.3"
@@ -1249,6 +1256,11 @@ prepend-http@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/prepend-http/-/prepend-http-2.0.0.tgz#e92434bfa5ea8c19f41cdfd401d741a3c819d897"
   integrity sha1-6SQ0v6XqjBn0HN/UAddBo8gZ2Jc=
+
+prettier@latest:
+  version "2.0.5"
+  resolved "https://registry.yarnpkg.com/prettier/-/prettier-2.0.5.tgz#d6d56282455243f2f92cc1716692c08aa31522d4"
+  integrity sha512-7PtVymN48hGcO4fGjybyBSIWDsLU4H4XlvOHfq91pz9kkGlonzwTfYkaIEwiRg/dAJF9YlbsduBAgtYLi+8cFg==
 
 process-nextick-args@~2.0.0:
   version "2.0.1"
