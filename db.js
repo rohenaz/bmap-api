@@ -2,7 +2,7 @@ const MongoClient = require('mongodb').MongoClient
 let client
 exports.getDbo = async () => {
   try {
-    client = await MongoClient.connect(process.env.MINERVA_MONGO_URL, {
+    client = await MongoClient.connect(process.env.MONGO_URL, {
       useUnifiedTopology: true,
       useNewUrlParser: true,
     })
