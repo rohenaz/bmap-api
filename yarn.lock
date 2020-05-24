@@ -178,10 +178,10 @@ bl@^2.2.0:
     readable-stream "^2.3.5"
     safe-buffer "^5.1.1"
 
-bmapjs@^0.2.2:
-  version "0.2.2"
-  resolved "https://registry.yarnpkg.com/bmapjs/-/bmapjs-0.2.2.tgz#f15e7c3e498092d7681668cc54cd5a29b09ee404"
-  integrity sha512-jR6CtDLnyr+v1ls6HFb4jAFDA8nsCPWfwfD2BTK2u84p2vR+UljW0JpKu+SujUaYF6RNskq73b6Q6idxiy77XQ==
+bmapjs@^0.2.3:
+  version "0.2.3"
+  resolved "https://registry.yarnpkg.com/bmapjs/-/bmapjs-0.2.3.tgz#cb84255e062c4364f7a35073e59295aefda61802"
+  integrity sha512-1jIk5h/PM/wHubh+cBlu1S5oWQqhGU6OA5G2XbDTaKIo0pL4J6QJcaCZR/eQty8Cwocvb52w4Q/MuJmn9378qg==
   dependencies:
     "@msgpack/msgpack" "^1.11.0"
 
@@ -289,6 +289,14 @@ chalk@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/chalk/-/chalk-3.0.0.tgz#3f73c2bf526591f574cc492c51e2456349f844e4"
   integrity sha512-4D3B6Wf41KOYRFdszmDqMCGq5VV/uMAB273JILmO+3jAlh8X4qDtdtgCR3fxtbLEMzSx22QdhnDcJvu2u1fVwg==
+  dependencies:
+    ansi-styles "^4.1.0"
+    supports-color "^7.1.0"
+
+chalk@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/chalk/-/chalk-4.0.0.tgz#6e98081ed2d17faab615eb52ac66ec1fe6209e72"
+  integrity sha512-N9oWFcegS0sFr9oh1oz2d7Npos6vNoWW9HvtCg5N1KRFpUhaAhvTv5Y58g880fZaEYSNm3qDz8SU1UrGvp+n7A==
   dependencies:
     ansi-styles "^4.1.0"
     supports-color "^7.1.0"
