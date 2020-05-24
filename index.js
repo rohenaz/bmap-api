@@ -185,7 +185,7 @@ const crawl = (query, height, dbo) => {
                 )
               )
               if (synced) {
-                await clearUnconfirmed()
+                await clearUnconfirmed(dbo)
               }
               // planarium.send('socket', {type: 'block', block: current_block})
             }
@@ -221,7 +221,7 @@ const crawl = (query, height, dbo) => {
 }
 
 const crawler = (dbo) => {
-  crawl(query, current_block).then(() => {
+  crawl(query, current_block, dbo).then(() => {
     if (!synced) {
       console.log(chalk.green('SYNC COMPLETE'))
       synced = true

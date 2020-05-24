@@ -11,7 +11,12 @@ const saveTx = async (tx, collection, dbo) => {
   }
 
   if (t) {
-    await dbo.collection(collection).insertOne(t)
+    try {
+      await dbo.collection(collection).insertOne(t)
+    } catch (e) {
+      console.error('Sonofabitch', e)
+    }
+
     console.log(
       collection === 'u'
         ? (chalk.green('saved'), chalk.magenta('unconfirmed'))
