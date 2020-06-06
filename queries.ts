@@ -1,4 +1,4 @@
-const { config } = require('./config')
+import { config } from './config'
 
 // OP_RETURN Protocol prefixes
 const prefixes = {
@@ -9,7 +9,6 @@ const prefixes = {
   ron: '1GvFYzwtFix3qSAZhESQVTz9DeudHZNoh1',
 }
 
-console.log('FROM', config.from)
 // BitQuery
 const query = {
   v: 3,
@@ -63,4 +62,4 @@ const defaultQuery = {
   },
 }
 
-module.exports = { query, prefixes, defaultQuery, sock }
+export { query, prefixes, defaultQuery, sock }

@@ -1,6 +1,9 @@
-const MongoClient = require('mongodb').MongoClient
+import * as mongo from 'mongodb'
+
+const MongoClient = mongo.MongoClient
 let client
-exports.getDbo = async () => {
+
+const getDbo = async () => {
   try {
     client = await MongoClient.connect(process.env.MONGO_URL, {
       useUnifiedTopology: true,
@@ -12,8 +15,10 @@ exports.getDbo = async () => {
   }
 }
 
-exports.closeDb = async () => {
+const closeDb = async () => {
   if (client) {
     client.close()
   }
 }
+
+export { closeDb, getDbo }

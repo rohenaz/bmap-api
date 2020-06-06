@@ -1,5 +1,15 @@
 {
+  "type": "commonjs",
   "dependencies": {
+    "@types/better-queue": "^3.8.2",
+    "@types/chalk": "^2.2.0",
+    "@types/cors": "^2.8.6",
+    "@types/event-stream": "^3.3.34",
+    "@types/express": "^4.17.6",
+    "@types/mongodb": "^3.5.20",
+    "@types/node": "^14.0.9",
+    "@types/node-fetch": "^2.5.7",
+    "@types/node-persist": "^3.0.0",
     "JSONStream": "^1.3.5",
     "better-queue": "^3.8.10",
     "bmapjs": "^0.2.3",
@@ -17,8 +27,9 @@
     "prompt-async": "^0.9.9"
   },
   "devDependencies": {
+    "eslint-plugin-node": "latest",
     "nodemon": "^2.0.3",
-    "prettier": "latest"
+    "typescript": "^3.9.3"
   },
   "prettier": {
     "semi": false,
@@ -26,7 +37,9 @@
     "trailingComma": "es5"
   },
   "scripts": {
-    "start": "node index",
-    "dev": "nodemon index"
+    "build": "tsc",
+    "dev": "ts-node index.ts",
+    "start": "nodemon ./build/index.js",
+    "prod": "yarn build && yarn start"
   }
 }

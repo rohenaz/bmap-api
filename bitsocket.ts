@@ -1,26 +1,27 @@
-const { sock } = require('./queries')
-const Queue = require('better-queue')
-const EventSource = require('eventsource')
-const chalk = require('chalk')
-const { saveTx } = require('./actions')
-const { getDbo } = require('./db')
-const storage = require('node-persist')
+import { sock } from './queries'
+import * as BetterQueue from 'better-queue'
+import * as EventSource from 'eventsource'
+import * as chalk from 'chalk'
+import { saveTx } from './actions'
+import * as storage from 'node-persist'
+
 const storageOptions = {
   dir: 'persist',
   stringify: JSON.stringify,
   parse: JSON.parse,
   encoding: 'utf8',
   logging: false, // can also be custom logging function
-  ttl: false, // ttl* [NEW], can be true for 24h default or a number in MILLISECONDS or a valid Javascript Date object
   expiredInterval: 2 * 60 * 1000, // every 2 minutes the process will clean-up the expired cache
   // in some cases, you (or some other service) might add non-valid storage files to your
   // storage dir, i.e. Google Drive, make this true if you'd like to ignore these files and not throw an error
   forgiveParseErrors: false,
-}
+} as storage.InitOptions
 
 let socket
+let interval = null
+let latestTxMatch
 
-exports.lastEventId = async () => {
+const lastEventId = async () => {
   return await storage.getItem('lastEventId')
 }
 
@@ -46,11 +47,10 @@ const close = async function () {
 
 const connect = async function (leid) {
   const b64 = Buffer.from(JSON.stringify(sock)).toString('base64')
-  var queue = new Queue(async (item, cb) => {
+  var queue = new BetterQueue(async (item, cb) => {
     try {
       console.log('SAVING', item.tx.h)
-      let dbo = await getDbo()
-      await saveTx(item, d.type === 'block' ? 'c' : 'u', dbo)
+      await saveTx(item)
     } catch (e) {
       console.error('Failed to save tx. Record may already exists.', e)
     }
@@ -73,7 +73,7 @@ const connect = async function (leid) {
       socket = new EventSource(url + b64)
     }
     socket.onmessage = async (e) => {
-      if (e.lastEventId && e.lastEventId !== 'undefined') {
+      if (e.lastEventId) {
         try {
           await storage.setItem('lastEventId', e.lastEventId)
         } catch (e) {
@@ -81,14 +81,18 @@ const connect = async function (leid) {
         }
       }
 
-      d = JSON.parse(e.data)
+      let d = JSON.parse(e.data)
       if (d.type != 'open') {
         d.data.forEach(async (tx) => {
           if (tx.tx.h !== (await storage.getItem('lastSeenTx'))) {
             queue.push(tx)
             storage.setItem('lastSeenTx', tx.tx.h)
           } else {
-            console.log('why would this even happen?', tx.tx.h)
+            console.log(
+              "We've already seen this Tx",
+              tx.tx.h,
+              await storage.getItem('lastSeenTx')
+            )
           }
         })
       } else {
@@ -105,17 +109,14 @@ const connect = async function (leid) {
 }
 
 process.on('message', async (m) => {
-  console.log('message received!', m)
   if (m.connect) {
     try {
       await storage.init(storageOptions)
-      let lastId = await storage.getItem('lastEventId')
-      connect(lastId || null)
+      connect(await storage.getItem('lastEventId'))
     } catch (e) {
       console.error('Failed to intialize persistent storage.', e)
     }
   }
 })
 
-exports.connect = connect
-exports.close = close
+export { connect, close, lastEventId }
