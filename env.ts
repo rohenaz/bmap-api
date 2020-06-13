@@ -15,7 +15,7 @@ const ensureEnvVars = () => {
       }
     }
 
-    if (!process.env.MINERVA_MONGO_URL) {
+    if (!process.env.MONGO_URL) {
       prompt.start()
       try {
         chalk.red(
