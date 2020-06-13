@@ -49,7 +49,10 @@ const start = async function () {
             .sort(req.q.sort || { _id: -1 })
             .limit(req.q.limit ? req.q.limit : 10)
             .toArray(function (err, c) {
-              if (err) throw err
+              if (err) {
+                res.status(500).send(err)
+                return
+              }
               dbo
                 .collection('u')
                 .aggregate(req.q.aggregate)
@@ -70,7 +73,10 @@ const start = async function () {
           .limit(req.q.hasOwnProperty('limit') ? req.q.limit : 10)
           .project(req.q.project || { in: 0, out: 0 })
           .toArray(function (err, c) {
-            if (err) throw err
+            if (err) {
+              res.status(500).send(err)
+              return
+            }
             dbo
               .collection('u')
               .find(req.q.find)
