@@ -1,4 +1,4 @@
-import { crawler } from './crawler'
+import { crawler, setCurrentBlock } from './crawler'
 import { getDbo, closeDb } from './db'
 import { ensureEnvVars } from './env'
 import * as chalk from 'chalk'
@@ -28,7 +28,7 @@ const start = async () => {
   try {
     // Should really start with latest blk from ANY collection, not only video like this
     let currentBlock = await getCurrentBlock()
-
+    setCurrentBlock(currentBlock)
     console.log(chalk.cyan('crawling from', currentBlock))
     crawler(() => {
       bitsocket.send({ connect: true })
