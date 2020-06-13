@@ -22,9 +22,9 @@ const start = async function () {
   app.set('port', process.env.PORT || 3000)
   app.set('host', process.env.HOST || 'localhost')
   app.set('view engine', 'ejs')
-  app.set('views', __dirname + '/views')
+  app.set('views', __dirname + '/../views')
   app.use(cors())
-  app.use(express.static(__dirname + '/public'))
+  app.use(express.static(__dirname + '/../public'))
   app.get(/^\/q\/(.+)$/, function (req, res) {
     let b64 = req.params[0]
     console.log(chalk.magenta('PLANARIUM'), chalk.cyan('query', b64))
@@ -116,7 +116,7 @@ const start = async function () {
   })
 
   app.get('/', function (req, res) {
-    res.sendFile(__dirname + '/public/index.html')
+    res.sendFile(__dirname + '/../public/index.html')
   })
 
   if (app.get('port')) {
