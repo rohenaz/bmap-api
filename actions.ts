@@ -1,34 +1,44 @@
-import { TransformTx, BmapTx } from 'bmapjs'
+import { TransformTx } from 'bmapjs'
 import * as chalk from 'chalk'
-import { getDbo, closeDb } from './db'
+import { closeDb, getDbo } from './db'
 
 const saveTx = async (tx) => {
   let t
   // Transform
   try {
     let dbo = await getDbo()
-    t = await TransformTx(tx)
+    try {
+      t = await TransformTx(tx)
+      if (t) {
+        let collection = t.blk ? 'c' : 'u'
+        try {
+          await dbo.collection(collection).insertOne(t)
+          await closeDb()
+          return t
+        } catch (e) {
+          console.log(
+            collection === 'u'
+              ? (chalk.green('saved'), chalk.magenta('unconfirmed'))
+              : '',
+            (chalk.cyan('saved'), chalk.green(t.tx.h))
+          )
+          await closeDb()
 
-    if (t) {
-      let collection = t.blk ? 'c' : 'u'
-      await dbo.collection(collection).insertOne(t)
-
-      console.log(
-        collection === 'u'
-          ? (chalk.green('saved'), chalk.magenta('unconfirmed'))
-          : '',
-        (chalk.cyan('saved'), chalk.green(t.tx.h))
-      )
+          let txid = tx && tx.tx ? tx.tx.h : undefined
+          throw new Error('Failed to get dbo ' + txid + ' : ' + e)
+        }
+      } else {
+        await closeDb()
+        throw new Error('Invalid tx')
+      }
+    } catch (e) {
       await closeDb()
-      return t
-    } else {
-      await closeDb()
-      throw new Error('Invalid tx')
+      throw new Error('Failed to transform tx ' + tx)
     }
   } catch (e) {
     await closeDb()
     let txid = tx && tx.tx ? tx.tx.h : undefined
-    throw new Error('Failed to save ' + txid + ' : ' + e)
+    throw new Error('Failed to get dbo ' + txid + ' : ' + e)
   }
 }
 
