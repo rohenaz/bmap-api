@@ -1,10 +1,10 @@
-import { crawler, setCurrentBlock } from './crawler'
-import { getDbo, closeDb } from './db'
-import { ensureEnvVars } from './env'
 import * as chalk from 'chalk'
 import { fork } from 'child_process'
 import * as net from 'net'
 import * as redline from 'readline'
+import { crawler, setCurrentBlock } from './crawler'
+import { closeDb } from './db'
+import { ensureEnvVars } from './env'
 import { getCurrentBlock } from './state'
 
 /* Bitsocket runs in a child process */
@@ -53,6 +53,8 @@ if (process.platform === 'win32') {
 
 process.on('SIGINT', async function () {
   // graceful shutdown
+  console.log('close from shutdown')
+  closeDb()
   server.close()
   process.exit()
 })
