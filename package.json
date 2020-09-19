@@ -24,7 +24,7 @@
     "got": "^11.0.2",
     "mongodb": "^3.5.7",
     "mongoose": "^5.10.6",
-    "node-fetch": "^2.6.0",
+    "node-fetch": "^2.6.1",
     "node-persist": "^3.0.5",
     "prompt-async": "^0.9.9"
   },
