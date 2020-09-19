@@ -1,10 +1,11 @@
-import { saveTx } from './actions'
 import * as chalk from 'chalk'
-import { config } from './config'
 import * as es from 'event-stream'
 import fetch from 'node-fetch'
-import { query } from './queries'
+import { saveTx } from './actions'
 import { saveFiles } from './bitfs'
+import { config } from './config'
+import { closeDb } from './db'
+import { query } from './queries'
 
 let currentBlock = 0
 let synced = false
@@ -98,6 +99,7 @@ const crawler = (syncedCallback) => {
     if (!synced) {
       console.log(chalk.green('BITBUS SYNC COMPLETE'))
       synced = true
+      closeDb()
       syncedCallback()
     }
 
