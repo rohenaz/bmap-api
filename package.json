@@ -2,7 +2,6 @@
   "type": "commonjs",
   "dependencies": {
     "@types/better-queue": "^3.8.2",
-    "@types/chalk": "^2.2.0",
     "@types/cors": "^2.8.6",
     "@types/event-stream": "^3.3.34",
     "@types/express": "^4.17.6",
