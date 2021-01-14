@@ -6,7 +6,8 @@
     "@types/cors": "^2.8.6",
     "@types/event-stream": "^3.3.34",
     "@types/express": "^4.17.6",
-    "@types/mongodb": "^3.5.20",
+    "@types/mongodb": "^3.5.27",
+    "@types/mongoose": "^5.7.36",
     "@types/node": "^14.0.9",
     "@types/node-fetch": "^2.5.7",
     "@types/node-persist": "^3.0.0",
@@ -23,6 +24,7 @@
     "got": "^11.0.2",
     "mongodb": "^3.5.7",
     "node-fetch": "^2.6.1",
+    "mongoose": "^5.10.6",
     "node-persist": "^3.0.5",
     "prompt-async": "^0.9.9"
   },

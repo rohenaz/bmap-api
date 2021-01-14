@@ -1,4 +1,4 @@
-import { getDbo, closeDb } from './db'
+import { getDbo } from './db'
 
 const getCurrentBlock = () => {
   return new Promise(async (resolve, reject) => {
@@ -11,22 +11,22 @@ const getCurrentBlock = () => {
         .limit(1)
         .toArray(async function (err, result) {
           if (err) {
-            await closeDb()
+            // await closeDb()
             reject(err)
           }
 
           if (result && result.length > 0) {
             // only clear unconfirmed when block is higher than last item from socket too latest_block
-            await closeDb()
+            // await closeDb()
             resolve(result[0].blk.i)
           } else {
             console.log('No existing records. Crawling from the beginning.')
-            await closeDb()
+            // await closeDb()
             resolve(0)
           }
         })
     } catch (e) {
-      await closeDb()
+      // await closeDb()
       reject(e)
     }
   })

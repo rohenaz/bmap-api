@@ -1,6 +1,6 @@
 import { TransformTx } from 'bmapjs'
 import * as chalk from 'chalk'
-import { closeDb, getDbo } from './db'
+import { getDbo } from './db'
 
 const saveTx = async (tx) => {
   let t
@@ -13,7 +13,7 @@ const saveTx = async (tx) => {
         let collection = t.blk ? 'c' : 'u'
         try {
           await dbo.collection(collection).insertOne(t)
-          await closeDb()
+          // await closeDb()
           return t
         } catch (e) {
           console.log(
@@ -22,21 +22,23 @@ const saveTx = async (tx) => {
               : '',
             (chalk.cyan('saved'), chalk.green(t.tx.h))
           )
-          await closeDb()
+          // await closeDb()
 
           let txid = tx && tx.tx ? tx.tx.h : undefined
           throw new Error('Failed to get dbo ' + txid + ' : ' + e)
         }
       } else {
-        await closeDb()
+        // await closeDb()
         throw new Error('Invalid tx')
       }
     } catch (e) {
-      await closeDb()
-      throw new Error('Failed to transform tx ' + JSON.stringify(tx))
+
+      // await closeDb()
+      throw new Error('Failed to transform tx ' + tx)
+
     }
   } catch (e) {
-    await closeDb()
+    // await closeDb()
     let txid = tx && tx.tx ? tx.tx.h : undefined
     throw new Error('Failed to get dbo ' + txid + ' : ' + e)
   }
@@ -57,18 +59,18 @@ const clearUnconfirmed = () => {
         ) {
           try {
             // ToDo - This can throw errors during sync
-            await dbo.collection('u').drop(function (err, delOK) {
+            await dbo.collection('u').drop(async function (err, delOK) {
               if (err) {
-                closeDb()
+                // await closeDb()
                 rej(err)
                 return
               }
               if (delOK) res()
             })
-            closeDb()
+            // await closeDb()
             res()
           } catch (e) {
-            closeDb()
+            // await closeDb()
             rej(e)
           }
         }

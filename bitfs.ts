@@ -6,6 +6,8 @@ import fetch from 'node-fetch'
 // ToDo - Using a queue so if the file download fails for some reason we can add it back to the queue?
 const q = new BetterQueue(
   function (file) {
+    // TODO if data dir doesnt exist this will error out on mac
+
     let path = 'data/' + file + '.bitfs'
 
     // See if the file exists already before fetching it

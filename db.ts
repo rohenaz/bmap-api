@@ -1,23 +1,29 @@
 import * as mongo from 'mongodb'
 
 const MongoClient = mongo.MongoClient
-let client
+let client = null
 
 const getDbo = async () => {
-  try {
-    client = await MongoClient.connect(process.env.MONGO_URL, {
-      useUnifiedTopology: true,
-      useNewUrlParser: true,
-    })
-    return client.db('bmap')
-  } catch (e) {
-    throw e
+  if (client) {
+    return client
+  } else {
+    try {
+      client = await MongoClient.connect(process.env.MONGO_URL, {
+        poolSize: 10,
+        useUnifiedTopology: true,
+        useNewUrlParser: true,
+      })
+      return client.db('bmap')
+    } catch (e) {
+      throw e
+    }
   }
 }
 
 const closeDb = async () => {
-  if (client) {
-    client.close()
+  if (client !== null) {
+    await client.close()
+    client = null
   }
 }
 
