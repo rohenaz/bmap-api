@@ -33,7 +33,7 @@ const saveTx = async (tx) => {
       }
     } catch (e) {
       await closeDb()
-      throw new Error('Failed to transform tx ' + tx)
+      throw new Error('Failed to transform tx ' + JSON.stringify(tx))
     }
   } catch (e) {
     await closeDb()
@@ -77,3 +77,4 @@ const clearUnconfirmed = () => {
 }
 
 export { saveTx, clearUnconfirmed }
+

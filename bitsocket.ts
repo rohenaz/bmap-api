@@ -1,9 +1,9 @@
-import { sock } from './queries'
 import * as BetterQueue from 'better-queue'
-import * as EventSource from 'eventsource'
 import * as chalk from 'chalk'
-import { saveTx } from './actions'
+import * as EventSource from 'eventsource'
 import * as storage from 'node-persist'
+import { saveTx } from './actions'
+import { sock } from './queries'
 
 const storageOptions = {
   dir: 'persist',
@@ -52,7 +52,7 @@ const connect = async function (leid) {
       console.log('SAVING', item.tx.h)
       await saveTx(item)
     } catch (e) {
-      console.error('Failed to save tx. Record may already exists.', e)
+      console.error('Failed to save tx from bitsocket update. Record may already exist.', e)
     }
     cb()
   }, {})
@@ -120,3 +120,4 @@ process.on('message', async (m) => {
 })
 
 export { connect, close, lastEventId }
+
