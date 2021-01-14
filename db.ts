@@ -5,7 +5,7 @@ let client = null
 
 const getDbo = async () => {
   if (client) {
-    return client
+    return client.db('bmap')
   } else {
     try {
       client = await MongoClient.connect(process.env.MONGO_URL, {
@@ -28,3 +28,4 @@ const closeDb = async () => {
 }
 
 export { closeDb, getDbo }
+

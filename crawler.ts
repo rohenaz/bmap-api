@@ -114,3 +114,4 @@ const setCurrentBlock = (num) => {
 }
 
 export { setCurrentBlock, synced, crawler }
+

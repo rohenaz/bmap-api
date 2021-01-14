@@ -1,6 +1,8 @@
-import { TransformTx } from 'bmapjs'
+import { bmap } from 'bmapjs'
 import * as chalk from 'chalk'
 import { getDbo } from './db'
+
+const { TransformTx } = bmap
 
 const saveTx = async (tx) => {
   let t
@@ -16,6 +18,7 @@ const saveTx = async (tx) => {
           // await closeDb()
           return t
         } catch (e) {
+          console.log('not inserted', e)
           console.log(
             collection === 'u'
               ? (chalk.green('saved'), chalk.magenta('unconfirmed'))

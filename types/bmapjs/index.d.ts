@@ -1,9 +1,6 @@
-// Type definitions for bsv 0.30
+// Type definitions for bmapjs 0.3.0
 // Project: https://github.com/rohenaz/bmapjs
-// Definitions by: Lautaro Dragan <https://github.com/rohenaz>
-// Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
-
-// TypeScript Version: 2.2
+// Definitions by: Luke Rohenaz <https://github.com/rohenaz>
 
 declare module 'bmapjs' {
   export type MAP = {
@@ -53,6 +50,13 @@ declare module 'bmapjs' {
     _id: string
     '15igChEkUWgx4dsEcSuPitcLNZmNDfUvgA': SigProto | any
   }
+  class BMAP {
+    transformTx(tx: Object): Promise<BmapTx>
+  }
 
-  export function TransformTx(tx: Object): Promise<BmapTx>
+  export namespace bmap {
+    function TransformTx(tx: Object): Promise<BmapTx>
+  }
+
+  export default BMAP
 }
