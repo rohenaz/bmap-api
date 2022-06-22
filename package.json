@@ -20,7 +20,7 @@
     "event-stream": "^4.0.1",
     "eventsource": "^1.0.7",
     "express": "^4.17.1",
-    "got": "^11.0.2",
+    "got": "^11.8.5",
     "mongodb": "^3.6.3",
     "node-fetch": "^2.6.1",
     "mongoose": "^5.10.6",
