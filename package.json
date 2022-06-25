@@ -22,7 +22,7 @@
     "express": "^4.17.1",
     "got": "^11.0.2",
     "mongodb": "^3.6.3",
-    "node-fetch": "^2.6.1",
+    "node-fetch": "^2.6.7",
     "mongoose": "^5.10.6",
     "node-persist": "^3.0.5",
     "prompt-async": "^0.9.9"
