@@ -1,3 +1,4 @@
+import { config } from './config.js'
 import { getDbo } from './db.js'
 
 const getCurrentBlock = () => {
@@ -22,7 +23,7 @@ const getCurrentBlock = () => {
           } else {
             console.log('No existing records. Crawling from the beginning.')
             // await closeDb()
-            resolve(0)
+            resolve(config.from)
           }
         })
     } catch (e) {
