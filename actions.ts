@@ -1,6 +1,6 @@
 import { bmap } from 'bmapjs'
-import * as chalk from 'chalk'
-import { getDbo } from './db'
+import chalk from 'chalk'
+import { getDbo } from './db.js'
 
 const { TransformTx } = bmap
 
@@ -48,7 +48,7 @@ const saveTx = async (tx) => {
 }
 
 const clearUnconfirmed = () => {
-  return new Promise(async (res, rej) => {
+  return new Promise<void>(async (res, rej) => {
     let dbo = await getDbo()
     dbo
       .listCollections({ name: 'u' })

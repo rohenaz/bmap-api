@@ -1,4 +1,4 @@
-import * as mongo from 'mongodb'
+import mongo from 'mongodb'
 
 const MongoClient = mongo.MongoClient
 let client = null

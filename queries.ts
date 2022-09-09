@@ -1,4 +1,4 @@
-import { config } from './config'
+import { config } from './config.js'
 
 // OP_RETURN Protocol prefixes
 const prefixes = {
@@ -63,3 +63,4 @@ const defaultQuery = {
 }
 
 export { query, prefixes, defaultQuery, sock }
+

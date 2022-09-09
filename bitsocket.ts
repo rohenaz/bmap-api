@@ -1,9 +1,9 @@
-import * as BetterQueue from 'better-queue'
-import * as chalk from 'chalk'
-import * as EventSource from 'eventsource'
-import * as storage from 'node-persist'
-import { saveTx } from './actions'
-import { sock } from './queries'
+import BetterQueue from 'better-queue'
+import chalk from 'chalk'
+import EventSource from 'eventsource'
+import storage from 'node-persist'
+import { saveTx } from './actions.js'
+import { sock } from './queries.js'
 
 const storageOptions = {
   dir: 'persist',
@@ -108,7 +108,7 @@ const connect = async function (leid) {
   }, 900000)
 }
 
-process.on('message', async (m) => {
+process.on('message', async (m: any) => {
   if (m.connect) {
     try {
       await storage.init(storageOptions)

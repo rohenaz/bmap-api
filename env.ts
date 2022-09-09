@@ -1,8 +1,8 @@
-import * as chalk from 'chalk'
-import * as prompt from 'prompt-async'
+import chalk from 'chalk'
+import prompt from 'prompt-async'
 
 const ensureEnvVars = () => {
-  return new Promise(async (resolve, reject) => {
+  return new Promise<void>(async (resolve, reject) => {
     if (!process.env.PLANARIA_TOKEN) {
       prompt.start()
       try {
@@ -38,3 +38,4 @@ const ensureEnvVars = () => {
 }
 
 export { ensureEnvVars }
+

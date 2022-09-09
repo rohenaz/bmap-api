@@ -1,4 +1,4 @@
-import { getDbo } from './db'
+import { getDbo } from './db.js'
 
 const getCurrentBlock = () => {
   return new Promise(async (resolve, reject) => {
@@ -33,3 +33,4 @@ const getCurrentBlock = () => {
 }
 
 export { getCurrentBlock }
+

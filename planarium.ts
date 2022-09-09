@@ -1,11 +1,11 @@
-import * as express from 'express'
+import chalk from 'chalk'
+import cors from 'cors'
+import express from 'express'
+import mongo from 'mongodb'
+import { defaultQuery } from './queries.js'
 const app = express()
-import * as mongo from 'mongodb'
-import { defaultQuery } from './queries'
-import * as chalk from 'chalk'
-import * as cors from 'cors'
 
-process.on('message', async (m, socket) => {
+process.on('message', async (m, socket: any) => {
   console.log('message received!', m, socket)
   if (m === 'socket') {
     console.log('m is socket')

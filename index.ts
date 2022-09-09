@@ -1,11 +1,11 @@
-import * as chalk from 'chalk'
+import chalk from 'chalk'
 import { fork } from 'child_process'
-import * as net from 'net'
-import * as redline from 'readline'
-import { crawler, setCurrentBlock } from './crawler'
-import { closeDb } from './db'
-import { ensureEnvVars } from './env'
-import { getCurrentBlock } from './state'
+import net from 'net'
+import redline from 'readline'
+import { crawler, setCurrentBlock } from './crawler.js'
+import { closeDb } from './db.js'
+import { ensureEnvVars } from './env.js'
+import { getCurrentBlock } from './state.js'
 
 /* Bitsocket runs in a child process */
 
