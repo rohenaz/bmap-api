@@ -1,4 +1,4 @@
-import { JungleBusClient } from '@gorillapool/js-junglebus'
+import { JungleBusClient, Transaction } from '@gorillapool/js-junglebus'
 import BPU from 'bpu'
 import chalk from 'chalk'
 import { saveTx } from './actions.js'
@@ -52,46 +52,17 @@ const crawl = (query, height) => {
         console.error(ctx);
       }
     });
-    try {
-      const err = await jungleBusClient.Login(process.env.JUNGLEBUS_USERNAME, process.env.JUNGLEBUS_PASS);
-      if (!err) {
-        console.log('logged in')
-      } else {
-        console.log('err', err)
-      }
-    } catch (e) {
-      console.error('Failed to log in', e)
-    }
-    
-    jungleBusClient.Connect();
     // create subscriptions in the dashboard of the JungleBus website
     const subId = "3f600280c71978452b73bc7d339a726658e4b4dd5e06a50bd81f6d6ddd85abe9";
-
-    const subscription = jungleBusClient.Subscribe(
+    const subscription = await jungleBusClient.Subscribe(
       subId,
-      currentBlock || height, 
+      currentBlock || height,
       async function onPublish(ctx) {
-        // transaction found
-        // console.log({ctx});
-
-        try {
-          let result = await bobFromRawTx(ctx.transaction)
-          if (!result.blk) {
-            result.blk = {}
-          }
-          result.blk.i = ctx.block_height
-          result.blk.t = ctx.block_time
-          result.blk.m = ctx.merkle_proof
-          result.blk.h = ctx.block_hash
-
-          return await saveTx(result)
-        } catch (e) {
-          console.error('Failed to save tx', e)
-          return null
-        }
+        //console.log('TRANSACTION', ctx.id)
+        return await processTransaction(ctx);
       },
       function onBlockDone(cMsg) {
-       
+
         // add your own code here
         setCurrentBlock(cMsg.block)
         console.log(
@@ -101,10 +72,44 @@ const crawl = (query, height) => {
         )
         // planarium.send('socket', { type: 'block', block: currentBlock })
         // console.log({cMsg});
+      },
+      function onError(cErr) {
+        console.error(cErr)
+      },
+      async function onMempool(ctx) {
+        //console.log('MEMPOOL TRANSACTION', ctx.id)
+        return await processTransaction(ctx);
+      },
+      function onReorg(fromBlock) {
+        console.error("REORG from block", fromBlock)
       });
-      
+
     subscription.Subscribe();
   })
+}
+
+async function processTransaction(ctx: Transaction) {
+  // transaction found
+  // console.log({ctx});
+
+  try {
+    let result = await bobFromRawTx(ctx.transaction);
+    if (!result.blk) {
+      result.blk = {};
+    }
+
+    if (ctx.block_hash) {
+      result.blk.i = ctx.block_height;
+      result.blk.t = ctx.block_time;
+      result.blk.m = ctx.merkle_proof;
+      result.blk.h = ctx.block_hash;
+    }
+
+    return await saveTx(result);
+  } catch (e) {
+    console.error('Failed to save tx', e);
+    return null;
+  }
 }
 
 const crawler = (syncedCallback) => {

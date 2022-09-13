@@ -14,10 +14,10 @@
   resolved "https://registry.yarnpkg.com/@colors/colors/-/colors-1.5.0.tgz#bb504579c1cae923e6576a4f5da43d25f97bdbd9"
   integrity sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==
 
-"@gorillapool/js-junglebus@^0.1.7":
-  version "0.1.7"
-  resolved "https://registry.yarnpkg.com/@gorillapool/js-junglebus/-/js-junglebus-0.1.7.tgz#0b59335123490a9cbdcd708780bc102720b83ae9"
-  integrity sha512-RiyVEU06RBKEn4QsL0m4LfBur7FHkAgFalrELQw5fT0PV4nlDQ5dOe1EeCm/Xo0u5F5CSMwup4NnPUGk5aooMQ==
+"@gorillapool/js-junglebus@^0.1.8":
+  version "0.1.8"
+  resolved "https://registry.yarnpkg.com/@gorillapool/js-junglebus/-/js-junglebus-0.1.8.tgz#c788f436c914003e73c99b7eb8ea2d9c69f907a0"
+  integrity sha512-TOnQ4WFCnt6rEOhay0N7SPTSok+YeWll+9OIUioopOIqNfpgzZSuhDFarEifNp1CXdS8GNMo5U4THKxgkSxmhw==
   dependencies:
     buffer "^6.0.3"
     centrifuge "^3.0.1"
