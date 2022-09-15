@@ -3,8 +3,10 @@ import cors from 'cors'
 import express from 'express'
 import mongo from 'mongodb'
 import { dirname } from 'path'
+import { fileURLToPath } from 'url'
 import { defaultQuery } from './queries.js'
 
+const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express()
