@@ -1,9 +1,9 @@
-import { JungleBusClient, Transaction, ControlMessageStatusCode } from '@gorillapool/js-junglebus'
-import BPU from 'bpu'
-import chalk from 'chalk'
-import { saveTx } from './actions.js'
+import { ControlMessageStatusCode, JungleBusClient, Transaction } from '@gorillapool/js-junglebus';
+import BPU from 'bpu';
+import chalk from 'chalk';
+import { saveTx } from './actions.js';
 import { getDbo } from './db.js';
-import { query } from './queries.js'
+import { query } from './queries.js';
 
 let currentBlock = 0
 let synced = false
@@ -55,7 +55,7 @@ const crawl = (query, height) => {
     });
     // create subscriptions in the dashboard of the JungleBus website
     const subId = "3f600280c71978452b73bc7d339a726658e4b4dd5e06a50bd81f6d6ddd85abe9";
-    const subscription = await jungleBusClient.Subscribe(
+    await jungleBusClient.Subscribe(
       subId,
       currentBlock || height,
       async function onPublish(ctx) {
@@ -67,14 +67,14 @@ const crawl = (query, height) => {
         })
       },
       function onStatus(cMsg) {
-        console.log(cMsg);
         if (cMsg.statusCode === ControlMessageStatusCode.BLOCK_DONE) {
           // add your own code here
           setCurrentBlock(cMsg.block)
           console.log(
             chalk.blue('####  '),
             chalk.magenta('NEW BLOCK '),
-            chalk.green(currentBlock)
+            chalk.green(currentBlock),
+            cMsg.transactions > 0 ? chalk.bgCyan(cMsg.transactions) : chalk.bgGray('No transactions this block')
           )
         } else if (cMsg.statusCode === ControlMessageStatusCode.WAITING) {
           console.log(
@@ -86,6 +86,8 @@ const crawl = (query, height) => {
             chalk.blue('####  '),
             chalk.red('REORG TRIGGERED ', cMsg.block)
           )
+        } else {
+          chalk.red(cMsg)
         }
       },
       function onError(cErr) {
@@ -138,5 +140,5 @@ const setCurrentBlock = (num) => {
   currentBlock = num
 }
 
-export { setCurrentBlock, synced, crawler }
+export { setCurrentBlock, synced, crawler };
 
