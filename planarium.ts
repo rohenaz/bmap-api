@@ -2,7 +2,11 @@ import chalk from 'chalk'
 import cors from 'cors'
 import express from 'express'
 import mongo from 'mongodb'
+import { dirname } from 'path'
 import { defaultQuery } from './queries.js'
+
+const __dirname = dirname(__filename);
+
 const app = express()
 
 process.on('message', async (m, socket: any) => {
