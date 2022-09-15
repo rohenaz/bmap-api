@@ -18,17 +18,17 @@ const saveTx = async (tx) => {
   try {
     t = await TransformTx(tx)
   } catch (e) {
-    // await closeDb()
     throw new Error('Failed to transform tx ' + tx)
   }
 
   if (t) {
     let collection = t.blk ? 'c' : 'u'
-    let txid = tx && tx.tx ? tx.tx.h : undefined
-    t._id = txid
+    let txId = tx && tx.tx ? tx.tx.h : undefined
+    t._id = txId
     try {
-      await dbo.collection(collection).insertOne(t)
-      // await closeDb()
+      await dbo.collection(collection).updateOne({_id: t._id}, {$set: t}, {
+        upsert: true,
+      })
       return t
     } catch (e) {
       console.log('not inserted', e)
@@ -38,12 +38,10 @@ const saveTx = async (tx) => {
           : '',
         (chalk.cyan('saved'), chalk.green(t.tx.h))
       )
-      // await closeDb()
 
-      throw new Error('Failed to insert tx ' + txid + ' : ' + e)
+      throw new Error('Failed to insert tx ' + txId + ' : ' + e)
     }
   } else {
-    // await closeDb()
     throw new Error('Invalid tx')
   }
 }

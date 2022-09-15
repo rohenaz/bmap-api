@@ -17,9 +17,9 @@ process.on('message', async (m, socket: any) => {
 })
 
 const start = async function () {
-  console.log(chalk.magenta('PLANARIUM'), chalk.cyan('initializing machine...'))
+  console.log(chalk.magenta('BMAP API'), chalk.cyan('initializing machine...'))
 
-  app.set('port', process.env.PORT || 3000)
+  app.set('port', process.env.PORT || 3055)
   app.set('host', process.env.HOST || 'localhost')
   app.set('view engine', 'ejs')
   app.set('views', __dirname + '/../views')
@@ -27,7 +27,7 @@ const start = async function () {
   app.use(express.static(__dirname + '/../public'))
   app.get(/^\/q\/(.+)$/, function (req, res) {
     let b64 = req.params[0]
-    console.log(chalk.magenta('PLANARIUM'), chalk.cyan('query', b64))
+    console.log(chalk.magenta('BMAP API'), chalk.cyan('query', b64))
 
     mongo.MongoClient.connect(
       process.env.MONGO_URL,

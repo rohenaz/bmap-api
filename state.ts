@@ -7,7 +7,7 @@ const getCurrentBlock = () => {
       let dbo = await getDbo()
       dbo
         .collection('c')
-        .find()
+        .find({ 'blk.i': { $gt: 0 } })
         .sort({ 'blk.i': -1 })
         .limit(1)
         .toArray(async function (err, result) {

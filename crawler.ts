@@ -1,8 +1,8 @@
-import { JungleBusClient, Transaction } from '@gorillapool/js-junglebus'
+import { JungleBusClient, Transaction, ControlMessageStatusCode } from '@gorillapool/js-junglebus'
 import BPU from 'bpu'
 import chalk from 'chalk'
 import { saveTx } from './actions.js'
-import { closeDb } from './db.js'
+import { getDbo } from './db.js';
 import { query } from './queries.js'
 
 let currentBlock = 0
@@ -50,6 +50,7 @@ const crawl = (query, height) => {
       onError(ctx) {
         // add your own code here
         console.error(ctx);
+        reject(ctx)
       }
     });
     // create subscriptions in the dashboard of the JungleBus website
@@ -59,32 +60,42 @@ const crawl = (query, height) => {
       currentBlock || height,
       async function onPublish(ctx) {
         //console.log('TRANSACTION', ctx.id)
-        return await processTransaction(ctx);
+        return new Promise((resolve, reject) => {
+          setTimeout(async() => {
+            resolve(await processTransaction(ctx));
+          }, 1000);
+        })
       },
-      function onBlockDone(cMsg) {
-
-        // add your own code here
-        setCurrentBlock(cMsg.block)
-        console.log(
-          chalk.blue('####  '),
-          chalk.magenta('NEW BLOCK '),
-          chalk.green(currentBlock)
-        )
-        // planarium.send('socket', { type: 'block', block: currentBlock })
-        // console.log({cMsg});
+      function onStatus(cMsg) {
+        console.log(cMsg);
+        if (cMsg.statusCode === ControlMessageStatusCode.BLOCK_DONE) {
+          // add your own code here
+          setCurrentBlock(cMsg.block)
+          console.log(
+            chalk.blue('####  '),
+            chalk.magenta('NEW BLOCK '),
+            chalk.green(currentBlock)
+          )
+        } else if (cMsg.statusCode === ControlMessageStatusCode.WAITING) {
+          console.log(
+            chalk.blue('####  '),
+            chalk.yellow('WAITING ON NEW BLOCK ')
+          )
+        } else if (cMsg.statusCode === ControlMessageStatusCode.REORG) {
+          console.log(
+            chalk.blue('####  '),
+            chalk.red('REORG TRIGGERED ', cMsg.block)
+          )
+        }
       },
       function onError(cErr) {
         console.error(cErr)
+        reject(cErr)
       },
       async function onMempool(ctx) {
-        //console.log('MEMPOOL TRANSACTION', ctx.id)
+        console.log('MEMPOOL TRANSACTION', ctx.id)
         return await processTransaction(ctx);
-      },
-      function onReorg(fromBlock) {
-        console.error("REORG from block", fromBlock)
       });
-
-    subscription.Subscribe();
   })
 }
 
@@ -94,16 +105,12 @@ async function processTransaction(ctx: Transaction) {
 
   try {
     let result = await bobFromRawTx(ctx.transaction);
-    if (!result.blk) {
-      result.blk = {};
-    }
-
-    if (ctx.block_hash) {
-      result.blk.i = ctx.block_height;
-      result.blk.t = ctx.block_time;
-      result.blk.m = ctx.merkle_proof;
-      result.blk.h = ctx.block_hash;
-    }
+    result.blk = {
+      i: ctx.block_height || 0,
+      t: ctx.block_time,
+      m: ctx.merkle_proof || "",
+      h: ctx.block_hash || "",
+    };
 
     return await saveTx(result);
   } catch (e) {
@@ -112,19 +119,19 @@ async function processTransaction(ctx: Transaction) {
   }
 }
 
-const crawler = (syncedCallback) => {
-  crawl(query, currentBlock).then(() => {
-    if (!synced) {
-      console.log(chalk.green('JUNGLEBUS SYNC COMPLETE'))
-      synced = true
-      closeDb()
-      syncedCallback()
-    }
+const crawler = async () => {
+  await getDbo(); // warm up db connection
 
-    setTimeout(() => {
-      crawler(syncedCallback)
-    }, 10000)
-  })
+  await crawl(query, currentBlock).catch(e => {
+    // do something with error
+    console.log('ERROR', e)
+  });
+
+  /*
+  setTimeout(() => {
+    crawler()
+  }, 10000)
+  */
 }
 
 const setCurrentBlock = (num) => {

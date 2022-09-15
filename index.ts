@@ -3,13 +3,14 @@ import { fork } from 'child_process'
 import net from 'net'
 import redline from 'readline'
 import { crawler, setCurrentBlock } from './crawler.js'
-import { closeDb } from './db.js'
+import { closeDb, getDbo } from './db.js';
 import { ensureEnvVars } from './env.js'
 import { getCurrentBlock } from './state.js'
+import { config } from "./config";
 
 /* Bitsocket runs in a child process */
 
-const bitsocket = fork('./build/bitsocket')
+// const bitsocket = fork('./build/bitsocket')
 
 /* Planarium (API Server Process) */
 const planarium = fork('./build/planarium')
@@ -24,15 +25,14 @@ server.listen(1336)
 
 const start = async () => {
   await ensureEnvVars()
+  await getDbo(); // warm up db connection
 
   try {
     // Should really start with latest blk from ANY collection, not only video like this
     let currentBlock = await getCurrentBlock()
     setCurrentBlock(currentBlock)
     console.log(chalk.cyan('crawling from', currentBlock))
-    crawler(() => {
-      bitsocket.send({ connect: true })
-    })
+    await crawler()
   } catch (e) {
     console.error(e)
   }
@@ -54,7 +54,7 @@ if (process.platform === 'win32') {
 process.on('SIGINT', async function () {
   // graceful shutdown
   console.log('close from shutdown')
-  closeDb()
+  await closeDb()
   server.close()
   process.exit()
 })

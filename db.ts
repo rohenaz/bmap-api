@@ -2,10 +2,11 @@ import mongo from 'mongodb'
 
 const MongoClient = mongo.MongoClient
 let client = null
+let db = null
 
 const getDbo = async () => {
-  if (client) {
-    return client.db('bmap')
+  if (db) {
+    return db
   } else {
     try {
       client = await MongoClient.connect(process.env.MONGO_URL, {
@@ -13,7 +14,8 @@ const getDbo = async () => {
         useUnifiedTopology: true,
         useNewUrlParser: true,
       })
-      return client.db('bmap')
+      db = client.db('bmap')
+      return db
     } catch (e) {
       throw e
     }
