@@ -59,15 +59,7 @@ const start = async function () {
                 res.status(500).send(err)
                 return
               }
-              dbo
-                .collection('u')
-                .aggregate(req.q.aggregate)
-                .sort(req.q.sort || { _id: -1 })
-                .limit(req.q.limit ? req.q.limit : 10)
-                .toArray(function (err, u) {
-                  db.close()
-                  res.send({ c: c, u: u })
-                })
+              res.send({ c })
             })
           return
         }
@@ -83,16 +75,7 @@ const start = async function () {
               res.status(500).send(err)
               return
             }
-            dbo
-              .collection('u')
-              .find(req.q.find)
-              .sort(req.q.sort || { _id: -1 })
-              .limit(req.q.hasOwnProperty('limit') ? req.q.limit : 10)
-              .project(req.q.project || { in: 0, out: 0 })
-              .toArray(function (err, u) {
-                db.close()
-                res.send({ c: c, u: u })
-              })
+            res.send({ c })
           })
       }
     )
