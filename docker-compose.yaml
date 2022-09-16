@@ -2,7 +2,6 @@ version: "2.1"
 services:
   web:
     environment:
-      - PLANARIA_TOKEN=${PLANARIA_TOKEN}
       - MONGO_URL=mongodb://localhost:27017/bmap
     build: .
     ports:
