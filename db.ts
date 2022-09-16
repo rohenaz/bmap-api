@@ -31,3 +31,19 @@ const closeDb = async () => {
 
 export { closeDb, getDbo }
 
+// db.c.createIndex({
+//   "MAP.app": 1,
+//   "MAP.type": 1,
+// })
+
+// db.c.createIndex({
+//   "MAP.app": 1,
+//   "MAP.type": 1,
+//   "blk.t": -1,
+// })
+
+// db.c.createIndex({
+//   "MAP.app": 1,
+//   "MAP.type": 1,
+//   "blk.i": -1,
+// })

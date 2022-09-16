@@ -4,6 +4,7 @@ import express from 'express'
 import mongo from 'mongodb'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { getDbo } from './db.js'
 import { defaultQuery } from './queries.js'
 
 const __filename = fileURLToPath(import.meta.url);
@@ -23,6 +24,7 @@ process.on('message', async (m, socket: any) => {
 })
 
 const start = async function () {
+
   console.log(chalk.magenta('BMAP API'), chalk.cyan('initializing machine...'))
 
   app.set('port', process.env.PORT || 3055)
@@ -30,6 +32,23 @@ const start = async function () {
   app.set('view engine', 'ejs')
   app.set('views', __dirname + '/../views')
   app.use(cors())
+
+  // app.use(function (req, res, next) {
+  //   res.sseSetup = function() {
+  //     res.writeHead(200, {
+  //       "Content-Type": "text/event-stream",
+  //       "Cache-Control": "no-cache",
+  //       "X-Accel-Buffering": "no",
+  //       "Connection": "keep-alive",
+  //     })
+  //     res.sseSend({ type: "open", data: [] })
+  //   }
+  //   res.sseSend = function(data) {
+  //     res.write("data: " + JSON.stringify(data) + "\n\n")
+  //   }
+  //   next()
+  // })
+  
   app.use(express.static(__dirname + '/../public'))
   app.get(/^\/q\/(.+)$/, function (req, res) {
     let b64 = req.params[0]
@@ -112,6 +131,44 @@ const start = async function () {
 
   app.get('/', function (req, res) {
     res.sendFile(__dirname + '/../public/index.html')
+  })
+
+  app.get("/s/:b64(*)", async function(req, res) {
+    // const 
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "X-Accel-Buffering": "no",
+      "Connection": "keep-alive",
+    })
+    res.write("data: " + JSON.stringify({ type: "open", data: [] }) + "\n\n")
+
+    const db = await getDbo()
+
+    let json = Buffer.from(req.params.b64, "base64").toString()
+    console.log("json = ", json)
+    let query = JSON.parse(json)
+
+    const pipeline = [
+      {
+          '$match': {
+              'operationType': 'insert',
+          },
+      }
+    ];
+  
+    Object.keys(query).forEach((k) => pipeline[0]['$match'][`fullDocument.${k}`] = query[k])
+    // [{ fullDocument: query }]
+
+    const changeStream = db.collection('c').watch(pipeline);
+
+    changeStream.on('change', (next) => {
+      
+      res.write("data: " + JSON.stringify({ type: "push", data: [next.fullDocument] }) + "\n\n")
+
+      console.log(next);
+    });
+
   })
 
   if (app.get('port')) {

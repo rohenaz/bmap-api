@@ -3,23 +3,22 @@ import { fork } from 'child_process'
 import net from 'net'
 import redline from 'readline'
 import { crawler, setCurrentBlock } from './crawler.js'
-import { closeDb, getDbo } from './db.js';
+import { closeDb, getDbo } from './db.js'
 import { ensureEnvVars } from './env.js'
 import { getCurrentBlock } from './state.js'
-import { config } from "./config";
 
 /* Bitsocket runs in a child process */
 
 // const bitsocket = fork('./build/bitsocket')
 
 /* Planarium (API Server Process) */
-const planarium = fork('./build/planarium')
+const api = fork('./build/api')
 
 // Open up the server and send RPC socket to child. Use pauseOnConnect to prevent
 // the sockets from being read before they are sent to the child process.
 const server = net.createServer({ pauseOnConnect: true })
 server.on('connection', (socket) => {
-  planarium.send('socket', socket)
+  api.send('socket', socket)
 })
 server.listen(1336)
 

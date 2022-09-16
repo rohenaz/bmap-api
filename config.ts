@@ -1,6 +1,7 @@
 const config = {
-  from: 630000,
+  from: 730000,
   token: process.env.PLANARIA_TOKEN,
 }
 
 export { config }
+

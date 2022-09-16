@@ -104,16 +104,21 @@ const crawl = (query, height) => {
 async function processTransaction(ctx: Transaction) {
   // transaction found
   // console.log({ctx});
-
+  let result: any
   try {
-    let result = await bobFromRawTx(ctx.transaction);
+    result = await bobFromRawTx(ctx.transaction);
     result.blk = {
       i: ctx.block_height || 0,
       t: ctx.block_time,
       m: ctx.merkle_proof || "",
       h: ctx.block_hash || "",
     };
+  } catch (e) {
+    console.error('Failed to bob tx', e);
+    return null;
+  }
 
+  try {
     return await saveTx(result);
   } catch (e) {
     console.error('Failed to save tx', e);
