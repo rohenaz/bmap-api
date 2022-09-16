@@ -31,23 +31,7 @@ const start = async function () {
   app.set('view engine', 'ejs')
   app.set('views', __dirname + '/../views')
   app.use(cors())
-
-  // app.use(function (req, res, next) {
-  //   res.sseSetup = function() {
-  //     res.writeHead(200, {
-  //       "Content-Type": "text/event-stream",
-  //       "Cache-Control": "no-cache",
-  //       "X-Accel-Buffering": "no",
-  //       "Connection": "keep-alive",
-  //     })
-  //     res.sseSend({ type: "open", data: [] })
-  //   }
-  //   res.sseSend = function(data) {
-  //     res.write("data: " + JSON.stringify(data) + "\n\n")
-  //   }
-  //   next()
-  // })
-  
+   
   app.use(express.static(__dirname + '/../public'))
   app.get(/^\/q\/(.+)$/, function (req, res) {
     let b64 = req.params[0]
@@ -109,7 +93,7 @@ const start = async function () {
       "Connection": "keep-alive",
     })
     res.write("data: " + JSON.stringify({ type: "open", data: [] }) + "\n\n")
-  
+    res.end()
     // const db = await getDbo()
 
     // let json = Buffer.from(req.params.b64, "base64").toString()
@@ -177,14 +161,14 @@ const start = async function () {
   if (app.get('port')) {
     app.listen(app.get('port'), app.get('host'), () => {
       console.log(
-        chalk.magenta('PLANARIUM'),
+        chalk.magenta('BMAP API'),
         chalk.green(`listening on ${app.get('host')}:${app.get('port')}!`)
       )
     })
   } else {
     app.listen(app.get('port'), () => {
       console.log(
-        chalk.magenta('PLANARIUM'),
+        chalk.magenta('BMAP API'),
         chalk.green(`listening on port ${app.get('port')}!`)
       )
     })
