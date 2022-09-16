@@ -33,53 +33,52 @@ const start = async function () {
   app.use(cors())
    
   app.use(express.static(__dirname + '/../public'))
-
   
-  app.get(/^\/s\/(.+)$/, function(req, res) {
-    let b64 = req.params[0]
-    // const 
-    // res.writeHead(200, {
-    //   "Content-Type": "text/event-stream",
-    //   "Cache-Control": "no-cache",
-    //   "X-Accel-Buffering": "no",
-    //   "Connection": "keep-alive",
-    // })
-    // res.write("data: " + JSON.stringify({ type: "open", data: [] }) + "\n\n")
-    // res.end()
-    let json = Buffer.from(b64, "base64").toString()
-    res.status(200).send(json)
-    // const db = await getDbo()
+  // app.get(/^\/s\/(.+)$/, function(req, res) {
+  //   let b64 = req.params[0]
+  //   // const 
+  //   // res.writeHead(200, {
+  //   //   "Content-Type": "text/event-stream",
+  //   //   "Cache-Control": "no-cache",
+  //   //   "X-Accel-Buffering": "no",
+  //   //   "Connection": "keep-alive",
+  //   // })
+  //   // res.write("data: " + JSON.stringify({ type: "open", data: [] }) + "\n\n")
+  //   // res.end()
+  //   let json = Buffer.from(b64, "base64").toString()
+  //   res.status(200).send(json)
+  //   // const db = await getDbo()
 
-    // let json = Buffer.from(req.params.b64, "base64").toString()
-    // console.log("json = ", json)
-    // let query = JSON.parse(json)
+  //   // let json = Buffer.from(req.params.b64, "base64").toString()
+  //   // console.log("json = ", json)
+  //   // let query = JSON.parse(json)
 
-    // const pipeline = [
-    //   {
-    //       '$match': {
-    //           'operationType': 'insert',
-    //       },
-    //   }
-    // ];
+  //   // const pipeline = [
+  //   //   {
+  //   //       '$match': {
+  //   //           'operationType': 'insert',
+  //   //       },
+  //   //   }
+  //   // ];
   
-    // Object.keys(query).forEach((k) => pipeline[0]['$match'][`fullDocument.${k}`] = query[k])
-    // // [{ fullDocument: query }]
+  //   // Object.keys(query).forEach((k) => pipeline[0]['$match'][`fullDocument.${k}`] = query[k])
+  //   // // [{ fullDocument: query }]
 
-    // const changeStream = db.collection('c').watch(pipeline);
+  //   // const changeStream = db.collection('c').watch(pipeline);
 
-    // changeStream.on('change', (next) => {
+  //   // changeStream.on('change', (next) => {
       
-    //   res.write("data: " + JSON.stringify({ type: "push", data: [next.fullDocument] }) + "\n\n")
+  //   //   res.write("data: " + JSON.stringify({ type: "push", data: [next.fullDocument] }) + "\n\n")
 
-    //   console.log(next);
-    // });
+  //   //   console.log(next);
+  //   // });
 
-    // req.on('close', () => {
-    //   changeStream.close()
-    // })
-  })
+  //   // req.on('close', () => {
+  //   //   changeStream.close()
+  //   // })
+  // })
   
-  app.get(/^\/q\/(.+)$/, function (req, res) {
+  app.get(/^\/s\/(.+)$/, function (req, res) {
     let b64 = req.params[0]
     console.log(chalk.magenta('BMAP API'), chalk.cyan('query', b64))
 
