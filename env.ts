@@ -1,20 +1,8 @@
-import * as chalk from 'chalk'
-import * as prompt from 'prompt-async'
+import chalk from 'chalk'
+import prompt from 'prompt-async'
 
 const ensureEnvVars = () => {
-  return new Promise(async (resolve, reject) => {
-    if (!process.env.PLANARIA_TOKEN) {
-      prompt.start()
-      try {
-        console.log(chalk.red('Enter Planaria Token:'))
-        const { PLANARIA_TOKEN } = await prompt.get(['PLANARIA_TOKEN'])
-        process.env.PLANARIA_TOKEN = PLANARIA_TOKEN
-      } catch (e) {
-        reject('failed to get token')
-        return
-      }
-    }
-
+  return new Promise<void>(async (resolve, reject) => {
     if (!process.env.MONGO_URL) {
       prompt.start()
       try {
@@ -38,3 +26,4 @@ const ensureEnvVars = () => {
 }
 
 export { ensureEnvVars }
+

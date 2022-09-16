@@ -1,4 +1,5 @@
-import { getDbo } from './db'
+import { config } from './config.js'
+import { getDbo } from './db.js'
 
 const getCurrentBlock = () => {
   return new Promise(async (resolve, reject) => {
@@ -6,7 +7,7 @@ const getCurrentBlock = () => {
       let dbo = await getDbo()
       dbo
         .collection('c')
-        .find()
+        .find({ 'blk.i': { $gt: 0 } })
         .sort({ 'blk.i': -1 })
         .limit(1)
         .toArray(async function (err, result) {
@@ -22,7 +23,7 @@ const getCurrentBlock = () => {
           } else {
             console.log('No existing records. Crawling from the beginning.')
             // await closeDb()
-            resolve(0)
+            resolve(config.from)
           }
         })
     } catch (e) {
@@ -33,3 +34,4 @@ const getCurrentBlock = () => {
 }
 
 export { getCurrentBlock }
+

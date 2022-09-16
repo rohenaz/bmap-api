@@ -1,6 +1,6 @@
-import * as BetterQueue from 'better-queue'
-import * as chalk from 'chalk'
-import * as fs from 'fs'
+import BetterQueue from 'better-queue'
+import chalk from 'chalk'
+import fs from 'fs'
 import fetch from 'node-fetch'
 
 // ToDo - Using a queue so if the file download fails for some reason we can add it back to the queue?
@@ -37,3 +37,4 @@ const saveFiles = (bitfs) => {
 }
 
 export { saveFiles }
+

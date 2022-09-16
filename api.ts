@@ -1,11 +1,19 @@
-import * as express from 'express'
-const app = express()
-import * as mongo from 'mongodb'
-import { defaultQuery } from './queries'
-import * as chalk from 'chalk'
-import * as cors from 'cors'
+import chalk from 'chalk'
+import cors from 'cors'
+import express from 'express'
+import asyncHandler from 'express-async-handler'
+import mongo from 'mongodb'
+import { dirname } from 'path'
+import { fileURLToPath } from 'url'
+import { getDbo } from './db.js'
+import { defaultQuery } from './queries.js'
 
-process.on('message', async (m, socket) => {
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const app = express()
+
+process.on('message', async (m, socket: any) => {
   console.log('message received!', m, socket)
   if (m === 'socket') {
     console.log('m is socket')
@@ -17,17 +25,63 @@ process.on('message', async (m, socket) => {
 })
 
 const start = async function () {
-  console.log(chalk.magenta('PLANARIUM'), chalk.cyan('initializing machine...'))
 
-  app.set('port', process.env.PORT || 3000)
+  console.log(chalk.magenta('BMAP API'), chalk.cyan('initializing machine...'))
+
+  app.set('port', process.env.PORT || 3055)
   app.set('host', process.env.HOST || 'localhost')
   app.set('view engine', 'ejs')
   app.set('views', __dirname + '/../views')
   app.use(cors())
+   
   app.use(express.static(__dirname + '/../public'))
+  
+  app.get(/^\/s\/(.+)$/, asyncHandler(async function(req, res) {
+    let b64 = req.params[0]
+    
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "X-Accel-Buffering": "no",
+      "Connection": "keep-alive",
+    })
+    res.write("data: " + JSON.stringify({ type: "open", data: [] }) + "\n\n")
+
+    let json = Buffer.from(b64, "base64").toString()
+
+    const db = await getDbo()
+
+    console.log("json = ", json)
+    let query = JSON.parse(json)
+
+    const pipeline = [
+      {
+          '$match': {
+              'operationType': 'insert',
+          },
+      }
+    ];
+  
+    Object.keys(query.q.find || {}).forEach((k) => pipeline[0]['$match'][`fullDocument.${k}`] = query.q.find[k])
+    // [{ fullDocument: query }]
+
+    const changeStream = db.collection('c').watch(pipeline);
+
+    changeStream.on('change', (next) => {
+      
+      res.write("data: " + JSON.stringify({ type: "push", data: [next.fullDocument] }) + "\n\n")
+
+      console.log(next);
+    });
+
+    req.on('close', () => {
+      changeStream.close()
+    })
+  }))
+  
   app.get(/^\/q\/(.+)$/, function (req, res) {
     let b64 = req.params[0]
-    console.log(chalk.magenta('PLANARIUM'), chalk.cyan('query', b64))
+    console.log(chalk.magenta('BMAP API'), chalk.cyan('query', b64))
 
     mongo.MongoClient.connect(
       process.env.MONGO_URL,
@@ -53,15 +107,7 @@ const start = async function () {
                 res.status(500).send(err)
                 return
               }
-              dbo
-                .collection('u')
-                .aggregate(req.q.aggregate)
-                .sort(req.q.sort || { _id: -1 })
-                .limit(req.q.limit ? req.q.limit : 10)
-                .toArray(function (err, u) {
-                  db.close()
-                  res.send({ c: c, u: u })
-                })
+              res.send({ c })
             })
           return
         }
@@ -77,20 +123,12 @@ const start = async function () {
               res.status(500).send(err)
               return
             }
-            dbo
-              .collection('u')
-              .find(req.q.find)
-              .sort(req.q.sort || { _id: -1 })
-              .limit(req.q.hasOwnProperty('limit') ? req.q.limit : 10)
-              .project(req.q.project || { in: 0, out: 0 })
-              .toArray(function (err, u) {
-                db.close()
-                res.send({ c: c, u: u })
-              })
+            res.send({ c })
           })
       }
     )
   })
+  
 
   app.get('/ping', async (req, res) => {
     if (req.get('Referrer')) {
@@ -128,14 +166,14 @@ const start = async function () {
   if (app.get('port')) {
     app.listen(app.get('port'), app.get('host'), () => {
       console.log(
-        chalk.magenta('PLANARIUM'),
+        chalk.magenta('BMAP API'),
         chalk.green(`listening on ${app.get('host')}:${app.get('port')}!`)
       )
     })
   } else {
     app.listen(app.get('port'), () => {
       console.log(
-        chalk.magenta('PLANARIUM'),
+        chalk.magenta('BMAP API'),
         chalk.green(`listening on port ${app.get('port')}!`)
       )
     })

@@ -1,54 +1,53 @@
 import { bmap } from 'bmapjs'
-import * as chalk from 'chalk'
-import { getDbo } from './db'
+import chalk from 'chalk'
+import { getDbo } from './db.js'
 
 const { TransformTx } = bmap
 
 const saveTx = async (tx) => {
   let t
+  let dbo
   // Transform
   try {
-    let dbo = await getDbo()
-    try {
-      t = await TransformTx(tx)
-      if (t) {
-        let collection = t.blk ? 'c' : 'u'
-        try {
-          await dbo.collection(collection).insertOne(t)
-          // await closeDb()
-          return t
-        } catch (e) {
-          console.log('not inserted', e)
-          console.log(
-            collection === 'u'
-              ? (chalk.green('saved'), chalk.magenta('unconfirmed'))
-              : '',
-            (chalk.cyan('saved'), chalk.green(t.tx.h))
-          )
-          // await closeDb()
-
-          let txid = tx && tx.tx ? tx.tx.h : undefined
-          throw new Error('Failed to get dbo ' + txid + ' : ' + e)
-        }
-      } else {
-        // await closeDb()
-        throw new Error('Invalid tx')
-      }
-    } catch (e) {
-
-      // await closeDb()
-      throw new Error('Failed to transform tx ' + tx)
-
-    }
+    dbo = await getDbo()
   } catch (e) {
     // await closeDb()
     let txid = tx && tx.tx ? tx.tx.h : undefined
     throw new Error('Failed to get dbo ' + txid + ' : ' + e)
   }
+  try {
+    t = await TransformTx(tx)
+  } catch (e) {
+    throw new Error('Failed to transform tx ' + tx)
+  }
+
+  if (t) {
+    let collection = t.blk ? 'c' : 'u'
+    let txId = tx && tx.tx ? tx.tx.h : undefined
+    t._id = txId
+    try {
+      await dbo.collection(collection).updateOne({_id: t._id}, {$set: t}, {
+        upsert: true,
+      })
+      return t
+    } catch (e) {
+      console.log('not inserted', e)
+      console.log(
+        collection === 'u'
+          ? (chalk.green('saved'), chalk.magenta('unconfirmed'))
+          : '',
+        (chalk.cyan('saved'), chalk.green(t.tx.h))
+      )
+
+      throw new Error('Failed to insert tx ' + txId + ' : ' + e)
+    }
+  } else {
+    throw new Error('Invalid tx')
+  }
 }
 
 const clearUnconfirmed = () => {
-  return new Promise(async (res, rej) => {
+  return new Promise<void>(async (res, rej) => {
     let dbo = await getDbo()
     dbo
       .listCollections({ name: 'u' })

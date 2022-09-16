@@ -1,38 +1,37 @@
-import * as chalk from 'chalk'
+import chalk from 'chalk'
 import { fork } from 'child_process'
-import * as net from 'net'
-import * as redline from 'readline'
-import { crawler, setCurrentBlock } from './crawler'
-import { closeDb } from './db'
-import { ensureEnvVars } from './env'
-import { getCurrentBlock } from './state'
+import net from 'net'
+import redline from 'readline'
+import { crawler, setCurrentBlock } from './crawler.js'
+import { closeDb, getDbo } from './db.js'
+import { ensureEnvVars } from './env.js'
+import { getCurrentBlock } from './state.js'
 
 /* Bitsocket runs in a child process */
 
-const bitsocket = fork('./build/bitsocket')
+// const bitsocket = fork('./build/bitsocket')
 
 /* Planarium (API Server Process) */
-const planarium = fork('./build/planarium')
+const api = fork('./build/api')
 
 // Open up the server and send RPC socket to child. Use pauseOnConnect to prevent
 // the sockets from being read before they are sent to the child process.
 const server = net.createServer({ pauseOnConnect: true })
 server.on('connection', (socket) => {
-  planarium.send('socket', socket)
+  api.send('socket', socket)
 })
 server.listen(1336)
 
 const start = async () => {
   await ensureEnvVars()
+  await getDbo(); // warm up db connection
 
   try {
     // Should really start with latest blk from ANY collection, not only video like this
     let currentBlock = await getCurrentBlock()
     setCurrentBlock(currentBlock)
     console.log(chalk.cyan('crawling from', currentBlock))
-    crawler(() => {
-      bitsocket.send({ connect: true })
-    })
+    await crawler()
   } catch (e) {
     console.error(e)
   }
@@ -54,7 +53,7 @@ if (process.platform === 'win32') {
 process.on('SIGINT', async function () {
   // graceful shutdown
   console.log('close from shutdown')
-  closeDb()
+  await closeDb()
   server.close()
   process.exit()
 })
