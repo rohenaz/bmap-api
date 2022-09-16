@@ -169,6 +169,9 @@ const start = async function () {
       console.log(next);
     });
 
+    req.on('close', () => {
+      changeStream.close()
+    })
   })
 
   if (app.get('port')) {
