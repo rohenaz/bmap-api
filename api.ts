@@ -46,7 +46,7 @@ const start = async function () {
       "Connection": "keep-alive",
     })
     res.write("data: " + JSON.stringify({ type: "open", data: [] }) + "\n\n")
-    res.end()
+
     let json = Buffer.from(b64, "base64").toString()
 
     const db = await getDbo()
