@@ -62,7 +62,7 @@ const start = async function () {
       }
     ];
   
-    Object.keys(query).forEach((k) => pipeline[0]['$match'][`fullDocument.${k}`] = query[k])
+    Object.keys(query.q.find || {}).forEach((k) => pipeline[0]['$match'][`fullDocument.${k}`] = query[k])
     // [{ fullDocument: query }]
 
     const changeStream = db.collection('c').watch(pipeline);
