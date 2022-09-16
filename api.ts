@@ -1,7 +1,6 @@
 import chalk from 'chalk'
 import cors from 'cors'
 import express from 'express'
-import asyncHandler from 'express-async-handler'
 import mongo from 'mongodb'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -100,7 +99,7 @@ const start = async function () {
     )
   })
   
-  app.get(/^\/s\/(.+)$/, asyncHandler(async function(req, res) {
+  app.get(/^\/s\/(.+)$/, function(req, res) {
     let b64 = req.params[0]
     // const 
     res.writeHead(200, {
@@ -140,7 +139,7 @@ const start = async function () {
     // req.on('close', () => {
     //   changeStream.close()
     // })
-  }))
+  })
 
   app.get('/ping', async (req, res) => {
     if (req.get('Referrer')) {
