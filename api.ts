@@ -133,7 +133,7 @@ const start = async function () {
     res.sendFile(__dirname + '/../public/index.html')
   })
 
-  app.get("/s/:b64(*)", asyncHandler(async function(req, res) {
+  app.get("/s/:b64(*)", asyncHandler(async function(req, res, next) {
     // const 
     res.writeHead(200, {
       "Content-Type": "text/event-stream",
@@ -142,7 +142,7 @@ const start = async function () {
       "Connection": "keep-alive",
     })
     res.write("data: " + JSON.stringify({ type: "open", data: [] }) + "\n\n")
-
+    next()
     // const db = await getDbo()
 
     // let json = Buffer.from(req.params.b64, "base64").toString()
