@@ -1,5 +1,5 @@
 const config = {
-  from: 730000,
+  from: 757000,
   token: process.env.PLANARIA_TOKEN,
 }
 

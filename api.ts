@@ -5,7 +5,6 @@ import asyncHandler from 'express-async-handler'
 import mongo from 'mongodb'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { getDbo } from './db.js'
 import { defaultQuery } from './queries.js'
 
 const __filename = fileURLToPath(import.meta.url);
@@ -144,35 +143,35 @@ const start = async function () {
     })
     res.write("data: " + JSON.stringify({ type: "open", data: [] }) + "\n\n")
 
-    const db = await getDbo()
+    // const db = await getDbo()
 
-    let json = Buffer.from(req.params.b64, "base64").toString()
-    console.log("json = ", json)
-    let query = JSON.parse(json)
+    // let json = Buffer.from(req.params.b64, "base64").toString()
+    // console.log("json = ", json)
+    // let query = JSON.parse(json)
 
-    const pipeline = [
-      {
-          '$match': {
-              'operationType': 'insert',
-          },
-      }
-    ];
+    // const pipeline = [
+    //   {
+    //       '$match': {
+    //           'operationType': 'insert',
+    //       },
+    //   }
+    // ];
   
-    Object.keys(query).forEach((k) => pipeline[0]['$match'][`fullDocument.${k}`] = query[k])
-    // [{ fullDocument: query }]
+    // Object.keys(query).forEach((k) => pipeline[0]['$match'][`fullDocument.${k}`] = query[k])
+    // // [{ fullDocument: query }]
 
-    const changeStream = db.collection('c').watch(pipeline);
+    // const changeStream = db.collection('c').watch(pipeline);
 
-    changeStream.on('change', (next) => {
+    // changeStream.on('change', (next) => {
       
-      res.write("data: " + JSON.stringify({ type: "push", data: [next.fullDocument] }) + "\n\n")
+    //   res.write("data: " + JSON.stringify({ type: "push", data: [next.fullDocument] }) + "\n\n")
 
-      console.log(next);
-    });
+    //   console.log(next);
+    // });
 
-    req.on('close', () => {
-      changeStream.close()
-    })
+    // req.on('close', () => {
+    //   changeStream.close()
+    // })
   }))
 
   if (app.get('port')) {
