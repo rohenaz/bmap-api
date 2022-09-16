@@ -1,6 +1,7 @@
 import chalk from 'chalk'
 import cors from 'cors'
 import express from 'express'
+import asyncHandler from 'express-async-handler'
 import mongo from 'mongodb'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -133,7 +134,7 @@ const start = async function () {
     res.sendFile(__dirname + '/../public/index.html')
   })
 
-  app.get("/s/:b64(*)", async function(req, res) {
+  app.get("/s/:b64(*)", asyncHandler(async function(req, res) {
     // const 
     res.writeHead(200, {
       "Content-Type": "text/event-stream",
@@ -172,7 +173,7 @@ const start = async function () {
     req.on('close', () => {
       changeStream.close()
     })
-  })
+  }))
 
   if (app.get('port')) {
     app.listen(app.get('port'), app.get('host'), () => {
