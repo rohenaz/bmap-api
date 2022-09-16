@@ -86,14 +86,16 @@ const start = async function () {
   app.get(/^\/s\/(.+)$/, function(req, res) {
     let b64 = req.params[0]
     // const 
-    res.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      "X-Accel-Buffering": "no",
-      "Connection": "keep-alive",
-    })
-    res.write("data: " + JSON.stringify({ type: "open", data: [] }) + "\n\n")
-    res.end()
+    // res.writeHead(200, {
+    //   "Content-Type": "text/event-stream",
+    //   "Cache-Control": "no-cache",
+    //   "X-Accel-Buffering": "no",
+    //   "Connection": "keep-alive",
+    // })
+    // res.write("data: " + JSON.stringify({ type: "open", data: [] }) + "\n\n")
+    // res.end()
+    let json = Buffer.from(b64, "base64").toString()
+    res.status(200).send(json)
     // const db = await getDbo()
 
     // let json = Buffer.from(req.params.b64, "base64").toString()
