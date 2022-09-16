@@ -99,6 +99,48 @@ const start = async function () {
       }
     )
   })
+  
+  app.get(/^\/s\/(.+)$/, asyncHandler(async function(req, res) {
+    let b64 = req.params[0]
+    // const 
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "X-Accel-Buffering": "no",
+      "Connection": "keep-alive",
+    })
+    res.write("data: " + JSON.stringify({ type: "open", data: [] }) + "\n\n")
+  
+    // const db = await getDbo()
+
+    // let json = Buffer.from(req.params.b64, "base64").toString()
+    // console.log("json = ", json)
+    // let query = JSON.parse(json)
+
+    // const pipeline = [
+    //   {
+    //       '$match': {
+    //           'operationType': 'insert',
+    //       },
+    //   }
+    // ];
+  
+    // Object.keys(query).forEach((k) => pipeline[0]['$match'][`fullDocument.${k}`] = query[k])
+    // // [{ fullDocument: query }]
+
+    // const changeStream = db.collection('c').watch(pipeline);
+
+    // changeStream.on('change', (next) => {
+      
+    //   res.write("data: " + JSON.stringify({ type: "push", data: [next.fullDocument] }) + "\n\n")
+
+    //   console.log(next);
+    // });
+
+    // req.on('close', () => {
+    //   changeStream.close()
+    // })
+  }))
 
   app.get('/ping', async (req, res) => {
     if (req.get('Referrer')) {
@@ -132,47 +174,6 @@ const start = async function () {
   app.get('/', function (req, res) {
     res.sendFile(__dirname + '/../public/index.html')
   })
-
-  app.get("/s/:b64(*)", asyncHandler(async function(req, res, next) {
-    // const 
-    res.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      "X-Accel-Buffering": "no",
-      "Connection": "keep-alive",
-    })
-    res.write("data: " + JSON.stringify({ type: "open", data: [] }) + "\n\n")
-    next()
-    // const db = await getDbo()
-
-    // let json = Buffer.from(req.params.b64, "base64").toString()
-    // console.log("json = ", json)
-    // let query = JSON.parse(json)
-
-    // const pipeline = [
-    //   {
-    //       '$match': {
-    //           'operationType': 'insert',
-    //       },
-    //   }
-    // ];
-  
-    // Object.keys(query).forEach((k) => pipeline[0]['$match'][`fullDocument.${k}`] = query[k])
-    // // [{ fullDocument: query }]
-
-    // const changeStream = db.collection('c').watch(pipeline);
-
-    // changeStream.on('change', (next) => {
-      
-    //   res.write("data: " + JSON.stringify({ type: "push", data: [next.fullDocument] }) + "\n\n")
-
-    //   console.log(next);
-    // });
-
-    // req.on('close', () => {
-    //   changeStream.close()
-    // })
-  }))
 
   if (app.get('port')) {
     app.listen(app.get('port'), app.get('host'), () => {
