@@ -1,14 +1,14 @@
-# bmap-planaria
+# bmap-api
 
-A [Planaria](https://github.com/interplanaria) for building 'BMAP' Bitcoin apps. It uses bitbus 2.0 to crawl for transactions and transforms them with bmapjs. It runs two processes:
+An Indexer and API for building 'BMAP' Bitcoin apps. It uses junglebus to crawl for transactions and transforms them with bmapjs. It runs two processes:
 
-## Planaria
+## Crawler
 
 A crawler and indexer that saves transaction data into a MongoDB database.
 
-## Planarium
+## API
 
-A 'Planarium' (REST API) supporting BitQuery syntax.
+A REST API supporting BitQuery syntax.
 
 ![alt text](public/screen.png "Screenshot")
 
