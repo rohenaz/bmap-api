@@ -1,6 +1,8 @@
 # bmap-api
 
-An Indexer and API for building 'BMAP' Bitcoin apps. It uses junglebus to crawl for transactions and transforms them with bmapjs. It runs two processes:
+This API is hosted publicly at https://b.map.sv
+
+It is a Bitcoin transaction indexer and API for building 'BMAP' Bitcoin apps. It uses [junglebus](https://junglebus.gorillapool.io) to crawl for transactions and transforms them with [bmapjs](https://bmapjs.com). It runs two processes:
 
 ## Crawler
 
@@ -37,7 +39,39 @@ It also makes working with the results from your frontend much friendlier
 ```js
 let res = await fetch("https://b.map.sv/q/...");
 let j = res.json();
-console.log("Got tx", j.tx.h, "app:", j.MAP.app);
+console.log("Got tx", j[0].tx.h, "app:", j[0].MAP.app);
+```
+
+## Socket
+
+Using the same query syntax you can listen for changes:
+
+```js
+var sock = {
+  "v":3,
+  "q":{
+    "find":{
+      "MAP.type": {"$in": ["post","message"]}, 
+    },
+    "sort": {
+      "blk.t": -1
+    }
+  }
+}
+```
+
+```js
+var sock_b64 = btoa(JSON.stringify(sock))
+var socket_url = 'https://b.map.sv/s/'+sock_b64
+
+  // socket
+  bmapSocket = new EventSource(socket_url)
+  bmapSocket.onmessage = function(e) {
+    var res = JSON.parse(e.data)
+    if (res.type === 'push') {
+      // do something with res.data
+    }
+  }
 ```
 
 # Install
