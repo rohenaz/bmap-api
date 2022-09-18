@@ -65,7 +65,7 @@ yarn start
 Build the image
 
 ```bash
-docker build -t bmap-planaria .
+docker build -t bmap-api.
 ```
 
 Start the app
@@ -129,7 +129,7 @@ let timestamp = Math.floor(new Date().getTime() / 1000 - 86400);
 
 # BMAPjs
 
-This Planaria returns data in BMAP format which is a derivative of [BOB](https://github.com/interplanaria/bpu):
+This API returns data in BMAP format which is a derivative of [BOB](https://github.com/interplanaria/bpu):
 [BMAPjs](https://github.com/rohenaz/bmap)
 
 [bmapjs.com](https://bmapjs.com)
