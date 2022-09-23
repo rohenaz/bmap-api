@@ -51,26 +51,26 @@ const start = async function () {
 
     const db = await getDbo()
 
-    console.log("json = ", json)
+    console.log(chalk.blue("New change stream subscription"))
     let query = JSON.parse(json)
-
+    
     const pipeline = [
       {
-          '$match': {
-              'operationType': 'insert',
-          },
+        '$match': {
+          'operationType': 'insert',
+        },
       }
     ];
-  
+    
     Object.keys(query.q.find || {}).forEach((k) => pipeline[0]['$match'][`fullDocument.${k}`] = query.q.find[k])
-
+    
     const changeStream = db.collection('c').watch(pipeline);
-
+    
     changeStream.on('change', (next) => {
       
+      console.log(chalk.blue("New change event - pushing to SSE"), next.fullDocument.tx?.h)
       res.write("data: " + JSON.stringify({ type: "push", data: [next.fullDocument] }) + "\n\n")
 
-      console.log(next);
     });
 
     req.on('close', () => {

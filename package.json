@@ -1,7 +1,7 @@
 {
   "type": "module",
   "dependencies": {
-    "@gorillapool/js-junglebus": "^0.2.5",
+    "@gorillapool/js-junglebus": "^0.3.0",
     "@types/better-queue": "^3.8.2",
     "@types/cors": "^2.8.6",
     "@types/event-stream": "^3.3.34",
