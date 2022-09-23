@@ -26,7 +26,9 @@ const saveTx = async (tx) => {
     let txId = tx && tx.tx ? tx.tx.h : undefined
     t._id = txId
     try {
-      await dbo.collection(collection).updateOne({_id: t._id}, {$set: t, $setOnInsert: { timestamp: t.timestamp || Math.round(new Date().getTime()/1000)}}, {
+      let timestamp = t.timestamp
+      delete t.timestamp
+      await dbo.collection(collection).updateOne({_id: t._id}, {$set: t, $setOnInsert: { timestamp: timestamp || Math.round(new Date().getTime()/1000)}}, {
         upsert: true,
       })
       return t
