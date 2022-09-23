@@ -96,14 +96,13 @@ const crawl = (query, height) => {
       },
       async function onMempool(ctx) {
         console.log('MEMPOOL TRANSACTION', ctx.id)
+        
         return await processTransaction(ctx);
       });
   })
 }
 
 async function processTransaction(ctx: Transaction) {
-  // transaction found
-  // console.log({ctx});
   let result: any
   try {
     result = await bobFromRawTx(ctx.transaction);
@@ -113,6 +112,11 @@ async function processTransaction(ctx: Transaction) {
       m: ctx.merkle_proof || "",
       h: ctx.block_hash || "",
     };
+    
+    // TODO: it is possible it doesn't have a timestamp at all if we missed it from mempool
+    if (!ctx.block_hash) {
+      result.timestamp = ctx.block_time
+    }
   } catch (e) {
     console.error('Failed to bob tx', e);
     return null;
@@ -133,12 +137,6 @@ const crawler = async () => {
     // do something with error
     console.log('ERROR', e)
   });
-
-  /*
-  setTimeout(() => {
-    crawler()
-  }, 10000)
-  */
 }
 
 const setCurrentBlock = (num) => {
