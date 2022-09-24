@@ -81,13 +81,13 @@ const start = async function () {
     })
     
     let lastStatus = connectionStatus;
-    while (true) {
+    // while (true) {
       if (lastStatus !== connectionStatus) {
         lastStatus = connectionStatus
         console.log(chalk.blue("New connection status event - pushing to SSE"), connectionStatus)
         res.write("data: " + JSON.stringify({ type: "status", data: connectionStatus }) + "\n\n")
       }
-    }
+    // }
   }))
   
   app.get(/^\/q\/(.+)$/, function (req, res) {

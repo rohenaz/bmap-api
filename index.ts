@@ -70,7 +70,6 @@ const start = async () => {
         console.error(ctx);
         connectionStatus = ConnectionStatus.Error
         api.send({ status: connectionStatus, type: 'status' })
-
         // reject(ctx)
       }
     });
