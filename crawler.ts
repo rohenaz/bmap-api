@@ -1,4 +1,4 @@
-import { ControlMessageStatusCode, JungleBusClient, Transaction } from '@gorillapool/js-junglebus';
+import { ControlMessageStatusCode, Transaction } from '@gorillapool/js-junglebus';
 import BPU from 'bpu';
 import chalk from 'chalk';
 import { saveTx } from './actions.js';
@@ -27,32 +27,10 @@ const bobFromRawTx = async (rawtx) => {
   })
 }
 
-const crawl = (query, height) => {
+const crawl = (query, height, jungleBusClient) => {
   return new Promise(async (resolve, reject) => {
     // only block indexes greater than given height
-    const server = "junglebus.gorillapool.io";
-    console.log('CRAWLING', server)
-    const jungleBusClient = new JungleBusClient(server, {
-      debug: true,
-      protocol: "protobuf",
-      onConnected(ctx) {
-        // add your own code here
-        console.log(ctx);
-      },
-      onConnecting(ctx) {
-        // add your own code here
-        console.log(ctx);
-      },
-      onDisconnected(ctx) {
-        // add your own code here
-        console.log(ctx);
-      },
-      onError(ctx) {
-        // add your own code here
-        console.error(ctx);
-        reject(ctx)
-      }
-    });
+    
     // create subscriptions in the dashboard of the JungleBus website
     const subId = "3f600280c71978452b73bc7d339a726658e4b4dd5e06a50bd81f6d6ddd85abe9";
     await jungleBusClient.Subscribe(
@@ -130,10 +108,10 @@ async function processTransaction(ctx: Transaction) {
   }
 }
 
-const crawler = async () => {
+const crawler = async (jungleBusClient) => {
   await getDbo(); // warm up db connection
 
-  await crawl(query, currentBlock).catch(e => {
+  await crawl(query, currentBlock, jungleBusClient).catch(e => {
     // do something with error
     console.log('ERROR', e)
   });

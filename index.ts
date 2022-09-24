@@ -1,3 +1,4 @@
+import { JungleBusClient } from '@gorillapool/js-junglebus'
 import chalk from 'chalk'
 import { fork } from 'child_process'
 import net from 'net'
@@ -13,6 +14,15 @@ import { getCurrentBlock } from './state.js'
 
 /* Planarium (API Server Process) */
 const api = fork('./build/api')
+
+export const enum ConnectionStatus {
+  Connecting = 0,
+  Connected,
+  Disconnected,
+  Error
+}
+
+let connectionStatus = ConnectionStatus.Disconnected
 
 // Open up the server and send RPC socket to child. Use pauseOnConnect to prevent
 // the sockets from being read before they are sent to the child process.
@@ -31,7 +41,41 @@ const start = async () => {
     let currentBlock = await getCurrentBlock()
     setCurrentBlock(currentBlock)
     console.log(chalk.cyan('crawling from', currentBlock))
-    await crawler()
+
+    const s = "junglebus.gorillapool.io";
+    console.log('CRAWLING', s)
+    const jungleBusClient = new JungleBusClient(s, {
+      debug: true,
+      protocol: "protobuf",
+      onConnected(ctx) {
+        // add your own code here
+        connectionStatus = ConnectionStatus.Connected
+        api.send({ status: connectionStatus, type: 'status' })
+        console.log(ctx);
+      },
+      onConnecting(ctx) {
+        // add your own code here
+        connectionStatus = ConnectionStatus.Connecting
+        api.send({ status: connectionStatus, type: 'status' })
+        console.log(ctx);
+      },
+      onDisconnected(ctx) {
+        // add your own code here
+        connectionStatus = ConnectionStatus.Disconnected
+        api.send({ status: connectionStatus, type: 'status' })
+        console.log(ctx);
+      },
+      onError(ctx) {
+        // add your own code here
+        console.error(ctx);
+        connectionStatus = ConnectionStatus.Error
+        api.send({ status: connectionStatus, type: 'status' })
+
+        // reject(ctx)
+      }
+    });
+
+    await crawler(jungleBusClient)
   } catch (e) {
     console.error(e)
   }

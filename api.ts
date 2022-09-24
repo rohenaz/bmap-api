@@ -6,21 +6,26 @@ import mongo from 'mongodb'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { getDbo } from './db.js'
+import { ConnectionStatus } from './index.js'
 import { defaultQuery } from './queries.js'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+let connectionStatus: ConnectionStatus = ConnectionStatus.Disconnected
+
 const app = express()
 
-process.on('message', async (m, socket: any) => {
-  console.log('message received!', m, socket)
-  if (m === 'socket') {
-    console.log('m is socket')
-    switch (socket.type) {
-      case 'block':
-        console.log('current block is now', socket.block)
-    }
+process.on('message', async (data: any) => {
+  console.log('message received!', data)
+  switch (data.type) {
+    case 'block':
+      console.log('current block is now', data.block)
+      break;
+    case 'status':
+      console.log('Connection status changed', data.status)
+      connectionStatus = data.status
+      break;
   }
 })
 
@@ -67,15 +72,22 @@ const start = async function () {
     const changeStream = db.collection('c').watch(pipeline);
     
     changeStream.on('change', (next) => {
-      
       console.log(chalk.blue("New change event - pushing to SSE"), next.fullDocument.tx?.h)
       res.write("data: " + JSON.stringify({ type: "push", data: [next.fullDocument] }) + "\n\n")
-
     });
-
+    
     req.on('close', () => {
       changeStream.close()
     })
+    
+    let lastStatus = connectionStatus;
+    while (true) {
+      if (lastStatus !== connectionStatus) {
+        lastStatus = connectionStatus
+        console.log(chalk.blue("New connection status event - pushing to SSE"), connectionStatus)
+        res.write("data: " + JSON.stringify({ type: "status", data: connectionStatus }) + "\n\n")
+      }
+    }
   }))
   
   app.get(/^\/q\/(.+)$/, function (req, res) {
