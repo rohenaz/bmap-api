@@ -25,7 +25,11 @@ const saveTx = async (tx) => {
   if (t.AIP) {
     for (let i = 0; i < t.AIP.length; i++) {
       const { address } = t.AIP[i]
-      const bap = await getBAPIdByAddress(address, t.blk.i, t.timestamp)
+      const bap = await getBAPIdByAddress(
+        address,
+        t.blk.i || undefined,
+        t.timestamp
+      )
       if (bap && bap.valid === true) {
         t.AIP[i].bapId = bap.idKey
       }
