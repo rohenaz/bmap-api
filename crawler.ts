@@ -113,7 +113,7 @@ async function processTransaction(ctx: Transaction) {
       const { address } = result.AIP[i]
       const bap = await getBAPIdByAddress(
         address,
-        result.block,
+        result.blk.i,
         result.timestamp
       )
       if (bap && bap.valid === true) {
