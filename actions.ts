@@ -21,6 +21,16 @@ const saveTx = async (tx) => {
     throw new Error('Failed to transform tx ' + tx)
   }
 
+  // get BAP IDs for given social op
+  if (t.AIP) {
+    for (let i = 0; i < t.AIP.length; i++) {
+      const { address } = t.AIP[i]
+      const bap = await getBAPIdByAddress(address, t.blk.i, t.timestamp)
+      if (bap && bap.valid === true) {
+        t.AIP[i].bapId = bap.idKey
+      }
+    }
+  }
   if (t) {
     let collection = t.blk ? 'c' : 'u'
     let txId = tx && tx.tx ? tx.tx.h : undefined
@@ -28,9 +38,18 @@ const saveTx = async (tx) => {
     try {
       let timestamp = t.timestamp
       delete t.timestamp
-      await dbo.collection(collection).updateOne({_id: t._id}, {$set: t, $setOnInsert: { timestamp: timestamp || Math.round(new Date().getTime()/1000)}}, {
-        upsert: true,
-      })
+      await dbo.collection(collection).updateOne(
+        { _id: t._id },
+        {
+          $set: t,
+          $setOnInsert: {
+            timestamp: timestamp || Math.round(new Date().getTime() / 1000),
+          },
+        },
+        {
+          upsert: true,
+        }
+      )
       return t
     } catch (e) {
       console.log('not inserted', e)
@@ -84,3 +103,26 @@ const clearUnconfirmed = () => {
 
 export { saveTx, clearUnconfirmed }
 
+const bapApiUrl = `https://bap-api.com/v1`
+const getBAPIdByAddress = async function (address, block, timestamp) {
+  if (bapApiUrl) {
+    const result = await fetch(`${bapApiUrl}/identity/validByAddress`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        address,
+        block,
+        timestamp,
+      }),
+    })
+    const data = await result.json()
+    if (data && data.status === 'OK' && data.result) {
+      return data.result
+    }
+  }
+
+  return false
+}

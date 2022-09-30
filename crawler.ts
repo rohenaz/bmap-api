@@ -107,21 +107,6 @@ async function processTransaction(ctx: Transaction) {
     return null
   }
 
-  // get BAP IDs for given social op
-  if (result.AIP) {
-    for (let i = 0; i < result.AIP.length; i++) {
-      const { address } = result.AIP[i]
-      const bap = await getBAPIdByAddress(
-        address,
-        result.blk.i,
-        result.timestamp
-      )
-      if (bap && bap.valid === true) {
-        result.AIP[i].bapId = bap.idKey
-      }
-    }
-  }
-
   try {
     return await saveTx(result)
   } catch (e) {
@@ -144,27 +129,3 @@ const setCurrentBlock = (num) => {
 }
 
 export { setCurrentBlock, synced, crawler }
-
-const bapApiUrl = `https://bap-api.com/v1`
-const getBAPIdByAddress = async function (address, block, timestamp) {
-  if (bapApiUrl) {
-    const result = await fetch(`${bapApiUrl}/identity/validByAddress`, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        address,
-        block,
-        timestamp,
-      }),
-    })
-    const data = await result.json()
-    if (data && data.status === 'OK' && data.result) {
-      return data.result
-    }
-  }
-
-  return false
-}
