@@ -9,8 +9,8 @@ import { getDbo } from './db.js'
 import { ConnectionStatus } from './index.js'
 import { defaultQuery } from './queries.js'
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 let connectionStatus: ConnectionStatus = ConnectionStatus.Disconnected
 
@@ -21,16 +21,15 @@ process.on('message', async (data: any) => {
   switch (data.type) {
     case 'block':
       console.log('current block is now', data.block)
-      break;
+      break
     case 'status':
       console.log('Connection status changed', data.status)
       connectionStatus = data.status
-      break;
+      break
   }
 })
 
 const start = async function () {
-
   console.log(chalk.magenta('BMAP API'), chalk.cyan('initializing machine...'))
 
   app.set('port', process.env.PORT || 3055)
@@ -38,58 +37,77 @@ const start = async function () {
   app.set('view engine', 'ejs')
   app.set('views', __dirname + '/../views')
   app.use(cors())
-   
+
   app.use(express.static(__dirname + '/../public'))
-  
-  app.get(/^\/s\/(.+)$/, asyncHandler(async function(req, res) {
-    let b64 = req.params[0]
-    
-    res.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      "X-Accel-Buffering": "no",
-      "Connection": "keep-alive",
-    })
-    res.write("data: " + JSON.stringify({ type: "open", data: [] }) + "\n\n")
 
-    let json = Buffer.from(b64, "base64").toString()
+  app.get(
+    /^\/s\/(.+)$/,
+    asyncHandler(async function (req, res) {
+      let b64 = req.params[0]
 
-    const db = await getDbo()
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'X-Accel-Buffering': 'no',
+        Connection: 'keep-alive',
+      })
+      res.write('data: ' + JSON.stringify({ type: 'open', data: [] }) + '\n\n')
 
-    console.log(chalk.blue("New change stream subscription"))
-    let query = JSON.parse(json)
-    
-    const pipeline = [
-      {
-        '$match': {
-          'operationType': 'insert',
+      let json = Buffer.from(b64, 'base64').toString()
+
+      const db = await getDbo()
+
+      console.log(chalk.blue('New change stream subscription'))
+      let query = JSON.parse(json)
+
+      const pipeline = [
+        {
+          $match: {
+            operationType: 'insert',
+          },
         },
-      }
-    ];
-    
-    Object.keys(query.q.find || {}).forEach((k) => pipeline[0]['$match'][`fullDocument.${k}`] = query.q.find[k])
-    
-    const changeStream = db.collection('c').watch(pipeline);
-    
-    changeStream.on('change', (next) => {
-      console.log(chalk.blue("New change event - pushing to SSE"), next.fullDocument.tx?.h)
-      res.write("data: " + JSON.stringify({ type: "push", data: [next.fullDocument] }) + "\n\n")
-    });
-    
-    req.on('close', () => {
-      changeStream.close()
-    })
-    
-    let lastStatus = connectionStatus;
-    // while (true) {
+      ]
+
+      Object.keys(query.q.find || {}).forEach(
+        (k) => (pipeline[0]['$match'][`fullDocument.${k}`] = query.q.find[k])
+      )
+
+      const changeStream = db.collection('c').watch(pipeline)
+
+      changeStream.on('change', (next) => {
+        console.log(
+          chalk.blue('New change event - pushing to SSE'),
+          next.fullDocument.tx?.h
+        )
+        res.write(
+          'data: ' +
+            JSON.stringify({ type: 'push', data: [next.fullDocument] }) +
+            '\n\n'
+        )
+      })
+
+      req.on('close', () => {
+        changeStream.close()
+      })
+
+      let lastStatus = connectionStatus
+      // while (true) {
       if (lastStatus !== connectionStatus) {
         lastStatus = connectionStatus
-        console.log(chalk.blue("New connection status event - pushing to SSE"), connectionStatus)
-        res.write("data: " + JSON.stringify({ type: "status", data: connectionStatus }) + "\n\n")
+        console.log(
+          chalk.blue('New connection status event - pushing to SSE'),
+          connectionStatus
+        )
+        res.write(
+          'data: ' +
+            JSON.stringify({ type: 'status', data: connectionStatus }) +
+            '\n\n'
+        )
       }
-    // }
-  }))
-  
+      // }
+    })
+  )
+
   app.get(/^\/q\/(.+)$/, function (req, res) {
     let b64 = req.params[0]
     console.log(chalk.magenta('BMAP API'), chalk.cyan('query', b64))
@@ -110,7 +128,10 @@ const start = async function () {
         if (req.q.aggregate) {
           dbo
             .collection('c')
-            .aggregate(req.q.aggregate)
+            .aggregate(req.q.aggregate, {
+              allowDiskUse: true,
+              cursor: { batchSize: 1000 },
+            })
             .sort(req.q.sort || { _id: -1 })
             .limit(req.q.limit ? req.q.limit : 10)
             .toArray(function (err, c) {
@@ -139,7 +160,6 @@ const start = async function () {
       }
     )
   })
-  
 
   app.get('/ping', async (req, res) => {
     if (req.get('Referrer')) {
