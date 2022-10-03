@@ -4,7 +4,6 @@ import cors from 'cors'
 import express from 'express'
 import asyncHandler from 'express-async-handler'
 import mongo from 'mongodb'
-import net from 'net'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { getDbo } from './db.js'
@@ -15,20 +14,20 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 let connectionStatus: ConnectionStatus = ConnectionStatus.Disconnected
-let socket: net.Socket
+// let socket: net.Socket
 
 const app = express()
 app.use(bodyParser.json())
 
-process.on('message', async (data: any) => {
+process.on('message', (data: any) => {
   console.log('message received!', data)
   switch (data.type) {
     case 'block':
       console.log('current block is now', data.block)
       break
     case 'socket':
-      socket = data.socket
-      console.log({ socket })
+      // socket = data.socket
+      console.log({ socket: data.socket })
       break
     case 'status':
       console.log('Connection status changed', data.status)
@@ -200,9 +199,9 @@ const start = async function () {
 
   app.post('/ingest', function (req, res) {
     // ingest a raw tx
-    console.log('ingest', socket)
-    if (socket && req.body.rawTx) {
-      socket.write(JSON.stringify({ status: connectionStatus, type: 'tx' }))
+    console.log('ingest')
+    if (req.body.rawTx) {
+      process.send({ rawTx: req.body.rawTx, type: 'tx' })
       return res.status(201).send()
     } else {
       return res.status(400).send()
