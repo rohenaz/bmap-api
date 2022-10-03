@@ -6,6 +6,7 @@ import asyncHandler from 'express-async-handler'
 import mongo from 'mongodb'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { processTransaction } from './crawler.js'
 import { getDbo } from './db.js'
 import { ConnectionStatus } from './index.js'
 import { defaultQuery } from './queries.js'
@@ -197,16 +198,21 @@ const start = async function () {
     })
   })
 
-  app.post('/ingest', function (req, res) {
-    // ingest a raw tx
-    console.log('ingest', req.body.rawTx)
-    if (req.body.rawTx) {
-      process.send({ rawTx: req.body.rawTx, type: 'tx' })
-      return res.status(201).send()
-    } else {
-      return res.status(400).send()
-    }
-  })
+  app.post(
+    '/ingest',
+    asyncHandler(async function (req, res) {
+      // ingest a raw tx
+      console.log('ingest', req.body.rawTx)
+      if (req.body.rawTx) {
+        // process.send({ rawTx: req.body.rawTx, type: 'tx' })
+        await processTransaction(req.body.rawTx)
+
+        return res.status(201).send()
+      } else {
+        return res.status(400).send()
+      }
+    })
+  )
 
   app.get('/', function (req, res) {
     res.sendFile(__dirname + '/../public/index.html')

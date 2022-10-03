@@ -3,7 +3,7 @@ import chalk from 'chalk'
 import { fork } from 'child_process'
 import net from 'net'
 import redline from 'readline'
-import { crawler, processTransaction, setCurrentBlock } from './crawler.js'
+import { crawler, setCurrentBlock } from './crawler.js'
 import { closeDb, getDbo } from './db.js'
 import { ensureEnvVars } from './env.js'
 import { getCurrentBlock } from './state.js'
@@ -32,19 +32,19 @@ let connectionStatus = ConnectionStatus.Disconnected
 // api.send({ type: 'socket', socket: s })
 // socket = s
 
-process.on('message', (data: any) => {
-  console.log('message received by parent!', data)
-  switch (data.type) {
-    case '':
-    case 'tx':
-      try {
-        processTransaction(data.rawTx)
-      } catch (e) {
-        console.error('Failed to ingest tx', e)
-      }
-      break
-  }
-})
+// process.on('message', (data: any) => {
+//   console.log('message received by parent!', data)
+//   switch (data.type) {
+//     case '':
+//     case 'tx':
+//       try {
+//         processTransaction(data.rawTx)
+//       } catch (e) {
+//         console.error('Failed to ingest tx', e)
+//       }
+//       break
+//   }
+// })
 // })
 
 // server.listen(1336)
