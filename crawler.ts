@@ -6,11 +6,12 @@ import BPU from 'bpu'
 import chalk from 'chalk'
 import { saveTx } from './actions.js'
 import { getDbo } from './db.js'
+import { socket } from './index.js'
 
 let currentBlock = 0
 let synced = false
 
-process.on('message', async (data: any) => {
+socket.on('message', async (data: any) => {
   console.log('message received!', data)
   switch (data.type) {
     case 'tx':

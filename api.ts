@@ -4,6 +4,7 @@ import cors from 'cors'
 import express from 'express'
 import asyncHandler from 'express-async-handler'
 import mongo from 'mongodb'
+import net from 'net'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { getDbo } from './db.js'
@@ -14,7 +15,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 let connectionStatus: ConnectionStatus = ConnectionStatus.Disconnected
-let socket
+let socket: net.Socket
 
 const app = express()
 app.use(bodyParser.json())
@@ -199,7 +200,8 @@ const start = async function () {
 
   app.post('/ingest', function (req, res) {
     // ingest a raw tx
-    if (req.body.rawTx) {
+    console.log('ingest', socket)
+    if (socket && req.body.rawTx) {
       socket.send({ status: connectionStatus, type: 'tx' })
       return res.status(201).send()
     } else {
