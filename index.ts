@@ -32,7 +32,7 @@ let connectionStatus = ConnectionStatus.Disconnected
 // api.send({ type: 'socket', socket: s })
 // socket = s
 
-socket.on('message', async (data: any) => {
+process.on('message', async (data: any) => {
   console.log('message received!', data)
   switch (data.type) {
     case 'tx':
