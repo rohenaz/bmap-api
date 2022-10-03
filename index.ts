@@ -27,22 +27,22 @@ let connectionStatus = ConnectionStatus.Disconnected
 
 // Open up the server and send RPC socket to child. Use pauseOnConnect to prevent
 // the sockets from being read before they are sent to the child process.
-const server = net.createServer({ pauseOnConnect: true })
-server.on('connection', (s) => {
-  api.send({ type: 'socket', socket: s })
-  socket = s
+// const server = net.createServer({ pauseOnConnect: true })
+// server.on('connection', (s) => {
+// api.send({ type: 'socket', socket: s })
+// socket = s
 
-  socket.on('message', async (data: any) => {
-    console.log('message received!', data)
-    switch (data.type) {
-      case 'tx':
-        await processTransaction(data.rawTx)
-        break
-    }
-  })
+socket.on('message', async (data: any) => {
+  console.log('message received!', data)
+  switch (data.type) {
+    case 'tx':
+      await processTransaction(data.rawTx)
+      break
+  }
 })
+// })
 
-server.listen(1336)
+// server.listen(1336)
 
 const start = async () => {
   await ensureEnvVars()
