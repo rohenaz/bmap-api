@@ -1,3 +1,4 @@
+import bodyParser from 'body-parser'
 import chalk from 'chalk'
 import cors from 'cors'
 import express from 'express'
@@ -13,14 +14,20 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 let connectionStatus: ConnectionStatus = ConnectionStatus.Disconnected
+let socket
 
 const app = express()
+app.use(bodyParser.json())
 
 process.on('message', async (data: any) => {
   console.log('message received!', data)
   switch (data.type) {
     case 'block':
       console.log('current block is now', data.block)
+      break
+    case 'socket':
+      socket = data.socket
+      console.log({ socket })
       break
     case 'status':
       console.log('Connection status changed', data.status)
@@ -188,6 +195,16 @@ const start = async function () {
       name: 'BMAP',
       code: code,
     })
+  })
+
+  app.get('/ingest', function (req, res) {
+    // ingest a raw tx
+    if (req.body.rawTx) {
+      socket.send('tx', req.body.rawTx)
+      return res.status(201).send()
+    } else {
+      return res.status(400).send()
+    }
   })
 
   app.get('/', function (req, res) {

@@ -19,7 +19,7 @@ export const enum ConnectionStatus {
   Connecting = 0,
   Connected,
   Disconnected,
-  Error
+  Error,
 }
 
 let connectionStatus = ConnectionStatus.Disconnected
@@ -34,7 +34,7 @@ server.listen(1336)
 
 const start = async () => {
   await ensureEnvVars()
-  await getDbo(); // warm up db connection
+  await getDbo() // warm up db connection
 
   try {
     // Should really start with latest blk from ANY collection, not only video like this
@@ -42,37 +42,37 @@ const start = async () => {
     setCurrentBlock(currentBlock)
     console.log(chalk.cyan('crawling from', currentBlock))
 
-    const s = "junglebus.gorillapool.io";
+    const s = 'junglebus.gorillapool.io'
     console.log('CRAWLING', s)
     const jungleBusClient = new JungleBusClient(s, {
       debug: true,
-      protocol: "protobuf",
+      protocol: 'protobuf',
       onConnected(ctx) {
         // add your own code here
         connectionStatus = ConnectionStatus.Connected
         api.send({ status: connectionStatus, type: 'status' })
-        console.log(ctx);
+        console.log(ctx)
       },
       onConnecting(ctx) {
         // add your own code here
         connectionStatus = ConnectionStatus.Connecting
         api.send({ status: connectionStatus, type: 'status' })
-        console.log(ctx);
+        console.log(ctx)
       },
       onDisconnected(ctx) {
         // add your own code here
         connectionStatus = ConnectionStatus.Disconnected
         api.send({ status: connectionStatus, type: 'status' })
-        console.log(ctx);
+        console.log(ctx)
       },
       onError(ctx) {
         // add your own code here
-        console.error(ctx);
+        console.error(ctx)
         connectionStatus = ConnectionStatus.Error
         api.send({ status: connectionStatus, type: 'status' })
         // reject(ctx)
-      }
-    });
+      },
+    })
 
     await crawler(jungleBusClient)
   } catch (e) {

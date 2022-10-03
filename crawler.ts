@@ -6,7 +6,6 @@ import BPU from 'bpu'
 import chalk from 'chalk'
 import { saveTx } from './actions.js'
 import { getDbo } from './db.js'
-import { query } from './queries.js'
 
 let currentBlock = 0
 let synced = false
@@ -30,7 +29,7 @@ const bobFromRawTx = async (rawtx) => {
   })
 }
 
-const crawl = (query, height, jungleBusClient) => {
+const crawl = (height, jungleBusClient) => {
   return new Promise(async (resolve, reject) => {
     // only block indexes greater than given height
 
@@ -118,7 +117,7 @@ async function processTransaction(ctx: Transaction) {
 const crawler = async (jungleBusClient) => {
   await getDbo() // warm up db connection
 
-  await crawl(query, currentBlock, jungleBusClient).catch((e) => {
+  await crawl(currentBlock, jungleBusClient).catch((e) => {
     // do something with error
     console.log('ERROR', e)
   })
