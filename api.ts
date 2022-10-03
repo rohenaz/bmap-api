@@ -202,7 +202,7 @@ const start = async function () {
     // ingest a raw tx
     console.log('ingest', socket)
     if (socket && req.body.rawTx) {
-      socket.send({ status: connectionStatus, type: 'tx' })
+      socket.write(JSON.stringify({ status: connectionStatus, type: 'tx' }))
       return res.status(201).send()
     } else {
       return res.status(400).send()
