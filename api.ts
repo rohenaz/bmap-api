@@ -200,7 +200,7 @@ const start = async function () {
   app.get('/ingest', function (req, res) {
     // ingest a raw tx
     if (req.body.rawTx) {
-      socket.send('tx', req.body.rawTx)
+      socket.send({ status: connectionStatus, type: 'tx' })
       return res.status(201).send()
     } else {
       return res.status(400).send()

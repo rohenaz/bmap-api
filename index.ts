@@ -21,15 +21,17 @@ export const enum ConnectionStatus {
   Disconnected,
   Error,
 }
-
+export var socket
 let connectionStatus = ConnectionStatus.Disconnected
 
 // Open up the server and send RPC socket to child. Use pauseOnConnect to prevent
 // the sockets from being read before they are sent to the child process.
 const server = net.createServer({ pauseOnConnect: true })
-server.on('connection', (socket) => {
-  api.send('socket', socket)
+server.on('connection', (s) => {
+  api.send('socket', s)
+  socket = s
 })
+
 server.listen(1336)
 
 const start = async () => {

@@ -10,6 +10,15 @@ import { getDbo } from './db.js'
 let currentBlock = 0
 let synced = false
 
+process.on('message', async (data: any) => {
+  console.log('message received!', data)
+  switch (data.type) {
+    case 'tx':
+      await processTransaction(data.rawTx)
+      break
+  }
+})
+
 const bobFromRawTx = async (rawtx) => {
   return await BPU.parse({
     tx: { r: rawtx },
