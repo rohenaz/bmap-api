@@ -198,21 +198,21 @@ const start = async function () {
     })
   })
 
-  app.post(
-    '/ingest',
-    asyncHandler(async function (req, res) {
-      // ingest a raw tx
-      console.log('ingest', req.body.rawTx)
-      if (req.body.rawTx) {
-        // process.send({ rawTx: req.body.rawTx, type: 'tx' })
-        await processTransaction(req.body.rawTx)
+  app.post('/ingest', function (req, res) {
+    // ingest a raw tx
+    console.log('ingest', req.body.rawTx)
 
-        return res.status(201).send()
-      } else {
-        return res.status(400).send()
-      }
-    })
-  )
+    if (req.body.rawTx) {
+      // process.send({ rawTx: req.body.rawTx, type: 'tx' })
+      processTransaction(req.body.rawTx)
+        .then(() => res.status(201).send())
+        .catch((e) => res.status(500).send(e))
+
+      return
+    } else {
+      return res.status(400).send()
+    }
+  })
 
   app.get('/', function (req, res) {
     res.sendFile(__dirname + '/../public/index.html')

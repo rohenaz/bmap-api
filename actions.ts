@@ -35,6 +35,7 @@ const saveTx = async (tx) => {
       }
     }
   }
+
   if (t) {
     let collection = t.blk ? 'c' : 'u'
     let txId = tx && tx.tx ? tx.tx.h : undefined
