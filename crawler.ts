@@ -86,13 +86,13 @@ const crawl = (height, jungleBusClient) => {
   })
 }
 
-export async function processTransaction(ctx: Transaction) {
+export async function processTransaction(ctx: Partial<Transaction>) {
   let result: any
   try {
     result = await bobFromRawTx(ctx.transaction)
     result.blk = {
       i: ctx.block_height || 0,
-      t: ctx.block_time || new Date().getTime() / 1000,
+      t: ctx.block_time || Math.round(new Date().getTime() / 1000),
       m: ctx.merkle_proof || '',
       h: ctx.block_hash || '',
     }
