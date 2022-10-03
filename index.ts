@@ -3,7 +3,7 @@ import chalk from 'chalk'
 import { fork } from 'child_process'
 import net from 'net'
 import redline from 'readline'
-import { crawler, setCurrentBlock } from './crawler.js'
+import { crawler, processTransaction, setCurrentBlock } from './crawler.js'
 import { closeDb, getDbo } from './db.js'
 import { ensureEnvVars } from './env.js'
 import { getCurrentBlock } from './state.js'
@@ -31,6 +31,15 @@ const server = net.createServer({ pauseOnConnect: true })
 server.on('connection', (s) => {
   api.send({ type: 'socket', socket: s })
   socket = s
+
+  socket.on('message', async (data: any) => {
+    console.log('message received!', data)
+    switch (data.type) {
+      case 'tx':
+        await processTransaction(data.rawTx)
+        break
+    }
+  })
 })
 
 server.listen(1336)

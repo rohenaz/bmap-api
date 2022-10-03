@@ -6,19 +6,9 @@ import BPU from 'bpu'
 import chalk from 'chalk'
 import { saveTx } from './actions.js'
 import { getDbo } from './db.js'
-import { socket } from './index.js'
 
 let currentBlock = 0
 let synced = false
-
-socket.on('message', async (data: any) => {
-  console.log('message received!', data)
-  switch (data.type) {
-    case 'tx':
-      await processTransaction(data.rawTx)
-      break
-  }
-})
 
 const bobFromRawTx = async (rawtx) => {
   return await BPU.parse({
@@ -96,7 +86,7 @@ const crawl = (height, jungleBusClient) => {
   })
 }
 
-async function processTransaction(ctx: Transaction) {
+export async function processTransaction(ctx: Transaction) {
   let result: any
   try {
     result = await bobFromRawTx(ctx.transaction)
