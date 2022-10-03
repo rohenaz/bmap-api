@@ -109,7 +109,7 @@ process.on('SIGINT', async function () {
   // graceful shutdown
   console.log('close from shutdown')
   await closeDb()
-  server.close()
+  // server.close()
   process.exit()
 })
 
