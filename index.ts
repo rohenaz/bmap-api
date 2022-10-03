@@ -36,7 +36,11 @@ process.on('message', async (data: any) => {
   console.log('message received!', data)
   switch (data.type) {
     case 'tx':
-      await processTransaction(data.rawTx)
+      try {
+        await processTransaction(data.rawTx)
+      } catch (e) {
+        console.error('Failed to ingest tx', e)
+      }
       break
   }
 })
