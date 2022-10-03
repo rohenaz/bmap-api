@@ -92,7 +92,7 @@ export async function processTransaction(ctx: Transaction) {
     result = await bobFromRawTx(ctx.transaction)
     result.blk = {
       i: ctx.block_height || 0,
-      t: ctx.block_time,
+      t: ctx.block_time || new Date().getTime() / 1000,
       m: ctx.merkle_proof || '',
       h: ctx.block_hash || '',
     }

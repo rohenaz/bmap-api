@@ -1,3 +1,4 @@
+import { Transaction } from '@gorillapool/js-junglebus'
 import bodyParser from 'body-parser'
 import chalk from 'chalk'
 import cors from 'cors'
@@ -204,7 +205,9 @@ const start = async function () {
 
     if (req.body.rawTx) {
       // process.send({ rawTx: req.body.rawTx, type: 'tx' })
-      processTransaction(req.body.rawTx)
+      processTransaction({
+        transaction: req.body.rawTx,
+      } as Partial<Transaction>)
         .then(() => res.status(201).send())
         .catch((e) => res.status(500).send(e))
 
