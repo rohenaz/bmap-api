@@ -197,7 +197,7 @@ const start = async function () {
     })
   })
 
-  app.get('/ingest', function (req, res) {
+  app.post('/ingest', function (req, res) {
     // ingest a raw tx
     if (req.body.rawTx) {
       socket.send({ status: connectionStatus, type: 'tx' })
