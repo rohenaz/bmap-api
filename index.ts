@@ -32,12 +32,13 @@ let connectionStatus = ConnectionStatus.Disconnected
 // api.send({ type: 'socket', socket: s })
 // socket = s
 
-process.on('message', async (data: any) => {
-  console.log('message received!', data)
+process.on('message', (data: any) => {
+  console.log('message received by parent!', data)
   switch (data.type) {
+    case '':
     case 'tx':
       try {
-        await processTransaction(data.rawTx)
+        processTransaction(data.rawTx)
       } catch (e) {
         console.error('Failed to ingest tx', e)
       }

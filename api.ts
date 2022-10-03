@@ -20,7 +20,7 @@ const app = express()
 app.use(bodyParser.json())
 
 process.on('message', (data: any) => {
-  console.log('message received!', data)
+  console.log('message received by child!', data)
   switch (data.type) {
     case 'block':
       console.log('current block is now', data.block)
@@ -199,7 +199,7 @@ const start = async function () {
 
   app.post('/ingest', function (req, res) {
     // ingest a raw tx
-    console.log('ingest')
+    console.log('ingest', req.body.rawTx)
     if (req.body.rawTx) {
       process.send({ rawTx: req.body.rawTx, type: 'tx' })
       return res.status(201).send()
