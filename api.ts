@@ -132,11 +132,11 @@ const start = async function () {
 
   app.get(
     /^\/q\/(.+)$/,
-    asyncHandler(async (req, res) => {
+    asyncHandler(async function (req, res) {
       let b64 = req.params[0]
       console.log(chalk.magenta('BMAP API'), chalk.cyan('query', b64))
 
-      var dbo = await getDbo()
+      const dbo = await getDbo()
 
       let code = Buffer.from(b64, 'base64').toString()
       let j = JSON.parse(code)
