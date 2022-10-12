@@ -23,15 +23,30 @@ const saveTx = async (tx) => {
 
   // get BAP IDs for given social op
   if (t.AIP) {
-    for (let i = 0; i < t.AIP.length; i++) {
-      const { address } = t.AIP && Array.isArray(t.AIP) ? t.AIP[i] : t.AIP
+    // multiple AIP outputs
+    if (Array.isArray(t.AIP)) {
+      for (let i = 0; i < t.AIP.length; i++) {
+        const { address } = t.AIP[i]
+        const bap = await getBAPIdByAddress(
+          address,
+          t.blk.i || undefined,
+          t.timestamp
+        )
+        if (bap && bap.valid === true) {
+          console.log('bap ID found', bap.idKey)
+          t.AIP[i].bapId = bap.idKey
+        }
+      }
+    } else {
+      const { address } = t.AIP
       const bap = await getBAPIdByAddress(
         address,
         t.blk.i || undefined,
         t.timestamp
       )
       if (bap && bap.valid === true) {
-        t.AIP[i].bapId = bap.idKey
+        console.log('bap ID found', bap.idKey)
+        t.AIP.bapId = bap.idKey
       }
     }
   }
