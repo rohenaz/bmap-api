@@ -8,7 +8,7 @@ import mongo from 'mongodb'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { processTransaction } from './crawler.js'
-import { getDbo } from './db.js'
+import { closeDb, getDbo } from './db.js'
 import { ConnectionStatus } from './index.js'
 import { defaultQuery } from './queries.js'
 
@@ -97,6 +97,7 @@ const start = async function () {
 
       req.on('close', () => {
         changeStream.close()
+        closeDb()
       })
 
       let lastStatus = connectionStatus
