@@ -24,7 +24,7 @@ const saveTx = async (tx) => {
   // get BAP IDs for given social op
   if (t.AIP) {
     for (let i = 0; i < t.AIP.length; i++) {
-      const { address } = t.AIP[i]
+      const { address } = t.AIP && Array.isArray(t.AIP) ? t.AIP[i] : t.AIP
       const bap = await getBAPIdByAddress(
         address,
         t.blk.i || undefined,
