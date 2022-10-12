@@ -32,7 +32,8 @@ const saveTx = async (tx) => {
           t.blk.i || undefined,
           t.timestamp
         )
-        if (bap && bap.valid === true) {
+        //TODO: add && bap.valid === true when BAP API returns this correctly
+        if (bap) {
           console.log('bap ID found', bap.idKey)
           t.AIP[i].bapId = bap.idKey
         }
