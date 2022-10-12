@@ -37,7 +37,7 @@ const saveTx = async (tx) => {
         if (bap) {
           console.log('bap ID found', bap.idKey)
           t.AIP[i].bapId = bap.idKey
-          if (t.AIP[i].identity) {
+          if (bap.identity) {
             t.AIP[i].identity = JSON.parse(bap.identity)
           }
         }
@@ -48,7 +48,7 @@ const saveTx = async (tx) => {
       if (bap) {
         console.log('bap ID found', bap.idKey)
         t.AIP.bapId = bap.idKey
-        if (t.AIP.identity) {
+        if (bap.identity) {
           t.AIP.identity = JSON.parse(bap.identity)
         }
       }
