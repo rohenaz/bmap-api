@@ -95,9 +95,22 @@ const start = async function () {
         )
       })
 
+      changeStream.on('error', () => {
+        changeStream.close()
+        try {
+          closeDb()
+        } catch (e) {
+          console.log('Error closing db in changestream error')
+        }
+      })
+
       req.on('close', () => {
         changeStream.close()
-        closeDb()
+        try {
+          closeDb()
+        } catch (e) {
+          console.log('Error closing db')
+        }
       })
 
       let lastStatus = connectionStatus
