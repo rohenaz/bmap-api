@@ -44,7 +44,7 @@ const saveTx = async (tx) => {
       bap = await getBAPIdByAddress(address, t.blk.i || undefined, t.timestamp)
       if (bap && bap.result) {
         console.log('bap ID found', bap.idKey)
-        t.AIP.bapId = bap.idKey
+        t.AIP.bapId = bap.result.idKey
       }
     }
   }
