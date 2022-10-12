@@ -4,7 +4,6 @@ import chalk from 'chalk'
 import cors from 'cors'
 import express from 'express'
 import asyncHandler from 'express-async-handler'
-import mongo from 'mongodb'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { processTransaction } from './crawler.js'
@@ -131,48 +130,25 @@ const start = async function () {
     })
   )
 
-  app.get(/^\/q\/(.+)$/, function (req, res) {
-    let b64 = req.params[0]
-    console.log(chalk.magenta('BMAP API'), chalk.cyan('query', b64))
+  app.get(
+    /^\/q\/(.+)$/,
+    asyncHandler(async (req, res) => {
+      let b64 = req.params[0]
+      console.log(chalk.magenta('BMAP API'), chalk.cyan('query', b64))
 
-    mongo.MongoClient.connect(
-      process.env.MONGO_URL,
-      {
-        useUnifiedTopology: true,
-        useNewUrlParser: true,
-      },
-      async function (err, db) {
-        if (err) throw err
+      var dbo = await getDbo()
 
-        var dbo = db.db('bmap')
-
-        let code = Buffer.from(b64, 'base64').toString()
-        let req = JSON.parse(code)
-        if (req.q.aggregate) {
-          dbo
-            .collection('c')
-            .aggregate(req.q.aggregate, {
-              allowDiskUse: true,
-              cursor: { batchSize: 1000 },
-            })
-            .sort(req.q.sort || { _id: -1 })
-            .limit(req.q.limit ? req.q.limit : 10)
-            .toArray(function (err, c) {
-              if (err) {
-                res.status(500).send(err)
-                return
-              }
-              res.send({ c })
-            })
-          return
-        }
-
+      let code = Buffer.from(b64, 'base64').toString()
+      let j = JSON.parse(code)
+      if (j.q.aggregate) {
         dbo
           .collection('c')
-          .find(req.q.find)
-          .sort(req.q.sort || { _id: -1 })
-          .limit(req.q.hasOwnProperty('limit') ? req.q.limit : 10)
-          .project(req.q.project || { in: 0, out: 0 })
+          .aggregate(j.q.aggregate, {
+            allowDiskUse: true,
+            cursor: { batchSize: 1000 },
+          })
+          .sort(j.q.sort || { _id: -1 })
+          .limit(j.q.limit ? j.q.limit : 10)
           .toArray(function (err, c) {
             if (err) {
               res.status(500).send(err)
@@ -180,9 +156,24 @@ const start = async function () {
             }
             res.send({ c })
           })
+        return
       }
-    )
-  })
+
+      dbo
+        .collection('c')
+        .find(j.q.find)
+        .sort(j.q.sort || { _id: -1 })
+        .limit(j.q.hasOwnProperty('limit') ? j.q.limit : 10)
+        .project(j.q.project || { in: 0, out: 0 })
+        .toArray(function (err, c) {
+          if (err) {
+            res.status(500).send(err)
+            return
+          }
+          res.send({ c })
+        })
+    })
+  )
 
   app.get('/ping', async (req, res) => {
     if (req.get('Referrer')) {
