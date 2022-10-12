@@ -7,7 +7,7 @@ import asyncHandler from 'express-async-handler'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { processTransaction } from './crawler.js'
-import { closeDb, getDbo } from './db.js'
+import { getDbo } from './db.js'
 import { ConnectionStatus } from './index.js'
 import { defaultQuery } from './queries.js'
 
@@ -96,20 +96,14 @@ const start = async function () {
 
       changeStream.on('error', () => {
         changeStream.close()
-        try {
-          closeDb()
-        } catch (e) {
-          console.log('Error closing db in changestream error')
-        }
+
+        console.log('Error closing db in changestream error')
       })
 
       req.on('close', () => {
         changeStream.close()
-        try {
-          closeDb()
-        } catch (e) {
-          console.log('Error closing db')
-        }
+
+        console.log('Error closing db')
       })
 
       let lastStatus = connectionStatus
