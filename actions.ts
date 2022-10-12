@@ -34,17 +34,17 @@ const saveTx = async (tx) => {
           t.timestamp
         )
         //TODO: add && bap.valid === true when BAP API returns this correctly
-        if (bap && bap.result) {
-          console.log('bap ID found', bap.result.idKey)
-          t.AIP[i].bapId = bap.result.idKey
+        if (bap) {
+          console.log('bap ID found', bap.idKey)
+          t.AIP[i].bapId = bap.idKey
         }
       }
     } else {
       const { address } = t.AIP
       bap = await getBAPIdByAddress(address, t.blk.i || undefined, t.timestamp)
-      if (bap && bap.result) {
+      if (bap) {
         console.log('bap ID found', bap.idKey)
-        t.AIP.bapId = bap.result.idKey
+        t.AIP.bapId = bap.idKey
       }
     }
   }
@@ -123,7 +123,6 @@ export { saveTx, clearUnconfirmed }
 
 const bapApiUrl = `https://bap-api.com/v1`
 const getBAPIdByAddress = async function (address, block, timestamp) {
-  console.log('look up bap id', address)
   if (bapApiUrl) {
     const result = await fetch(`${bapApiUrl}/identity/validByAddress`, {
       method: 'POST',
@@ -138,7 +137,7 @@ const getBAPIdByAddress = async function (address, block, timestamp) {
       }),
     })
     const data = await result.json()
-    console.log('bap lookup', data)
+
     if (data && data.status === 'OK' && data.result) {
       return data.result
     }
