@@ -14,11 +14,13 @@
   resolved "https://registry.yarnpkg.com/@colors/colors/-/colors-1.5.0.tgz#bb504579c1cae923e6576a4f5da43d25f97bdbd9"
   integrity sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==
 
-"@gorillapool/js-junglebus@^0.3.0":
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/@gorillapool/js-junglebus/-/js-junglebus-0.3.0.tgz#cab204e43aa5e533db8a2d4477f129ad64f89d40"
-  integrity sha512-Kxbwud3LUrs7kDN1zoHebmY4MsGgO4+5Ggf2WbsGQ8HI6ShrpK+uCAxK8r/M69Qm/qVWh9QomWlHGsoeuEfX8Q==
+"@gorillapool/js-junglebus@^0.4.1":
+  version "0.4.1"
+  resolved "https://registry.yarnpkg.com/@gorillapool/js-junglebus/-/js-junglebus-0.4.1.tgz#11648f45fb6a4583d37822e0672267cce94a821e"
+  integrity sha512-F6iCz8Sl6R+I3KBkFJpImrDeeW7TlQ+jtZEFSjMfje9O3EP0Y7JRAnT3JC7IqSALv6xIkpFamNK+12k/4zl+hw==
   dependencies:
+    "@types/better-queue" "^3.8.3"
+    better-queue "^3.8.12"
     buffer "^6.0.3"
     centrifuge "^3.0.1"
     cross-fetch "^3.1.5"
@@ -118,7 +120,7 @@
   dependencies:
     defer-to-connect "^2.0.0"
 
-"@types/better-queue@^3.8.2":
+"@types/better-queue@^3.8.2", "@types/better-queue@^3.8.3":
   version "3.8.3"
   resolved "https://registry.yarnpkg.com/@types/better-queue/-/better-queue-3.8.3.tgz#69dd8ba158749749df0cb48ef05ab4d62145575a"
   integrity sha512-xCWSF5i1CJMq271mGjK4MrAzIEFNFKVv/eMtL8eUyD4rOOcx1SBs2zhcQxVkWjCz2TVMQOUUxwkgWyDDyvw+rw==
@@ -401,6 +403,15 @@ better-queue@^3.8.10:
   version "3.8.11"
   resolved "https://registry.yarnpkg.com/better-queue/-/better-queue-3.8.11.tgz#8b63203793b30590891f40ee7bca9eeedb3c3106"
   integrity sha512-lfq4EvZfM/zYXa7x6bTsVkdZjz/srU6dJ/EsaydzVWVoFlKfhXLA5MJhqVLX3Mv7CPgubXyQktplV0amrF6kJw==
+  dependencies:
+    better-queue-memory "^1.0.1"
+    node-eta "^0.9.0"
+    uuid "^9.0.0"
+
+better-queue@^3.8.12:
+  version "3.8.12"
+  resolved "https://registry.yarnpkg.com/better-queue/-/better-queue-3.8.12.tgz#15c18923d0f9778be94f19c3ef2bd85c632d0db3"
+  integrity sha512-D9KZ+Us+2AyaCz693/9AyjTg0s8hEmkiM/MB3i09cs4MdK1KgTSGJluXRYmOulR69oLZVo2XDFtqsExDt8oiLA==
   dependencies:
     better-queue-memory "^1.0.1"
     node-eta "^0.9.0"
