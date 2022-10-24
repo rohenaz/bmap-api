@@ -203,7 +203,9 @@ const start = async function () {
       processTransaction({
         transaction: req.body.rawTx,
       } as Partial<Transaction>)
-        .then(() => res.status(201).send())
+        .then((tx) => {
+          res.status(201).send(tx)
+        })
         .catch((e) => res.status(500).send(e))
 
       return
