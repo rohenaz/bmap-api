@@ -1480,10 +1480,10 @@ mimic-response@^3.1.0:
   resolved "https://registry.yarnpkg.com/mimic-response/-/mimic-response-3.1.0.tgz#2d1d59af9c1b129815accc2c46a022a5ce1fa3c9"
   integrity sha512-z0yWI+4FDrrweS8Zmt4Ej5HdJmky15+L2e6Wgn3+iK5fWzb6T3fhNFq2+MeTRb064c6Wr4N/wv0DzQTjNzHNGQ==
 
-mingo@^6.1.0:
-  version "6.1.0"
-  resolved "https://registry.yarnpkg.com/mingo/-/mingo-6.1.0.tgz#6b58858bf1254c04d35e727c02754ec0533ce858"
-  integrity sha512-OShdwTMBzDabOxkfxX1a7ENFP0tp9KGIJgRabuyamCdm6qDxcjoQPhlkXyxgUqI5s1tKsDKiRWKZtu1Nap4/Xw==
+mingo@^6.1.2:
+  version "6.2.0"
+  resolved "https://registry.yarnpkg.com/mingo/-/mingo-6.2.0.tgz#52965f2c550203bc02183c20255262aab45af051"
+  integrity sha512-M5uhzRiQv7xxyQ7B/SyDKZkSzj0a9yqhc2tI2UzVLo+ZuoT5K1hhSj6hG3itOLlufkv7c1r2YM16Xxc4JYAXTA==
 
 minimalistic-assert@^1.0.0, minimalistic-assert@^1.0.1:
   version "1.0.1"
