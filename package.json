@@ -16,7 +16,7 @@
     "express": "^4.17.1",
     "express-async-handler": "^1.2.0",
     "got": "^11.0.2",
-    "mingo": "^6.1.0",
+    "mingo": "^6.1.2",
     "mongodb": "^3.6.3",
     "mongoose": "^5.10.6",
     "node-fetch": "^2.6.1",
