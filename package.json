@@ -3,7 +3,7 @@
   "dependencies": {
     "@gorillapool/js-junglebus": "^0.4.1",
     "JSONStream": "^1.3.5",
-    "better-queue": "^3.8.10",
+    "better-queue": "^3.8.12",
     "bmapjs": "^0.3.5",
     "body-parser": "^1.20.0",
     "bpu": "^0.0.13",
