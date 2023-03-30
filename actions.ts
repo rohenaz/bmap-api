@@ -131,7 +131,8 @@ const bapApiUrl = `https://bap-api.com/v1`
 const getBAPIdByAddress = async (address, block, timestamp) => {
   if (bapApiUrl) {
     if (bapCache.has(address)) {
-      console.log('Return BAP id from cache')
+      // return BAP ID from cache
+      // TODO: This should be a seprate collection
       return bapCache.get(address)
     }
     try {
