@@ -23,7 +23,7 @@
     "prompt-async": "^0.9.9"
   },
   "engines": {
-    "node": ">=16"
+    "node": "16"
   },
   "devDependencies": {
     "@types/better-queue": "^3.8.2",
@@ -48,7 +48,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "ts-node index.ts",
-    "start": "set NODE_OPTIONS=--openssl-legacy-provider && nodemon ./build/index.js",
+    "start": "nodemon ./build/index.js",
     "prod": "yarn build && yarn start",
     "debug": "yarn build && nodemon --trace-warnings ./build/index.js"
   }
