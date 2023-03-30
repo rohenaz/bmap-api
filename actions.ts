@@ -40,7 +40,6 @@ const saveTx = async (tx: BobTx) => {
           )
           //TODO: add && bap.valid === true when BAP API returns this correctly
           if (bap) {
-            console.log(chalk.grey('bap ID found', bap.idKey))
             t.AIP[i].bapId = bap.idKey
             if (bap.identity) {
               t.AIP[i].identity = JSON.parse(bap.identity)
