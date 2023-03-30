@@ -43,7 +43,7 @@ const start = async function () {
   console.log(chalk.magenta('BMAP API'), chalk.cyan('initializing machine...'))
 
   app.set('port', process.env.PORT || 3055)
-  app.set('host', process.env.HOST || 'localhost')
+  app.set('host', process.env.HOST || '127.0.0.1')
   app.set('view engine', 'ejs')
   app.set('views', __dirname + '/../views')
   app.use(cors())

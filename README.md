@@ -12,7 +12,7 @@ A crawler and indexer that saves transaction data into a MongoDB database.
 
 A REST API supporting BitQuery syntax.
 
-![alt text](public/screen.png "Screenshot")
+![alt text](public/screen.png 'Screenshot')
 
 ```json
 {
@@ -37,9 +37,9 @@ For a full list of what protocols are supported see [bmapjs.com](https://bmapjs.
 It also makes working with the results from your frontend much friendlier
 
 ```js
-let res = await fetch("https://b.map.sv/q/...");
-let j = res.json();
-console.log("Got tx", j[0].tx.h, "app:", j[0].MAP.app);
+let res = await fetch('https://b.map.sv/q/...')
+let j = res.json()
+console.log('Got tx', j[0].tx.h, 'app:', j[0].MAP.app)
 ```
 
 ## Socket
@@ -48,30 +48,30 @@ Using the same query syntax you can listen for changes:
 
 ```js
 var sock = {
-  "v":3,
-  "q":{
-    "find":{
-      "MAP.type": {"$in": ["post","message"]}, 
+  v: 3,
+  q: {
+    find: {
+      'MAP.type': { $in: ['post', 'message'] },
     },
-    "sort": {
-      "blk.t": -1
-    }
-  }
+    sort: {
+      'blk.t': -1,
+    },
+  },
 }
 ```
 
 ```js
 var sock_b64 = btoa(JSON.stringify(sock))
-var socket_url = 'https://b.map.sv/s/'+sock_b64
+var socket_url = 'https://b.map.sv/s/' + sock_b64
 
-  // socket
-  bmapSocket = new EventSource(socket_url)
-  bmapSocket.onmessage = function(e) {
-    var res = JSON.parse(e.data)
-    if (res.type === 'push') {
-      // do something with res.data
-    }
+// socket
+bmapSocket = new EventSource(socket_url)
+bmapSocket.onmessage = function (e) {
+  var res = JSON.parse(e.data)
+  if (res.type === 'push') {
+    // do something with res.data
   }
+}
 ```
 
 # Install
@@ -124,7 +124,7 @@ See their [installation guide](https://docs.mongodb.com/manual/installation)
 
 Set the following environmental variables:
 
-- `MONGO_URL` A connection string to your mongo database. ex: mongodb://localhost:27017/bmap when running locally, or mongodb://mongo:27017/bmap from within a container.
+- `MONGO_URL` A connection string to your mongo database. ex: mongodb://127.0.0.1:27017/bmap when running locally, or mongodb://mongo:27017/bmap from within a container.
 
 # Run
 
@@ -147,7 +147,7 @@ With BitQuery you can search in all sorts of ways.
 1. Set a timestamp in the expected format.
 
 ```js
-let timestamp = Math.floor(new Date().getTime() / 1000 - 86400);
+let timestamp = Math.floor(new Date().getTime() / 1000 - 86400)
 ```
 
 2. Search for records since that timestamp:

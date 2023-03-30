@@ -5,6 +5,9 @@ import { Db } from 'mongodb'
 import { getDbo } from './db.js'
 
 const { TransformTx } = bmapjs
+
+const bapCache = new Map<string, Object>()
+
 const saveTx = async (tx: BobTx) => {
   let t: any
   let dbo: Db
@@ -127,6 +130,10 @@ export { saveTx, clearUnconfirmed }
 const bapApiUrl = `https://bap-api.com/v1`
 const getBAPIdByAddress = async (address, block, timestamp) => {
   if (bapApiUrl) {
+    if (bapCache.has(address)) {
+      console.log('Return BAP id from cache')
+      return bapCache.get(address)
+    }
     try {
       const result = await fetch(`${bapApiUrl}/identity/validByAddress`, {
         method: 'POST',
@@ -142,6 +149,7 @@ const getBAPIdByAddress = async (address, block, timestamp) => {
       })
       const data = await result.json()
 
+      bapCache.set(address, data)
       if (data && data.status === 'OK' && data.result) {
         return data.result
       }
