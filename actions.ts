@@ -61,6 +61,12 @@ const saveTx = async (tx: BobTx) => {
     try {
       let timestamp = t.timestamp as number
       delete t.timestamp
+
+      // sending a ping will makesure we're connecting before trying to insert
+      // if it fails we enter the catch
+      // failing on updateOne on the other hand will crash
+      await dbo.command({ ping: 1 })
+
       await dbo.collection(collection).updateOne(
         { _id: t._id },
         {
