@@ -3,8 +3,8 @@ import {
   JungleBusClient,
   Transaction,
 } from '@gorillapool/js-junglebus'
-import { BmapTx } from 'bmapjs/types/common.js'
-import BPU from 'bpu'
+import { BmapTx, BobTx } from 'bmapjs/types/common.js'
+import BPU from 'bpu-ts'
 import chalk from 'chalk'
 import { saveTx } from './actions.js'
 import { getDbo } from './db.js'
@@ -18,10 +18,6 @@ const bobFromRawTx = async (rawtx: string) => {
     split: [
       {
         token: { op: 106 },
-        include: 'l',
-      },
-      {
-        token: { op: 0 },
         include: 'l',
       },
       {
@@ -93,9 +89,10 @@ const crawl = (height: number, jungleBusClient: JungleBusClient) => {
 }
 
 export async function processTransaction(ctx: Partial<Transaction>) {
-  let result: BmapTx
+  let result: Partial<BobTx>
   try {
-    result = await bobFromRawTx(ctx.transaction)
+    result = (await bobFromRawTx(ctx.transaction)) as Partial<BmapTx>
+
     result.blk = {
       i: ctx.block_height || 0,
       t: ctx.block_time || Math.round(new Date().getTime() / 1000),
@@ -109,7 +106,8 @@ export async function processTransaction(ctx: Partial<Transaction>) {
 
     // TODO: it is possible it doesn't have a timestamp at all if we missed it from mempool
     if (!ctx.block_hash) {
-      result.timestamp = ctx.block_time
+      result.timestamp =
+        ctx.block_time || Math.floor(new Date().getTime() / 1000 - 86400)
     }
   } catch (e) {
     console.error('Failed to bob tx', e)
@@ -117,7 +115,7 @@ export async function processTransaction(ctx: Partial<Transaction>) {
   }
 
   try {
-    return await saveTx(result)
+    return await saveTx(result as BobTx)
   } catch (e) {
     console.error('Failed to save tx', e)
     return null
