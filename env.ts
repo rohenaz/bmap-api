@@ -26,4 +26,3 @@ const ensureEnvVars = () => {
 }
 
 export { ensureEnvVars }
-

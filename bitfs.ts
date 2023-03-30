@@ -1,7 +1,6 @@
 import BetterQueue from 'better-queue'
 import chalk from 'chalk'
 import fs from 'fs'
-import fetch from 'node-fetch'
 
 // ToDo - Using a queue so if the file download fails for some reason we can add it back to the queue?
 const q = new BetterQueue(
@@ -17,7 +16,8 @@ const q = new BetterQueue(
           // Fetch from BitFS and store to local file
           console.log(chalk.cyan('saving https://bitfs.network/' + file))
           let res = await fetch('https://x.bitfs.network/' + file)
-          res.body.pipe(fs.createWriteStream(path))
+          const body = await res.json()
+          body.pipe(fs.createWriteStream(path))
           return
         }
         // file exists
@@ -37,4 +37,3 @@ const saveFiles = (bitfs) => {
 }
 
 export { saveFiles }
-

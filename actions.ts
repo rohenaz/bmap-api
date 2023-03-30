@@ -1,12 +1,13 @@
-import { bmap } from 'bmapjs'
+import bmapjs from 'bmapjs'
+import { BobTx } from 'bmapjs/types/common.js'
 import chalk from 'chalk'
+import { Db } from 'mongodb'
 import { getDbo } from './db.js'
 
-const { TransformTx } = bmap
-
-const saveTx = async (tx) => {
-  let t
-  let dbo
+const { TransformTx } = bmapjs
+const saveTx = async (tx: BobTx) => {
+  let t: any
+  let dbo: Db
   // Transform
   try {
     dbo = await getDbo()
@@ -28,30 +29,26 @@ const saveTx = async (tx) => {
     if (Array.isArray(t.AIP)) {
       for (let i = 0; i < t.AIP.length; i++) {
         const { address } = t.AIP[i]
-        bap = await getBAPIdByAddress(
-          address,
-          t.blk.i || undefined,
-          t.timestamp
-        )
-        //TODO: add && bap.valid === true when BAP API returns this correctly
-        if (bap) {
-          console.log('bap ID found', bap.idKey)
-          t.AIP[i].bapId = bap.idKey
-          if (bap.identity) {
-            t.AIP[i].identity = JSON.parse(bap.identity)
+        try {
+          bap = await getBAPIdByAddress(
+            address,
+            t.blk.i || undefined,
+            t.timestamp
+          )
+          //TODO: add && bap.valid === true when BAP API returns this correctly
+          if (bap) {
+            console.log(chalk.grey('bap ID found', bap.idKey))
+            t.AIP[i].bapId = bap.idKey
+            if (bap.identity) {
+              t.AIP[i].identity = JSON.parse(bap.identity)
+            }
           }
+        } catch (e) {
+          console.log(chalk.redBright('Failed to get BAP ID by Address', e))
         }
       }
     } else {
-      const { address } = t.AIP
-      bap = await getBAPIdByAddress(address, t.blk.i || undefined, t.timestamp)
-      if (bap) {
-        console.log('bap ID found', bap.idKey)
-        t.AIP.bapId = bap.idKey
-        if (bap.identity) {
-          t.AIP.identity = JSON.parse(bap.identity)
-        }
-      }
+      console.log(chalk.redBright('Unexpected AIP object format'))
     }
   }
 
@@ -60,7 +57,7 @@ const saveTx = async (tx) => {
     let txId = tx && tx.tx ? tx.tx.h : undefined
     t._id = txId
     try {
-      let timestamp = t.timestamp
+      let timestamp = t.timestamp as number
       delete t.timestamp
       await dbo.collection(collection).updateOne(
         { _id: t._id },
@@ -96,7 +93,7 @@ const clearUnconfirmed = () => {
     let dbo = await getDbo()
     dbo
       .listCollections({ name: 'u' })
-      .toArray(async function (err, collections) {
+      .toArray(async function (err: any, collections: any[]) {
         if (
           collections
             .map((c) => {
@@ -128,24 +125,29 @@ const clearUnconfirmed = () => {
 export { saveTx, clearUnconfirmed }
 
 const bapApiUrl = `https://bap-api.com/v1`
-const getBAPIdByAddress = async function (address, block, timestamp) {
+const getBAPIdByAddress = async (address, block, timestamp) => {
   if (bapApiUrl) {
-    const result = await fetch(`${bapApiUrl}/identity/validByAddress`, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        address,
-        block,
-        timestamp,
-      }),
-    })
-    const data = await result.json()
+    try {
+      const result = await fetch(`${bapApiUrl}/identity/validByAddress`, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address,
+          block,
+          timestamp,
+        }),
+      })
+      const data = await result.json()
 
-    if (data && data.status === 'OK' && data.result) {
-      return data.result
+      if (data && data.status === 'OK' && data.result) {
+        return data.result
+      }
+    } catch (e) {
+      console.log(chalk.redBright(e))
+      throw e
     }
   }
 

@@ -1,18 +1,20 @@
+import chalk from 'chalk'
 import mongo from 'mongodb'
 
 const MongoClient = mongo.MongoClient
-let client = null
-let db = null
+let client: mongo.MongoClient = null
+let db: mongo.Db = null
 
 const getDbo = async () => {
   if (db) {
     return db
   } else {
     try {
+      console.log(chalk.bgYellow(`Connecting to ${process.env.MONGO_URL}`))
       client = await MongoClient.connect(process.env.MONGO_URL, {
-        poolSize: 10,
-        useUnifiedTopology: true,
-        useNewUrlParser: true,
+        //client = await MongoClient.connect(`mongodb://127.0.0.1:27017/bmap`, {
+        minPoolSize: 1,
+        maxPoolSize: 10,
       })
       db = client.db('bmap')
       return db
@@ -24,7 +26,12 @@ const getDbo = async () => {
 
 const closeDb = async () => {
   if (client !== null) {
-    await client.close()
+    try {
+      await client.close()
+    } catch (e) {
+      console.error('Failed to close DB')
+      return
+    }
     client = null
   }
 }

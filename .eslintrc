@@ -1,7 +1,26 @@
 {
-  "extends": "eslint-plugin-node",
-  "plugins": ["prettier"],
+  "parser": "@typescript-eslint/parser",
+  "env": {
+    "browser": true,
+    "es2021": true,
+    "node": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 12,
+    "sourceType": "module",
+    "allowImportExportEverywhere": true,
+    "project": "./tsconfig.json"
+  },
+  "extends": [
+    "prettier",
+    "eslint:recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "eslint-plugin-node"
+  ],
+  "plugins": ["@typescript-eslint", "prettier"],
   "rules": {
-    "prettier/prettier": "error"
+    "no-extra-semi": 0,
+    "@typescript-eslint/no-unused-vars": "error",
+    "@typescript-eslint/consistent-type-definitions": ["error", "type"]
   }
 }

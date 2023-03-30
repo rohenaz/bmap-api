@@ -1,7 +1,9 @@
 import {
   ControlMessageStatusCode,
+  JungleBusClient,
   Transaction,
 } from '@gorillapool/js-junglebus'
+import { BmapTx } from 'bmapjs/types/common.js'
 import BPU from 'bpu'
 import chalk from 'chalk'
 import { saveTx } from './actions.js'
@@ -10,7 +12,7 @@ import { getDbo } from './db.js'
 let currentBlock = 0
 let synced = false
 
-const bobFromRawTx = async (rawtx) => {
+const bobFromRawTx = async (rawtx: string) => {
   return await BPU.parse({
     tx: { r: rawtx },
     split: [
@@ -29,7 +31,7 @@ const bobFromRawTx = async (rawtx) => {
   })
 }
 
-const crawl = (height, jungleBusClient) => {
+const crawl = (height: number, jungleBusClient: JungleBusClient) => {
   return new Promise(async (resolve, reject) => {
     // only block indexes greater than given height
 
@@ -41,11 +43,11 @@ const crawl = (height, jungleBusClient) => {
       currentBlock || height,
       async function onPublish(ctx) {
         //console.log('TRANSACTION', ctx.id)
-        return new Promise((resolve, reject) => {
-          setTimeout(async () => {
-            resolve(await processTransaction(ctx))
-          }, 1000)
-        })
+        try {
+          await processTransaction(ctx)
+        } catch (e) {
+          console.log(chalk.redBright(`Failed to process block tx`, e))
+        }
       },
       function onStatus(cMsg) {
         if (cMsg.statusCode === ControlMessageStatusCode.BLOCK_DONE) {
@@ -80,22 +82,30 @@ const crawl = (height, jungleBusClient) => {
       async function onMempool(ctx) {
         console.log('MEMPOOL TRANSACTION', ctx.id)
 
-        return await processTransaction(ctx)
+        try {
+          await processTransaction(ctx)
+        } catch (e) {
+          console.log(chalk.redBright(`Failed to process mempool tx`, e))
+        }
       }
     )
   })
 }
 
 export async function processTransaction(ctx: Partial<Transaction>) {
-  let result: any
+  let result: BmapTx
   try {
     result = await bobFromRawTx(ctx.transaction)
     result.blk = {
       i: ctx.block_height || 0,
       t: ctx.block_time || Math.round(new Date().getTime() / 1000),
-      m: ctx.merkle_proof || '',
-      h: ctx.block_hash || '',
     }
+
+    // TODO: We should enable this field in BmapTx
+    // and publish field extensions in docs
+    // result.tx = {
+    //   m: ctx.merkle_proof || '',
+    // }
 
     // TODO: it is possible it doesn't have a timestamp at all if we missed it from mempool
     if (!ctx.block_hash) {
@@ -114,7 +124,7 @@ export async function processTransaction(ctx: Partial<Transaction>) {
   }
 }
 
-const crawler = async (jungleBusClient) => {
+const crawler = async (jungleBusClient: JungleBusClient) => {
   await getDbo() // warm up db connection
 
   await crawl(currentBlock, jungleBusClient).catch((e) => {
@@ -123,7 +133,7 @@ const crawler = async (jungleBusClient) => {
   })
 }
 
-const setCurrentBlock = (num) => {
+const setCurrentBlock = (num: number) => {
   currentBlock = num
 }
 

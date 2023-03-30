@@ -1,14 +1,14 @@
-version: "2.1"
+version: '2.1'
 services:
   web:
     environment:
       - MONGO_URL=mongodb://localhost:27017/bmap
     build: .
     ports:
-      - "3000:3000"
+      - '3000:3000'
     depends_on:
       - mongo
   mongo:
     image: mongo
     ports:
-      - "27017:27017"
+      - '27017:27017'

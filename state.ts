@@ -1,7 +1,7 @@
 import { config } from './config.js'
 import { getDbo } from './db.js'
 
-const getCurrentBlock = () => {
+const getCurrentBlock = (): Promise<number> => {
   return new Promise(async (resolve, reject) => {
     try {
       let dbo = await getDbo()
@@ -12,6 +12,7 @@ const getCurrentBlock = () => {
         .limit(1)
         .toArray(async function (err, result) {
           if (err) {
+            console.error('Failed toArray', err)
             // await closeDb()
             reject(err)
           }
@@ -27,6 +28,7 @@ const getCurrentBlock = () => {
           }
         })
     } catch (e) {
+      console.error('Failed to get current block', e)
       // await closeDb()
       reject(e)
     }
@@ -34,4 +36,3 @@ const getCurrentBlock = () => {
 }
 
 export { getCurrentBlock }
-

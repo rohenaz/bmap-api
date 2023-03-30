@@ -1,9 +1,11 @@
 import { Transaction } from '@gorillapool/js-junglebus'
+import { BmapTx } from 'bmapjs/types/common.js'
 import bodyParser from 'body-parser'
 import chalk from 'chalk'
 import cors from 'cors'
 import express from 'express'
 import asyncHandler from 'express-async-handler'
+import { ChangeStreamDocument } from 'mongodb'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { processTransaction } from './crawler.js'
@@ -80,18 +82,23 @@ const start = async function () {
         (k) => (pipeline[0]['$match'][`fullDocument.${k}`] = query.q.find[k])
       )
 
-      const changeStream = db.collection('c').watch(pipeline)
+      const changeStream = db
+        .collection('c')
+        .watch(pipeline, { fullDocument: 'updateLookup' })
 
-      changeStream.on('change', (next) => {
-        console.log(
-          chalk.blue('New change event - pushing to SSE'),
-          next.fullDocument.tx?.h
-        )
-        res.write(
-          'data: ' +
-            JSON.stringify({ type: 'push', data: [next.fullDocument] }) +
-            '\n\n'
-        )
+      changeStream.on('change', (next: ChangeStreamDocument<BmapTx>) => {
+        // only updated contain fullDocument
+        if (next.operationType === 'update') {
+          console.log(
+            chalk.blue('New change event - pushing to SSE'),
+            next.fullDocument.tx?.h
+          )
+          res.write(
+            'data: ' +
+              JSON.stringify({ type: 'push', data: [next.fullDocument] }) +
+              '\n\n'
+          )
+        }
       })
 
       changeStream.on('error', () => {

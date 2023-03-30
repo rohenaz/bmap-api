@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "module": "ESNext",
+    "noImplicitAny": false,
     "moduleResolution": "node",
     "pretty": true,
     "sourceMap": true,
@@ -8,8 +9,8 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "outDir": "./build",
-    "typeRoots": ["./types", "./node_modules/@types"]
+    "typeRoots": ["types", "node_modules/@types", "node_modules/bmapjs/dist"]
   },
-  "include": ["./*.ts", "./node_modules/@types/*.ts"],
+  "include": ["./*.ts"],
   "exclude": ["node_modules"]
 }
