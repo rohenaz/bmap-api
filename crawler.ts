@@ -4,7 +4,7 @@ import {
   Transaction,
 } from '@gorillapool/js-junglebus'
 import { BmapTx, BobTx } from 'bmapjs/types/common.js'
-import BPU from 'bpu-ts'
+import { parse } from 'bpu-ts'
 import chalk from 'chalk'
 import { saveTx } from './actions.js'
 import { getDbo } from './db.js'
@@ -13,7 +13,7 @@ let currentBlock = 0
 let synced = false
 
 const bobFromRawTx = async (rawtx: string) => {
-  return await BPU.parse({
+  return await parse({
     tx: { r: rawtx },
     split: [
       {
