@@ -245,10 +245,10 @@ const start = async function () {
 }
 
 app.get(
-  '/tx',
+  '/tx/:tx/:format?',
   asyncHandler(async (req, res) => {
-    const tx = req.params[0]
-    const format = req.params[1]
+    const tx = req.params.tx
+    const format = req.params.format
 
     console.log('tx', tx)
     // fetch the tx
