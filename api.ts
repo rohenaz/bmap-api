@@ -1,5 +1,5 @@
 import { Transaction } from '@gorillapool/js-junglebus'
-import { allProtocols, TransformTx } from 'bmapjs'
+import bmapjs from 'bmapjs'
 import { BmapTx } from 'bmapjs/types/common.js'
 import bodyParser from 'body-parser'
 import { parse } from 'bpu-ts'
@@ -14,6 +14,7 @@ import { processTransaction } from './crawler.js'
 import { getDbo } from './db.js'
 import { ConnectionStatus } from './index.js'
 import { defaultQuery } from './queries.js'
+const { allProtocols, TransformTx } = bmapjs
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
