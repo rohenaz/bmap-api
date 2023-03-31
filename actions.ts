@@ -98,6 +98,7 @@ const rewind = async (block: number) => {
   let dbo = await getDbo()
 
   await dbo.collection('c').deleteMany({ 'blk.i': { $gt: block } })
+  await clearUnconfirmed()
 }
 
 const clearUnconfirmed = () => {
