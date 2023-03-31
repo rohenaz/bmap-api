@@ -78,11 +78,14 @@ const crawl = (height: number, jungleBusClient: JungleBusClient) => {
       async function onMempool(ctx) {
         console.log('MEMPOOL TRANSACTION', ctx.id)
 
-        try {
-          await processTransaction(ctx)
-        } catch (e) {
-          console.log(chalk.redBright(`Failed to process mempool tx`, e))
-        }
+        // TODO: Re-enabled when synced
+        // TODO: This is firing early. We can't read starting position
+        // from the db if we have this active during initial sync phase
+        // try {
+        //   await processTransaction(ctx)
+        // } catch (e) {
+        //   console.log(chalk.redBright(`Failed to process mempool tx`, e))
+        // }
       }
     )
   })
