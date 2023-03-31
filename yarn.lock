@@ -1327,10 +1327,10 @@ bitcoind-rpc@^0.9.1:
   resolved "https://registry.yarnpkg.com/bitcoind-rpc/-/bitcoind-rpc-0.9.1.tgz#05464c135d0fb6d8b51de76192064c0cf3593593"
   integrity sha512-fWjepYe3I6W8pw8WiDUrHAMKZXyRqtm6HfcUaDeLAQLr1KoKcVzqR4xzdJFJgUMBShNmN4GRMg0rLFr6ZKGZ6A==
 
-bmapjs@^0.4.0-beta.33:
-  version "0.4.0-beta.33"
-  resolved "https://registry.yarnpkg.com/bmapjs/-/bmapjs-0.4.0-beta.33.tgz#45cf864d98b2f5212f7afca067776810716f2013"
-  integrity sha512-9iTvvMjCz0AMLkGN3W6/cyP9zctdJuIWrHq6RzqkfX5kjOaxMI2eLTN3lUYLAajrv1M3QjVBf2UDbzrleEwvwQ==
+bmapjs@^0.4.0-beta.34:
+  version "0.4.0-beta.34"
+  resolved "https://registry.yarnpkg.com/bmapjs/-/bmapjs-0.4.0-beta.34.tgz#4d370fd12b5f3b078d4148604f442d57c4d77b01"
+  integrity sha512-Tk9e5OL70T5EPVYN2+4c3AcH6/qNu5bz7oy+zthuXfHERPDUKEe5zlicP/Wwx0hPVKn8LCssC6MnyNCSuGFzLA==
   dependencies:
     "@moneybutton/paymail-client" "^0.39.0"
     "@msgpack/msgpack" "^2.8.0"
