@@ -1327,16 +1327,16 @@ bitcoind-rpc@^0.9.1:
   resolved "https://registry.yarnpkg.com/bitcoind-rpc/-/bitcoind-rpc-0.9.1.tgz#05464c135d0fb6d8b51de76192064c0cf3593593"
   integrity sha512-fWjepYe3I6W8pw8WiDUrHAMKZXyRqtm6HfcUaDeLAQLr1KoKcVzqR4xzdJFJgUMBShNmN4GRMg0rLFr6ZKGZ6A==
 
-bmapjs@^0.4.0-beta.30:
-  version "0.4.0-beta.30"
-  resolved "https://registry.yarnpkg.com/bmapjs/-/bmapjs-0.4.0-beta.30.tgz#9c53f896f34128481ce5e937f30943020ffbde90"
-  integrity sha512-KXGfzblsdYmf3794dBeLTtqmW7N5XrMufP33KrmTRUaBjmaB6/BLaFuW/XAZD5mmnboUwa/uUzOhgKrtC+gEbg==
+bmapjs@^0.4.0-beta.32:
+  version "0.4.0-beta.32"
+  resolved "https://registry.yarnpkg.com/bmapjs/-/bmapjs-0.4.0-beta.32.tgz#73e026c082170b76ba483e58426723524fb29ea2"
+  integrity sha512-QDV6cku4W/ib37xKsYl88BSA5rOsrnfrFnN5R9u37TrgoPux2x3W4d92Fpy+aMWdidEzmo1/SEBbCEtFroPZTA==
   dependencies:
     "@moneybutton/paymail-client" "^0.39.0"
     "@msgpack/msgpack" "^2.8.0"
     "@ts-bitcoin/core" "^2.2.0"
     boostpow "^1.8.1"
-    bpu-ts "^0.0.9"
+    bpu-ts "^0.0.14"
     node-fetch "^2.6.1"
 
 bn.js@^4.0.0, bn.js@^4.1.0, bn.js@^4.11.9:
@@ -1408,10 +1408,10 @@ bowser@^2.11.0:
   resolved "https://registry.yarnpkg.com/bowser/-/bowser-2.11.0.tgz#5ca3c35757a7aa5771500c70a73a9f91ef420a8f"
   integrity sha512-AlcaJBi/pqqJBIQ8U9Mcpc9i8Aqxn88Skv5d+xBX006BY5u8N3mGLHa5Lgppa7L/HfwgwLgZ6NYs+Ag6uUmJRA==
 
-bpu-ts@^0.0.9:
-  version "0.0.9"
-  resolved "https://registry.yarnpkg.com/bpu-ts/-/bpu-ts-0.0.9.tgz#fc176fb395dd1d3255031f97295176f58d4f11e1"
-  integrity sha512-f6BzPIOZ63D7RUnIOr8Bp81MNA13abw2i8A825+FSXGPlFAz35Y/rsQXpA7apHz3ayr4Tsf1pR5uPEA3qQQoMQ==
+bpu-ts@^0.0.14:
+  version "0.0.14"
+  resolved "https://registry.yarnpkg.com/bpu-ts/-/bpu-ts-0.0.14.tgz#d87332dc6bd519935e97ba43701838e49e6ff41e"
+  integrity sha512-UOnUMKDKgUVh2oRFuh5OWPQW3ctVZH7nsOh3lxZXlAjgcuvhJ7K4X+Vulr/PohxUeN6q7BCoQpc4UPmr3sUJyQ==
   dependencies:
     "@ts-bitcoin/core" "^2.2.0"
     bitcoind-rpc "^0.9.1"
