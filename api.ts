@@ -248,7 +248,7 @@ app.get(
   '/tx',
   asyncHandler(async (req, res) => {
     const tx = req.params[0]
-    const format = req.params[0]
+    const format = req.params[1]
 
     console.log('tx', tx)
     // fetch the tx
