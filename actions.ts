@@ -94,6 +94,12 @@ const saveTx = async (tx: BobTx) => {
   }
 }
 
+const rewind = async (block: number) => {
+  let dbo = await getDbo()
+
+  await dbo.collection('c').deleteMany({ 'blk.i': { $gt: block } })
+}
+
 const clearUnconfirmed = () => {
   return new Promise<void>(async (res, rej) => {
     let dbo = await getDbo()
@@ -128,7 +134,7 @@ const clearUnconfirmed = () => {
   })
 }
 
-export { saveTx, clearUnconfirmed }
+export { saveTx, clearUnconfirmed, rewind }
 
 const bapApiUrl = `https://bap-api.com/v1`
 const getBAPIdByAddress = async (address, block, timestamp) => {

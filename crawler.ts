@@ -6,7 +6,7 @@ import {
 import { BmapTx, BobTx } from 'bmapjs/types/common.js'
 import { parse } from 'bpu-ts'
 import chalk from 'chalk'
-import { saveTx } from './actions.js'
+import { rewind, saveTx } from './actions.js'
 import { getDbo } from './db.js'
 
 let currentBlock = 0
@@ -45,10 +45,12 @@ const crawl = (height: number, jungleBusClient: JungleBusClient) => {
           console.log(chalk.redBright(`Failed to process block tx`, e))
         }
       },
-      function onStatus(cMsg) {
+      async function onStatus(cMsg) {
         if (cMsg.statusCode === ControlMessageStatusCode.BLOCK_DONE) {
           // add your own code here
-          setCurrentBlock(cMsg.block)
+          if (synced) {
+            setCurrentBlock(cMsg.block)
+          }
           console.log(
             chalk.blue('####  '),
             chalk.magenta('NEW BLOCK '),
@@ -62,11 +64,15 @@ const crawl = (height: number, jungleBusClient: JungleBusClient) => {
             chalk.blue('####  '),
             chalk.yellow('WAITING ON NEW BLOCK ')
           )
+          synced = true
         } else if (cMsg.statusCode === ControlMessageStatusCode.REORG) {
           console.log(
             chalk.blue('####  '),
             chalk.red('REORG TRIGGERED ', cMsg.block)
           )
+
+          await rewind(cMsg.block)
+          setCurrentBlock(cMsg.block)
         } else {
           chalk.red(cMsg)
         }
@@ -78,14 +84,11 @@ const crawl = (height: number, jungleBusClient: JungleBusClient) => {
       async function onMempool(ctx) {
         console.log('MEMPOOL TRANSACTION', ctx.id)
 
-        // TODO: Re-enabled when synced
-        // TODO: This is firing early. We can't read starting position
-        // from the db if we have this active during initial sync phase
-        // try {
-        //   await processTransaction(ctx)
-        // } catch (e) {
-        //   console.log(chalk.redBright(`Failed to process mempool tx`, e))
-        // }
+        try {
+          await processTransaction(ctx)
+        } catch (e) {
+          console.log(chalk.redBright(`Failed to process mempool tx`, e))
+        }
       }
     )
   })
