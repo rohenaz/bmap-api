@@ -274,6 +274,7 @@ app.get(
         }
 
         const item = await db.collection('c').findOne({ 'tx.h': txid })
+        console.log({ item })
         if (item && (item.ORD || item.B)) {
           var img = Buffer.from(
             item.ORD[vout]?.data || item.B[vout]?.content,
@@ -287,6 +288,8 @@ app.get(
           res.status(200).end(img)
           return
         }
+        res.status(404).send()
+        return
       }
       const bob = await bobFromTxid(tx)
       console.log('bob', bob.out[0])
