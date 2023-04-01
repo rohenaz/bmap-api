@@ -49,7 +49,11 @@ const start = async function () {
   app.set('host', process.env.HOST || '127.0.0.1')
   app.set('view engine', 'ejs')
   app.set('views', __dirname + '/../views')
-  app.use(cors())
+  app.use(
+    cors({
+      origin: '*',
+    })
+  )
 
   app.use(express.static(__dirname + '/../public'))
 
