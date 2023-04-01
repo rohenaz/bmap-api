@@ -336,16 +336,15 @@ app.get(
         default:
           if (format && decoded[format]) {
             return res.status(200).json(decoded[format])
-          } else {
-            res
-              .status(200)
-              .send(
-                format && format.length
-                  ? `Key ${format} not found in tx`
-                  : `<pre>${JSON.stringify(decoded, undefined, 2)}</pre>`
-              )
           }
       }
+      res
+        .status(200)
+        .send(
+          format && format.length
+            ? `Key ${format} not found in tx`
+            : `<pre>${JSON.stringify(decoded, undefined, 2)}</pre>`
+        )
     } catch (e) {
       res.status(400).send('Failed to process tx ' + e)
     }
