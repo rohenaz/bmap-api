@@ -48,9 +48,9 @@ const crawl = (height: number, jungleBusClient: JungleBusClient) => {
       async function onStatus(cMsg) {
         if (cMsg.statusCode === ControlMessageStatusCode.BLOCK_DONE) {
           // add your own code here
-          if (synced) {
-            setCurrentBlock(cMsg.block)
-          }
+
+          setCurrentBlock(cMsg.block)
+
           console.log(
             chalk.blue('####  '),
             chalk.magenta('NEW BLOCK '),
