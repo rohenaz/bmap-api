@@ -228,6 +228,115 @@ const start = async function () {
     }
   })
 
+  app.get(
+    '/tx/:tx/:format?',
+    asyncHandler(async (req, res) => {
+      const tx = req.params.tx
+      const format = req.params.format
+
+      console.log({ tx, format })
+      // fetch the tx
+      try {
+        if (format === 'raw') {
+          const rawTx = await rawTxFromTxid(tx)
+          res.status(200).send(rawTx)
+          return
+        } else if (format === 'json') {
+          const json = await jsonFromTxid(tx)
+          res.status(200).send(json)
+          return
+        } else if (format === 'file') {
+          const db = await getDbo()
+
+          let txid = tx
+          let vout = 0
+          if (tx.includes('_')) {
+            const parts = tx.split('_')
+            txid = parts[0]
+            vout = parseInt(parts[1])
+          }
+
+          const item = await db.collection('c').findOne({ 'tx.h': txid })
+          console.log({ item })
+          if (item && (item.ORD || item.B)) {
+            var img = Buffer.from(
+              item.ORD[vout]?.data || item.B[vout]?.content,
+              'base64'
+            )
+            res.writeHead(200, {
+              'Content-Type':
+                item.ORD[vout].contentType || item.B[vout]['content-type'],
+              'Content-Length': img.length,
+            })
+            res.status(200).end(img)
+            return
+          } else {
+            const bob = await bobFromTxid(txid)
+            console.log('bob', bob.out[0])
+            // Transform from BOB to BMAP
+            console.log('loading protocols', allProtocols)
+            const decoded = await TransformTx(
+              bob,
+              allProtocols.map((p) => p.name)
+            )
+            console.log('bmap', decoded)
+
+            var img = Buffer.from(
+              decoded.ORD[vout]?.data || decoded.B[vout]?.content,
+              'base64'
+            )
+            if (img) {
+              res.writeHead(200, {
+                'Content-Type':
+                  decoded.ORD[vout].contentType ||
+                  decoded.B[vout]['content-type'],
+                'Content-Length': img.length,
+              })
+              res.status(200).end(img)
+            } else {
+              res.status(500).send()
+            }
+
+            return
+          }
+        }
+        const bob = await bobFromTxid(tx)
+        console.log('bob', bob.out[0])
+        // Transform from BOB to BMAP
+        console.log('loading protocols', allProtocols)
+        const decoded = await TransformTx(
+          bob,
+          allProtocols.map((p) => p.name)
+        )
+        console.log('bmap', decoded)
+        // Response (segment and formatting optional)
+
+        switch (format) {
+          case 'bob':
+            res.status(200).json(bob)
+            return
+          case 'bmap':
+            res.status(200).json(decoded)
+            return
+          default:
+            if (format && decoded[format]) {
+              res.status(200).json(decoded[format])
+              return
+            }
+        }
+        res
+          .status(200)
+          .send(
+            format && format.length
+              ? `Key ${format} not found in tx`
+              : `<pre>${JSON.stringify(decoded, undefined, 2)}</pre>`
+          )
+      } catch (e) {
+        res.status(400).send('Failed to process tx ' + e)
+      }
+    })
+  )
+
   app.get('/', function (req, res) {
     res.sendFile(__dirname + '/../public/index.html')
   })
@@ -248,115 +357,6 @@ const start = async function () {
     })
   }
 }
-
-app.get(
-  '/tx/:tx/:format?',
-  asyncHandler(async (req, res) => {
-    const tx = req.params.tx
-    const format = req.params.format
-
-    console.log({ tx, format })
-    // fetch the tx
-    try {
-      if (format === 'raw') {
-        const rawTx = await rawTxFromTxid(tx)
-        res.status(200).send(rawTx)
-        return
-      } else if (format === 'json') {
-        const json = await jsonFromTxid(tx)
-        res.status(200).send(json)
-        return
-      } else if (format === 'file') {
-        const db = await getDbo()
-
-        let txid = tx
-        let vout = 0
-        if (tx.includes('_')) {
-          const parts = tx.split('_')
-          txid = parts[0]
-          vout = parseInt(parts[1])
-        }
-
-        const item = await db.collection('c').findOne({ 'tx.h': txid })
-        console.log({ item })
-        if (item && (item.ORD || item.B)) {
-          var img = Buffer.from(
-            item.ORD[vout]?.data || item.B[vout]?.content,
-            'base64'
-          )
-          res.writeHead(200, {
-            'Content-Type':
-              item.ORD[vout].contentType || item.B[vout]['content-type'],
-            'Content-Length': img.length,
-          })
-          res.status(200).end(img)
-          return
-        } else {
-          const bob = await bobFromTxid(txid)
-          console.log('bob', bob.out[0])
-          // Transform from BOB to BMAP
-          console.log('loading protocols', allProtocols)
-          const decoded = await TransformTx(
-            bob,
-            allProtocols.map((p) => p.name)
-          )
-          console.log('bmap', decoded)
-
-          var img = Buffer.from(
-            decoded.ORD[vout]?.data || decoded.B[vout]?.content,
-            'base64'
-          )
-          if (img) {
-            res.writeHead(200, {
-              'Content-Type':
-                decoded.ORD[vout].contentType ||
-                decoded.B[vout]['content-type'],
-              'Content-Length': img.length,
-            })
-            res.status(200).end(img)
-          } else {
-            res.status(500).send()
-          }
-
-          return
-        }
-      }
-      const bob = await bobFromTxid(tx)
-      console.log('bob', bob.out[0])
-      // Transform from BOB to BMAP
-      console.log('loading protocols', allProtocols)
-      const decoded = await TransformTx(
-        bob,
-        allProtocols.map((p) => p.name)
-      )
-      console.log('bmap', decoded)
-      // Response (segment and formatting optional)
-
-      switch (format) {
-        case 'bob':
-          res.status(200).json(bob)
-          return
-        case 'bmap':
-          res.status(200).json(decoded)
-          return
-        default:
-          if (format && decoded[format]) {
-            res.status(200).json(decoded[format])
-            return
-          }
-      }
-      res
-        .status(200)
-        .send(
-          format && format.length
-            ? `Key ${format} not found in tx`
-            : `<pre>${JSON.stringify(decoded, undefined, 2)}</pre>`
-        )
-    } catch (e) {
-      res.status(400).send('Failed to process tx ' + e)
-    }
-  })
-)
 
 const bobFromRawTx = async (rawtx: string) => {
   return await parse({
