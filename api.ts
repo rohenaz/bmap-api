@@ -262,6 +262,18 @@ app.get(
         const json = await jsonFromTxid(tx)
         res.status(200).send(json)
         return
+      } else if (format === 'file') {
+        const db = await getDbo()
+
+        const item = await db.collection('c').findOne({ 'tx.h': tx })
+        if (item && (item.ORD || item.B)) {
+          var img = Buffer.from(item.ORD.data || item.B.content, 'base64')
+          res.writeHead(200, {
+            'Content-Type': item.ORD.contentType || item.B.mediaType,
+            'Content-Length': img.length,
+          })
+          res.end(img)
+        }
       }
       const bob = await bobFromTxid(tx)
       console.log('bob', bob.out[0])
