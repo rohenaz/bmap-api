@@ -251,7 +251,7 @@ app.get(
     const tx = req.params.tx
     const format = req.params.format
 
-    console.log('tx', tx)
+    console.log({ tx, format })
     // fetch the tx
     try {
       if (format === 'raw') {
@@ -273,7 +273,7 @@ app.get(
           vout = parseInt(parts[1])
         }
 
-        const item = await db.collection('c').findOne({ 'tx.h': tx })
+        const item = await db.collection('c').findOne({ 'tx.h': txid })
         if (item && (item.ORD || item.B)) {
           var img = Buffer.from(
             item.ORD[vout]?.data || item.B[vout]?.content,
