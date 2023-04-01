@@ -330,12 +330,15 @@ app.get(
 
       switch (format) {
         case 'bob':
-          return res.status(200).json(bob)
+          res.status(200).json(bob)
+          return
         case 'bmap':
-          return res.status(200).json(decoded)
+          res.status(200).json(decoded)
+          return
         default:
           if (format && decoded[format]) {
-            return res.status(200).json(decoded[format])
+            res.status(200).json(decoded[format])
+            return
           }
       }
       res
