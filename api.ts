@@ -306,6 +306,10 @@ app.get(
 
           vout = parseInt(parts[1])
         }
+        var img = Buffer.from(
+          decoded.ORD[vout]?.data || decoded.B[vout]?.content,
+          'base64'
+        )
         res.writeHead(200, {
           'Content-Type':
             decoded.ORD[vout].contentType || decoded.B[vout]['content-type'],
