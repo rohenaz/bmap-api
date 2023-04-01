@@ -265,11 +265,23 @@ app.get(
       } else if (format === 'file') {
         const db = await getDbo()
 
+        let txid = tx
+        let vout = 0
+        if (tx.includes('_')) {
+          const parts = tx.split('_')
+          txid = parts[0]
+          vout = parseInt(parts[1])
+        }
+
         const item = await db.collection('c').findOne({ 'tx.h': tx })
         if (item && (item.ORD || item.B)) {
-          var img = Buffer.from(item.ORD.data || item.B.content, 'base64')
+          var img = Buffer.from(
+            item.ORD[vout]?.data || item.B[vout]?.content,
+            'base64'
+          )
           res.writeHead(200, {
-            'Content-Type': item.ORD.contentType || item.B.mediaType,
+            'Content-Type':
+              item.ORD[vout].contentType || item.B[vout].mediaType,
             'Content-Length': img.length,
           })
           res.status(200).end(img)
