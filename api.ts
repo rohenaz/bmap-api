@@ -310,12 +310,17 @@ app.get(
           decoded.ORD[vout]?.data || decoded.B[vout]?.content,
           'base64'
         )
-        res.writeHead(200, {
-          'Content-Type':
-            decoded.ORD[vout].contentType || decoded.B[vout]['content-type'],
-          'Content-Length': img.length,
-        })
-        res.status(200).end(img)
+        if (img) {
+          res.writeHead(200, {
+            'Content-Type':
+              decoded.ORD[vout].contentType || decoded.B[vout]['content-type'],
+            'Content-Length': img.length,
+          })
+          res.status(200).end(img)
+        } else {
+          res.status(500).send()
+        }
+
         return
       }
       res
