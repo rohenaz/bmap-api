@@ -287,6 +287,34 @@ app.get(
           })
           res.status(200).end(img)
           return
+        } else {
+          const bob = await bobFromTxid(txid)
+          console.log('bob', bob.out[0])
+          // Transform from BOB to BMAP
+          console.log('loading protocols', allProtocols)
+          const decoded = await TransformTx(
+            bob,
+            allProtocols.map((p) => p.name)
+          )
+          console.log('bmap', decoded)
+
+          var img = Buffer.from(
+            decoded.ORD[vout]?.data || decoded.B[vout]?.content,
+            'base64'
+          )
+          if (img) {
+            res.writeHead(200, {
+              'Content-Type':
+                decoded.ORD[vout].contentType ||
+                decoded.B[vout]['content-type'],
+              'Content-Length': img.length,
+            })
+            res.status(200).end(img)
+          } else {
+            res.status(500).send()
+          }
+
+          return
         }
       }
       const bob = await bobFromTxid(tx)
@@ -299,30 +327,7 @@ app.get(
       )
       console.log('bmap', decoded)
       // Response (segment and formatting optional)
-      if (format === 'file') {
-        let vout = 0
-        if (tx.includes('_')) {
-          const parts = tx.split('_')
 
-          vout = parseInt(parts[1])
-        }
-        var img = Buffer.from(
-          decoded.ORD[vout]?.data || decoded.B[vout]?.content,
-          'base64'
-        )
-        if (img) {
-          res.writeHead(200, {
-            'Content-Type':
-              decoded.ORD[vout].contentType || decoded.B[vout]['content-type'],
-            'Content-Length': img.length,
-          })
-          res.status(200).end(img)
-        } else {
-          res.status(500).send()
-        }
-
-        return
-      }
       res
         .status(200)
         .send(
