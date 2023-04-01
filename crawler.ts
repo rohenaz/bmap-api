@@ -33,7 +33,8 @@ const crawl = (height: number, jungleBusClient: JungleBusClient) => {
 
     // create subscriptions in the dashboard of the JungleBus website
     const subId =
-      '3f600280c71978452b73bc7d339a726658e4b4dd5e06a50bd81f6d6ddd85abe9'
+      //'3f600280c71978452b73bc7d339a726658e4b4dd5e06a50bd81f6d6ddd85abe9'
+      '6aa5f8d340fe8761bb60f993113f238a2e1c63eceecb13a4a438b7dff2e26261'
     await jungleBusClient.Subscribe(
       subId,
       currentBlock || height,
