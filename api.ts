@@ -272,7 +272,8 @@ app.get(
             'Content-Type': item.ORD.contentType || item.B.mediaType,
             'Content-Length': img.length,
           })
-          res.end(img)
+          res.status(200).end(img)
+          return
         }
       }
       const bob = await bobFromTxid(tx)
