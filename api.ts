@@ -282,14 +282,12 @@ app.get(
           )
           res.writeHead(200, {
             'Content-Type':
-              item.ORD[vout].contentType || item.B[vout].mediaType,
+              item.ORD[vout].contentType || item.B[vout]['content-type'],
             'Content-Length': img.length,
           })
           res.status(200).end(img)
           return
         }
-        res.status(404).send()
-        return
       }
       const bob = await bobFromTxid(tx)
       console.log('bob', bob.out[0])
@@ -301,6 +299,21 @@ app.get(
       )
       console.log('bmap', decoded)
       // Response (segment and formatting optional)
+      if (format === 'file') {
+        let vout = 0
+        if (tx.includes('_')) {
+          const parts = tx.split('_')
+
+          vout = parseInt(parts[1])
+        }
+        res.writeHead(200, {
+          'Content-Type':
+            decoded.ORD[vout].contentType || decoded.B[vout]['content-type'],
+          'Content-Length': img.length,
+        })
+        res.status(200).end(img)
+        return
+      }
       res
         .status(200)
         .send(
