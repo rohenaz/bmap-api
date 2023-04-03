@@ -324,7 +324,7 @@ const start = async function () {
             }
           } else {
             const bob = await bobFromTxid(txid)
-
+            console.log('got the bob', Object.keys(bob))
             // Transform from BOB to BMAP
             const decoded = await TransformTx(
               bob,
