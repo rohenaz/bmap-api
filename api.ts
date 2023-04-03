@@ -299,6 +299,25 @@ const start = async function () {
 
             return
           }
+        } else if (format === 'dataUrl') {
+          const db = await getDbo()
+
+          let txid = tx
+          let vout = 0
+          if (tx.includes('_')) {
+            const parts = tx.split('_')
+            txid = parts[0]
+            vout = parseInt(parts[1])
+          }
+
+          const item = await db.collection('c').findOne({ 'tx.h': txid })
+          console.log({ item })
+          if (item && (item.ORD || item.B)) {
+            var targetContentType =  item.ORD[vout]?.contentType || item.B[vout]['content-type']
+            var targetData =  item.ORD[vout]?.data || item.B[vout]?.content
+
+            res.status(200).send(`data:${targetContentType};base64,${targetData}`)
+            return
         }
         const bob = await bobFromTxid(tx)
         console.log('bob', bob.out[0])
