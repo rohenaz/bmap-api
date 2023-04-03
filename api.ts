@@ -330,7 +330,7 @@ const start = async function () {
               bob,
               allProtocols.map((p) => p.name)
             )
-
+            console.log('decoded', !!decoded.ORD, !!decoded.B)
             if (decoded.ORD[vout]) {
               tc = item.ORD[vout]?.contentType
               td = item.ORD[vout]?.data
