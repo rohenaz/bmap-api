@@ -331,10 +331,10 @@ const start = async function () {
               allProtocols.map((p) => p.name)
             )
             console.log('decoded', !!decoded.ORD, !!decoded.B)
-            if (decoded.ORD[vout]) {
+            if (decoded.ORD && decoded.ORD[vout]) {
               tc = item.ORD[vout]?.contentType
               td = item.ORD[vout]?.data
-            } else if (decoded.B[vout]) {
+            } else if (decoded.B && decoded.B[vout]) {
               tc = item.B[vout]['content-type']
               td = item.B[vout]?.content
             }
