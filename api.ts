@@ -330,15 +330,15 @@ const start = async function () {
               allProtocols.map((p) => p.name)
             )
 
-            var targetContentType =
-              decoded.ORD[vout]?.contentType || decoded.B[vout]['content-type']
-            var targetData = decoded.ORD[vout]?.data || decoded.B[vout]?.content
+            var tc = (decoded.ORD[vout]?.contentType ||
+              decoded.B[vout]['content-type']) as string
+            var td = (decoded.ORD[vout]?.data ||
+              decoded.B[vout]?.content) as string
 
-            res
-              .status(200)
-              .send(`data:${targetContentType};base64,${targetData}`)
+            res.status(200).send(`data:${tc};base64,${td}`)
             return
           }
+          // not a recognized format, parse as key
         }
         const bob = await bobFromTxid(tx)
         console.log('bob', bob.out[0])
