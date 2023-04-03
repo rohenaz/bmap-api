@@ -272,21 +272,18 @@ const start = async function () {
             return
           } else {
             const bob = await bobFromTxid(txid)
-            console.log('bob', bob.out[0])
             // Transform from BOB to BMAP
-            console.log('loading protocols', allProtocols)
             const decoded = await TransformTx(
               bob,
               allProtocols.map((p) => p.name)
             )
-            console.log('bmap', decoded)
 
             var dataBuf: Buffer
             var contentType: string
-            if (decoded.ORD[vout]) {
+            if (decoded.ORD && decoded.ORD[vout]) {
               dataBuf = Buffer.from(decoded.ORD[vout]?.data, 'base64')
               contentType = decoded.ORD[vout].contentType
-            } else if (decoded.B[vout]) {
+            } else if (decoded.B && decoded.B[vout]) {
               dataBuf = Buffer.from(decoded.B[vout]?.content, 'base64')
               contentType = decoded.B[vout]['content-type']
             }
