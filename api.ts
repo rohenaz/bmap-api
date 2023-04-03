@@ -313,11 +313,15 @@ const start = async function () {
           const item = await db.collection('c').findOne({ 'tx.h': txid })
           console.log({ item })
           if (item && (item.ORD || item.B)) {
-            var targetContentType =  item.ORD[vout]?.contentType || item.B[vout]['content-type']
-            var targetData =  item.ORD[vout]?.data || item.B[vout]?.content
+            var targetContentType =
+              item.ORD[vout]?.contentType || item.B[vout]['content-type']
+            var targetData = item.ORD[vout]?.data || item.B[vout]?.content
 
-            res.status(200).send(`data:${targetContentType};base64,${targetData}`)
+            res
+              .status(200)
+              .send(`data:${targetContentType};base64,${targetData}`)
             return
+          }
         }
         const bob = await bobFromTxid(tx)
         console.log('bob', bob.out[0])
