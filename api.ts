@@ -281,18 +281,22 @@ const start = async function () {
             )
             console.log('bmap', decoded)
 
-            var img = Buffer.from(
-              decoded.ORD[vout]?.data || decoded.B[vout]?.content,
-              'base64'
-            )
-            if (img) {
+            var dataBuf: Buffer
+            var contentType: string
+            if (decoded.ORD[vout]) {
+              dataBuf = Buffer.from(decoded.ORD[vout]?.data, 'base64')
+              contentType = decoded.ORD[vout].contentType
+            } else if (decoded.B[vout]) {
+              dataBuf = Buffer.from(decoded.B[vout]?.content, 'base64')
+              contentType = decoded.B[vout]['content-type']
+            }
+
+            if (dataBuf) {
               res.writeHead(200, {
-                'Content-Type':
-                  decoded.ORD[vout].contentType ||
-                  decoded.B[vout]['content-type'],
-                'Content-Length': img.length,
+                'Content-Type': contentType,
+                'Content-Length': dataBuf.length,
               })
-              res.status(200).end(img)
+              res.status(200).end(dataBuf)
             } else {
               res.status(500).send()
             }
