@@ -314,7 +314,7 @@ const start = async function () {
           console.log({ item })
           let tc: string
           let td: string
-          if (item && (item.ORD || item.B)) {
+          if (item && (item?.ORD || item?.B)) {
             if (item.ORD) {
               tc = item.ORD[vout]?.contentType
               td = item.ORD[vout]?.data
