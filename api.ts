@@ -321,6 +321,23 @@ const start = async function () {
               .status(200)
               .send(`data:${targetContentType};base64,${targetData}`)
             return
+          } else {
+            const bob = await bobFromTxid(txid)
+
+            // Transform from BOB to BMAP
+            const decoded = await TransformTx(
+              bob,
+              allProtocols.map((p) => p.name)
+            )
+
+            var targetContentType =
+              decoded.ORD[vout]?.contentType || decoded.B[vout]['content-type']
+            var targetData = decoded.ORD[vout]?.data || decoded.B[vout]?.content
+
+            res
+              .status(200)
+              .send(`data:${targetContentType};base64,${targetData}`)
+            return
           }
         }
         const bob = await bobFromTxid(tx)
