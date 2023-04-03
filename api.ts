@@ -312,15 +312,16 @@ const start = async function () {
 
           const item = await db.collection('c').findOne({ 'tx.h': txid })
           console.log({ item })
+          let tc: string
+          let td: string
           if (item && (item.ORD || item.B)) {
-            var targetContentType =
-              item.ORD[vout]?.contentType || item.B[vout]['content-type']
-            var targetData = item.ORD[vout]?.data || item.B[vout]?.content
-
-            res
-              .status(200)
-              .send(`data:${targetContentType};base64,${targetData}`)
-            return
+            if (item.ORD) {
+              tc = item.ORD[vout]?.contentType
+              td = item.ORD[vout]?.data
+            } else if (item.B) {
+              tc = item.B[vout]['content-type']
+              td = item.B[vout]?.content
+            }
           } else {
             const bob = await bobFromTxid(txid)
 
@@ -330,12 +331,20 @@ const start = async function () {
               allProtocols.map((p) => p.name)
             )
 
-            var tc = (decoded.ORD[vout]?.contentType ||
-              decoded.B[vout]['content-type']) as string
-            var td = (decoded.ORD[vout]?.data ||
-              decoded.B[vout]?.content) as string
+            if (decoded.ORD[vout]) {
+              tc = item.ORD[vout]?.contentType
+              td = item.ORD[vout]?.data
+            } else if (decoded.B[vout]) {
+              tc = item.B[vout]['content-type']
+              td = item.B[vout]?.content
+            }
 
-            res.status(200).send(`data:${tc};base64,${td}`)
+            if (tc && td) {
+              res.status(200).send(`data:${tc};base64,${td}`)
+            } else {
+              res.status(404).send()
+            }
+
             return
           }
           // not a recognized format, parse as key
