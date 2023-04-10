@@ -52,7 +52,7 @@ let connectionStatus = ConnectionStatus.Disconnected
 const start = async () => {
   await ensureEnvVars()
   await getDbo() // warm up db connection
-
+  console.log('WARM')
   try {
     // Should really start with latest blk from ANY collection, not only video like this
     let currentBlock = await getCurrentBlock()

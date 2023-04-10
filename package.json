@@ -50,7 +50,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "ts-node index.ts",
-    "start": "cross-env NODE_OPTIONS=--openssl-legacy-provider && nodemon ./build/index.js",
+    "start": "cross-env NODE_OPTIONS=\"--openssl-legacy-provider --no-experimental-fetch\" && nodemon ./build/index.js",
     "prod": "yarn build && yarn start",
     "debug": "yarn build && nodemon --trace-warnings ./build/index.js"
   }
