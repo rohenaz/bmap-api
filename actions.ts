@@ -104,34 +104,33 @@ const rewind = async (block: number) => {
 const clearUnconfirmed = () => {
   return new Promise<void>(async (res, rej) => {
     let dbo = await getDbo()
-    dbo
-      .listCollections({ name: 'u' })
-      .toArray(async function (err: any, collections: any[]) {
-        if (
-          collections
-            .map((c) => {
-              return c.name
-            })
-            .indexOf('u') !== -1
-        ) {
-          try {
-            // ToDo - This can throw errors during sync
-            await dbo.collection('u').drop(async function (err, delOK) {
-              if (err) {
-                // await closeDb()
-                rej(err)
-                return
-              }
-              if (delOK) res()
-            })
-            // await closeDb()
+    try {
+      const collections = await dbo.listCollections({ name: 'u' }).toArray()
+
+      if (
+        collections
+          .map((c) => {
+            return c.name
+          })
+          .indexOf('u') !== -1
+      ) {
+        try {
+          const delOk = await dbo.collection('u').drop()
+
+          if (delOk) {
             res()
-          } catch (e) {
-            // await closeDb()
-            rej(e)
           }
+
+          // await closeDb()
+          res()
+        } catch (e) {
+          // await closeDb()
+          rej(e)
         }
-      })
+      }
+    } catch (e) {
+      rej(e)
+    }
   })
 }
 

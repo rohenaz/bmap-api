@@ -145,37 +145,43 @@ const start = async function () {
       let code = Buffer.from(b64, 'base64').toString()
       let j = JSON.parse(code)
       if (j.q.aggregate) {
-        dbo
-          .collection('c')
-          .aggregate(j.q.aggregate, {
-            allowDiskUse: true,
-            cursor: { batchSize: 1000 },
-          })
-          .sort(j.q.sort || { _id: -1 })
-          .limit(j.q.limit ? j.q.limit : 10)
-          .toArray(function (err, c) {
-            if (err) {
-              res.status(500).send(err)
-              return
-            }
-            res.send({ c })
-          })
+        try {
+          const c = await dbo
+            .collection('c')
+            .aggregate(j.q.aggregate, {
+              allowDiskUse: true,
+              cursor: { batchSize: 1000 },
+            })
+            .sort(j.q.sort || { _id: -1 })
+            .limit(j.q.limit ? j.q.limit : 10)
+            .toArray()
+
+          res.send({ c })
+        } catch (e) {
+          res.status(500).send(e)
+          return
+        }
+
         return
       }
 
-      dbo
-        .collection('c')
-        .find(j.q.find)
-        .sort(j.q.sort || { _id: -1 })
-        .limit(j.q.hasOwnProperty('limit') ? j.q.limit : 10)
-        .project(j.q.project || { in: 0, out: 0 })
-        .toArray(function (err, c) {
-          if (err) {
-            res.status(500).send(err)
-            return
-          }
-          res.send({ c })
-        })
+      try {
+        const c = await dbo
+          .collection('c')
+          .find(j.q.find)
+          .sort(j.q.sort || { _id: -1 })
+          .limit(j.q.hasOwnProperty('limit') ? j.q.limit : 10)
+          .project(j.q.project || { in: 0, out: 0 })
+          .toArray()
+
+        res.send({ c })
+        return
+      } catch (e) {
+        if (e) {
+          res.status(500).send(e)
+          return
+        }
+      }
     })
   )
 
