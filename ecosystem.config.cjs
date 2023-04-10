@@ -2,13 +2,9 @@ module.exports = {
   apps: [
     {
       name: 'BMAP API',
-      script: 'index.js',
+      script: 'build/index.js',
       watch: '.',
       node_args: '--openssl-legacy-provider --no-experimental-fetch',
-    },
-    {
-      script: './service-worker/',
-      watch: ['./service-worker'],
     },
   ],
 
