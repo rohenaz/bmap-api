@@ -14,6 +14,7 @@ import { processTransaction } from './crawler.js'
 import { getDbo } from './db.js'
 import { ConnectionStatus } from './index.js'
 import { defaultQuery } from './queries.js'
+
 const { allProtocols, TransformTx } = bmapjs
 
 const __filename = fileURLToPath(import.meta.url)
