@@ -1,12 +1,11 @@
-import bmapjs from 'bmapjs'
-import { BobTx } from 'bmapjs/types/common.js'
+import { TransformTx } from 'bmapjs'
+import { BobTx } from 'bmapjs/types/common'
 import chalk from 'chalk'
 import { Db } from 'mongodb'
-import { getDbo } from './db.js'
-const { TransformTx } = bmapjs
+import { getDbo } from './db'
 const bapCache = new Map<string, Object>()
 
-const saveTx = async (tx: BobTx) => {
+export const saveTx = async (tx: BobTx) => {
   let t: any
   let dbo: Db
   // Transform
@@ -93,48 +92,6 @@ const saveTx = async (tx: BobTx) => {
     throw new Error('Invalid tx')
   }
 }
-
-const rewind = async (block: number) => {
-  let dbo = await getDbo()
-
-  await dbo.collection('c').deleteMany({ 'blk.i': { $gt: block } })
-  await clearUnconfirmed()
-}
-
-const clearUnconfirmed = () => {
-  return new Promise<void>(async (res, rej) => {
-    let dbo = await getDbo()
-    try {
-      const collections = await dbo.listCollections({ name: 'u' }).toArray()
-
-      if (
-        collections
-          .map((c) => {
-            return c.name
-          })
-          .indexOf('u') !== -1
-      ) {
-        try {
-          const delOk = await dbo.collection('u').drop()
-
-          if (delOk) {
-            res()
-          }
-
-          // await closeDb()
-          res()
-        } catch (e) {
-          // await closeDb()
-          rej(e)
-        }
-      }
-    } catch (e) {
-      rej(e)
-    }
-  })
-}
-
-export { saveTx, clearUnconfirmed, rewind }
 
 const bapApiUrl = `https://bap-api.com/v1`
 const getBAPIdByAddress = async (address, block, timestamp) => {
