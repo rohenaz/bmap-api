@@ -32,11 +32,7 @@ const crawl = (height: number, jungleBusClient: JungleBusClient) => {
     // only block indexes greater than given height
 
     // create subscriptions in the dashboard of the JungleBus website
-    const subId =
-      //'3f600280c71978452b73bc7d339a726658e4b4dd5e06a50bd81f6d6ddd85abe9'
-      // '6aa5f8d340fe8761bb60f993113f238a2e1c63eceecb13a4a438b7dff2e26261'
-      // '8229be3168fbc1d0955086ba43cb9e0c12bf423615df57630029af9ff61565b9'
-      '267c23b9b9f105a4a0ee1ec50170ad904e4724e14dee85d8a878d083af638b5d'
+    const subId = process.env.JUNGLEBUS_SUBSCRIPTION_ID;
     await jungleBusClient.Subscribe(
       subId,
       height,
