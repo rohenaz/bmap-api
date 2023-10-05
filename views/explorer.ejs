@@ -229,7 +229,9 @@
     </script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <script>
-      var endpoint = window.location.origin + '/q/'
+      const urlSegments = window.location.pathname.split('/')
+      const collectionName = urlSegments[2]
+      var endpoint = `${window.location.origin}/q/${collectionName}/`
       var source = document.getElementById('grid-template').innerHTML
       var template = Handlebars.compile(source)
       var editor
@@ -286,7 +288,7 @@
           updateUrl(query)
           document.querySelector('main .window').innerHTML =
             "<div class='spinner'><i class='fas fa-4x fa-circle-notch fa-spin'></i></div>"
-          fetch(endpoint + 'post/' + btoa(query), {
+          fetch(endpoint + btoa(query), {
             // TODO: Implement API Key Management
             headers: { key: 'qpne29ue8chsv9pxv653zxdhjn45umm4esyds75nx6' },
           })
@@ -306,7 +308,7 @@
       var updateUrl = function (query) {
         var base64 = btoa(query)
         var u = document.querySelector('.url')
-        u.value = endpoint + 'post/' + base64
+        u.value = endpoint + base64
         u.classList.add('updated')
         setTimeout(function () {
           u.classList.remove('updated')
