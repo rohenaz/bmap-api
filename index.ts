@@ -49,9 +49,10 @@ const start = async function () {
   app.use(express.static(__dirname + '/../public'))
 
   app.get(
-    /^\/s\/(.+)$/,
+    '/s/:collectionName/:base64Query',
     asyncHandler(async function (req, res) {
-      let b64 = req.params[0]
+      let collectionName = req.params.collectionName
+      let b64 = req.params.base64Query
 
       res.writeHead(200, {
         'Content-Type': 'text/event-stream',
@@ -81,7 +82,7 @@ const start = async function () {
       )
 
       const changeStream = db
-        .collection('post')
+        .collection(collectionName)
         .watch(pipeline, { fullDocument: 'updateLookup' })
 
       changeStream.on('change', (next: ChangeStreamDocument<BmapTx>) => {
@@ -110,9 +111,10 @@ const start = async function () {
   )
 
   app.get(
-    /^\/q\/(.+)$/,
+    '/q/:collectionName/:base64Query',
     asyncHandler(async function (req, res) {
-      let b64 = req.params[0]
+      let collectionName = req.params.collectionName
+      let b64 = req.params.base64Query
       console.log(chalk.magenta('BMAP API'), chalk.cyan('query', b64))
 
       const dbo = await getDbo()
@@ -122,7 +124,7 @@ const start = async function () {
       if (j.q.aggregate) {
         try {
           const c = await dbo
-            .collection('post')
+            .collection(collectionName)
             .aggregate(j.q.aggregate, {
               allowDiskUse: true,
               cursor: { batchSize: 1000 },
@@ -142,7 +144,7 @@ const start = async function () {
 
       try {
         const c = await dbo
-          .collection('post')
+          .collection(collectionName)
           .find(j.q.find)
           .sort(j.q.sort || { _id: -1 })
           .limit(j.q.hasOwnProperty('limit') ? j.q.limit : 10)
@@ -237,100 +239,100 @@ const start = async function () {
             vout = parseInt(parts[1])
           }
 
-          const item = await db.collection('post').findOne({ 'tx.h': txid })
-          console.log({ item })
-          if (item && (item.ORD || item.B)) {
-            var img = Buffer.from(
-              item.ORD[vout]?.data || item.B[vout]?.content,
-              'base64'
-            )
+          // const item = await db.collection('post').findOne({ 'tx.h': txid })
+          // console.log({ item })
+          // if (item && (item.ORD || item.B)) {
+          //   var img = Buffer.from(
+          //     item.ORD[vout]?.data || item.B[vout]?.content,
+          //     'base64'
+          //   )
+          //   res.writeHead(200, {
+          //     'Content-Type':
+          //       item.ORD[vout].contentType || item.B[vout]['content-type'],
+          //     'Content-Length': img.length,
+          //   })
+          //   res.status(200).end(img)
+          //   return
+          // } else {
+          const bob = await bobFromTxid(txid)
+          // Transform from BOB to BMAP
+          const decoded = await TransformTx(
+            bob,
+            allProtocols.map((p) => p.name)
+          )
+
+          var dataBuf: Buffer
+          var contentType: string
+          if (decoded.ORD && decoded.ORD[vout]) {
+            dataBuf = Buffer.from(decoded.ORD[vout]?.data, 'base64')
+            contentType = decoded.ORD[vout].contentType
+          } else if (decoded.B && decoded.B[vout]) {
+            dataBuf = Buffer.from(decoded.B[vout]?.content, 'base64')
+            contentType = decoded.B[vout]['content-type']
+          }
+
+          if (dataBuf) {
             res.writeHead(200, {
-              'Content-Type':
-                item.ORD[vout].contentType || item.B[vout]['content-type'],
-              'Content-Length': img.length,
+              'Content-Type': contentType,
+              'Content-Length': dataBuf.length,
             })
-            res.status(200).end(img)
-            return
+            res.status(200).end(dataBuf)
           } else {
-            const bob = await bobFromTxid(txid)
-            // Transform from BOB to BMAP
-            const decoded = await TransformTx(
-              bob,
-              allProtocols.map((p) => p.name)
-            )
-
-            var dataBuf: Buffer
-            var contentType: string
-            if (decoded.ORD && decoded.ORD[vout]) {
-              dataBuf = Buffer.from(decoded.ORD[vout]?.data, 'base64')
-              contentType = decoded.ORD[vout].contentType
-            } else if (decoded.B && decoded.B[vout]) {
-              dataBuf = Buffer.from(decoded.B[vout]?.content, 'base64')
-              contentType = decoded.B[vout]['content-type']
-            }
-
-            if (dataBuf) {
-              res.writeHead(200, {
-                'Content-Type': contentType,
-                'Content-Length': dataBuf.length,
-              })
-              res.status(200).end(dataBuf)
-            } else {
-              res.status(500).send()
-            }
-
-            return
+            res.status(500).send()
           }
+
+          return
+          //}
         } else if (format === 'dataUrl') {
-          const db = await getDbo()
+          // const db = await getDbo()
 
-          let txid = tx
-          let vout = 0
-          if (tx.includes('_')) {
-            const parts = tx.split('_')
-            txid = parts[0]
-            vout = parseInt(parts[1])
-          }
+          // let txid = tx
+          // let vout = 0
+          // if (tx.includes('_')) {
+          //   const parts = tx.split('_')
+          //   txid = parts[0]
+          //   vout = parseInt(parts[1])
+          // }
 
-          const item = await db.collection('post').findOne({ 'tx.h': txid })
-          console.log({ item })
-          let tc: string
-          let td: string
-          if (item && (item?.ORD || item?.B)) {
-            if (item.ORD) {
-              tc = item.ORD[vout]?.contentType
-              td = item.ORD[vout]?.data
-            } else if (item.B) {
-              tc = item.B[vout]['content-type']
-              td = item.B[vout]?.content
-            }
-          } else {
-            const bob = await bobFromTxid(txid)
-            console.log('got the bob', Object.keys(bob))
-            // Transform from BOB to BMAP
-            const decoded = await TransformTx(
-              bob,
-              allProtocols.map((p) => p.name)
-            )
-            if (decoded) {
-              console.log('decoded', !!decoded.ORD, !!decoded.B)
-              if (decoded.ORD && decoded.ORD[vout]) {
-                tc = decoded.ORD[vout]?.contentType
-                td = decoded.ORD[vout]?.data
-              } else if (decoded.B && decoded.B[vout]) {
-                tc = decoded.B[vout]['content-type']
-                td = decoded.B[vout]?.content
-              }
-            }
+          // const item = await db.collection('post').findOne({ 'tx.h': txid })
+          // console.log({ item })
+          // let tc: string
+          // let td: string
+          // if (item && (item?.ORD || item?.B)) {
+          //   if (item.ORD) {
+          //     tc = item.ORD[vout]?.contentType
+          //     td = item.ORD[vout]?.data
+          //   } else if (item.B) {
+          //     tc = item.B[vout]['content-type']
+          //     td = item.B[vout]?.content
+          //   }
+          // } else {
+          // const bob = await bobFromTxid(txid)
+          // console.log('got the bob', Object.keys(bob))
+          // // Transform from BOB to BMAP
+          // const decoded = await TransformTx(
+          //   bob,
+          //   allProtocols.map((p) => p.name)
+          // )
+          // if (decoded) {
+          //   console.log('decoded', !!decoded.ORD, !!decoded.B)
+          //   if (decoded.ORD && decoded.ORD[vout]) {
+          //     tc = decoded.ORD[vout]?.contentType
+          //     td = decoded.ORD[vout]?.data
+          //   } else if (decoded.B && decoded.B[vout]) {
+          //     tc = decoded.B[vout]['content-type']
+          //     td = decoded.B[vout]?.content
+          //   }
+          // }
 
-            if (tc && td) {
-              res.status(200).send(`data:${tc};base64,${td}`)
-            } else {
-              res.status(404).send()
-            }
+          // if (tc && td) {
+          //   res.status(200).send(`data:${tc};base64,${td}`)
+          // } else {
+          //   res.status(404).send()
+          // }
 
-            return
-          }
+          return
+          //}
           // not a recognized format, parse as key
         }
         const bob = await bobFromTxid(tx)
