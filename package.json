@@ -35,7 +35,7 @@
     "@types/node-fetch": "^2.6.3",
     "@types/node-persist": "^3.1.3",
     "@types/whatwg-url": "^11.0.0",
-    "cross-env": "^7.0.3",
+    "dotenv": "^16.3.1",
     "eslint": "^8.38.0",
     "eslint-plugin-node": "latest",
     "nodemon": "^2.0.22",
@@ -49,7 +49,7 @@
   "scripts": {
     "build": "rimraf build && tsc",
     "dev": "ts-node index.ts",
-    "start": "cross-env NODE_OPTIONS=\"--openssl-legacy-provider --no-experimental-fetch\" && nodemon ./build/index.js",
+    "start": "export NODE_OPTIONS=\"--openssl-legacy-provider --no-experimental-fetch\" && nodemon ./build/index.js",
     "prod": "yarn build && yarn start",
     "debug": "yarn build && nodemon --trace-warnings ./build/index.js",
     "pm2": "pm2 start ecosystem.config.cjs --env production"

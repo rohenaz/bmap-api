@@ -11,6 +11,9 @@ import { dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { getDbo } from './db.js'
 
+import dotenv from 'dotenv'
+dotenv.config()
+
 const { allProtocols, TransformTx } = bmapjs
 
 const __filename = fileURLToPath(import.meta.url)
