@@ -49,7 +49,7 @@
   "scripts": {
     "build": "rimraf build && tsc",
     "dev": "ts-node index.ts",
-    "start": "nodemon ./build/index.js",
+    "start": "node /build/index.js",
     "prod": "yarn build && yarn start",
     "debug": "yarn build && nodemon --trace-warnings ./build/index.js",
     "pm2": "pm2 start ecosystem.config.cjs --env production"
