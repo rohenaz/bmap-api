@@ -306,7 +306,7 @@
       var updateUrl = function (query) {
         var base64 = btoa(query)
         var u = document.querySelector('.url')
-        u.value = endpoint + base64
+        u.value = endpoint + 'post/' + base64
         u.classList.add('updated')
         setTimeout(function () {
           u.classList.remove('updated')
