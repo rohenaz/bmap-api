@@ -81,7 +81,7 @@ const start = async function () {
       )
 
       const changeStream = db
-        .collection('c')
+        .collection('post')
         .watch(pipeline, { fullDocument: 'updateLookup' })
 
       changeStream.on('change', (next: ChangeStreamDocument<BmapTx>) => {
@@ -122,7 +122,7 @@ const start = async function () {
       if (j.q.aggregate) {
         try {
           const c = await dbo
-            .collection('c')
+            .collection('post')
             .aggregate(j.q.aggregate, {
               allowDiskUse: true,
               cursor: { batchSize: 1000 },
@@ -142,7 +142,7 @@ const start = async function () {
 
       try {
         const c = await dbo
-          .collection('c')
+          .collection('post')
           .find(j.q.find)
           .sort(j.q.sort || { _id: -1 })
           .limit(j.q.hasOwnProperty('limit') ? j.q.limit : 10)
@@ -237,7 +237,7 @@ const start = async function () {
             vout = parseInt(parts[1])
           }
 
-          const item = await db.collection('c').findOne({ 'tx.h': txid })
+          const item = await db.collection('post').findOne({ 'tx.h': txid })
           console.log({ item })
           if (item && (item.ORD || item.B)) {
             var img = Buffer.from(
@@ -292,7 +292,7 @@ const start = async function () {
             vout = parseInt(parts[1])
           }
 
-          const item = await db.collection('c').findOne({ 'tx.h': txid })
+          const item = await db.collection('post').findOne({ 'tx.h': txid })
           console.log({ item })
           let tc: string
           let td: string
