@@ -342,7 +342,6 @@ const start = async function () {
     const qc = new QuickChart()
     qc.setConfig(chartConfig)
     qc.setWidth(1280).setHeight(300).setBackgroundColor('transparent')
-
     return qc
   }
 
