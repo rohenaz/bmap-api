@@ -384,8 +384,8 @@ const start = async function () {
         const dbo = await getDbo()
 
         const allCollections = await dbo.listCollections().toArray()
-        const allDataPromises = allCollections.map((c) =>
-          getTimeSeriesData(c.name, startBlock, endBlock)
+        const allDataPromises = allCollections.map(
+          async (c) => await getTimeSeriesData(c.name, startBlock, endBlock)
         )
         const allTimeSeriesData = await Promise.all(allDataPromises)
         // Sum or otherwise process allTimeSeriesData here
