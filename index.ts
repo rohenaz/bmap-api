@@ -311,6 +311,7 @@ const start = async function () {
     const labels: number[] = []
     const data: number[] = []
 
+    console.log({ timeSeriesData })
     for (const entry of timeSeriesData) {
       labels.push(entry._id)
       data.push(entry.count)
@@ -418,6 +419,7 @@ const start = async function () {
           startBlock,
           endBlock
         )
+
         chart = generateChart(timeSeriesData) // Replace with your chart generation function
       } else {
         // Generate a chart for all collections based on timePeriod
