@@ -8,13 +8,13 @@
     <script src="https://unpkg.com/htmx.org@1.6.1"></script>
   </head>
   <body class="dark bg-[#121212] text-white">
-    <header class="py-20 bg-zinc-900">
+    <header class="bg-zinc-900">
       <div
-        class="text-4xl bg-black font-semibold mb-4 flex items-center font-semibold w-full max-w-7xl mx-auto"
+        class="text-4xl bg-black font-semibold mb-4 flex items-center font-semibold w-full max-w-7xl mx-auto px-2"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          height="2em"
+          height="1em"
           viewBox="0 0 512 512"
           class="inline-block align-text-bottom mr-2"
         >
@@ -29,7 +29,7 @@
       <div
         hx-get="/htmx-chart"
         hx-trigger="load"
-        class="mt-8 flex justify-center"
+        class="mt-8 flex justify-center py-20"
       >
         <!-- Chart will be loaded here -->
       </div>
