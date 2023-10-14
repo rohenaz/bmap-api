@@ -393,8 +393,6 @@ const start = async function () {
         )
 
         chart = generateChart(timeSeriesData) // Replace with your chart generation function
-
-        return
       } else {
         const dbo = await getDbo()
         const allCollections = await dbo.listCollections().toArray()
@@ -416,7 +414,7 @@ const start = async function () {
           count: globalData[blockHeight],
         }))
 
-        const chart = generateChart(aggregatedData)
+        chart = generateChart(aggregatedData)
       }
       res.send(
         `<img src='${chart.getUrl()}' alt='Chart for ${collectionName}' class='mt-2 mb-2'>`
