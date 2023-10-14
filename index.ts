@@ -290,14 +290,14 @@ const start = async function () {
       type: 'line',
       data: {
         labels: timeSeriesData.map((d) => d._id),
-
+        backgroundColor: '#000000',
         datasets: [
           {
             label: 'Number of Records',
             data: timeSeriesData.map((d) => d.count),
             fill: false,
             borderColor: 'rgba(255, 255, 255, 0.8)',
-            backgroundColor: '#000000',
+            backgroundColor: '#498fff',
           },
         ],
       },
