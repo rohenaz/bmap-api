@@ -340,8 +340,8 @@ const start = async function () {
     } as ChartConfiguration
 
     const qc = new QuickChart()
-    qc.setBackgroundColor('#000000')
     qc.setConfig(chartConfig)
+    qc.setBackgroundColor('#000000')
 
     return qc
   }
