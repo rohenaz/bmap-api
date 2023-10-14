@@ -10,11 +10,11 @@
     <script src="https://unpkg.com/htmx.org@1.6.1"></script>
   </head>
   <body class="dark bg-[#121212] text-white">
-    <header class="text-center py-24 bg-slate-900 text-white">
-      <h2 class="text-2xl font-semibold">
+    <header class="text-center py-20 bg-slate-900">
+      <h2 class="text-4xl font-semibold mb-4">
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          height="1em"
+          height="2em"
           viewBox="0 0 512 512"
         >
           <path
@@ -22,10 +22,21 @@
           />
         </svg>
       </h2>
-      <h2>BMAP API</h2>
+      <h2 class="text-3xl font-semibold">BMAP API</h2>
+      <a
+        href="/query"
+        class="bg-indigo-600 text-white rounded px-6 py-3 inline-block mt-8 text-lg"
+        >Open Explorer</a
+      >
     </header>
-    <div class="container mx-auto max-w-4xl">
-      <div hx-get="/htmx-collections" hx-trigger="load"></div>
-    </div>
+    <main class="container mx-auto max-w-6xl py-12 px-8">
+      <div
+        hx-get="/htmx-collections"
+        hx-trigger="load"
+        class="grid grid-cols-3 gap-8"
+      >
+        <!-- Grid items will be replaced by HTMX -->
+      </div>
+    </main>
   </body>
 </html>
