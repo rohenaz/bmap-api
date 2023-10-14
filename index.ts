@@ -398,21 +398,28 @@ const start = async function () {
         )
         return
       } else {
-        // Generate a chart for all collections based on timePeriod
-        // Fetch time series data for this block range
         const dbo = await getDbo()
-
         const allCollections = await dbo.listCollections().toArray()
-        const allDataPromises = await Promise.all(
-          allCollections.map((c) =>
-            getTimeSeriesData(c.name, startBlock, endBlock)
-          )
+        const allDataPromises = allCollections.map((c) =>
+          getTimeSeriesData(c.name, startBlock, endBlock)
         )
         const allTimeSeriesData = await Promise.all(allDataPromises)
-        // Sum or otherwise process allTimeSeriesData here
-        chart = generateChart(allTimeSeriesData)
-        res.send(`<img src='${chart.getUrl()}' alt='Chart' class='mt-2 mb-2'>`)
-        return
+
+        // Sum up counts for each block height across all collections
+        const globalData: Record<number, number> = {}
+        allTimeSeriesData.forEach((collectionData) => {
+          collectionData.forEach(({ _id, count }) => {
+            globalData[_id] = (globalData[_id] || 0) + count
+          })
+        })
+
+        const aggregatedData = Object.keys(globalData).map((blockHeight) => ({
+          _id: Number(blockHeight),
+          count: globalData[blockHeight],
+        }))
+
+        const chart = generateChart(aggregatedData)
+        res.send(chart.getUrl())
       }
     })
   )
