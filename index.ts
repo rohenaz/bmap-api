@@ -11,6 +11,7 @@ import { dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { getCollectionCounts, getDbo } from './db.js'
 
+import { ChartConfiguration } from 'chart.js'
 import dotenv from 'dotenv'
 import QuickChart from 'quickchart-js'
 dotenv.config()
@@ -299,6 +300,7 @@ const start = async function () {
         ],
       },
       options: {
+        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Dark background color
         scales: {
           x: {
             title: {
@@ -335,7 +337,7 @@ const start = async function () {
           },
         },
       },
-    } as any
+    } as ChartConfiguration
 
     const qc = new QuickChart()
     qc.setConfig(chartConfig)
