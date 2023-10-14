@@ -35,7 +35,23 @@ const closeDb = async () => {
   }
 }
 
-export { closeDb, getDbo }
+async function getCollectionCounts(timestamp: number) {
+  const dbo = await getDbo()
+  const collections = await dbo.listCollections().toArray()
+
+  const countPromises = collections.map(async (c) => {
+    const query = timestamp ? { timestamp: { $gt: timestamp } } : {}
+    const count = await dbo.collection(c.name).countDocuments(query)
+    return [c.name, count]
+  })
+
+  const countsArray = await Promise.all(countPromises)
+  const countsObject = Object.fromEntries(countsArray)
+
+  return countsObject
+}
+
+export { closeDb, getCollectionCounts, getDbo }
 
 // db.c.createIndex({
 //   "MAP.app": 1,

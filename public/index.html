@@ -1,43 +1,85 @@
 <html>
-<head>
-  <style>
-    body {
-      font-family: Menlo, monaco, arial;
-      font-size: 11px;
-    }
-    header {
-      text-align: center;
-      padding: 100px;
-    }
-    .container {
-      margin: 0 auto;
-      max-width: 800px;
-    }
-    .logo {
-      color: #7387f5;
-    }
-    .btn {
-      background: rgba(0,0,0,0.8);
-      color: white;
-      padding: 5px 10px;
-      border-radius: 2px;
-      text-decoration: none;
-      margin: 20px;
-      display: inline-block;
-    }
-  </style>
-  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.9.0/css/all.css" type="text/css" media="all">
-</head>
-<body>
-  <header>
-    <h2 class="logo"><i class="fas fa-2x fa-hat-wizard"></i></h2>
-    <h2>BMAP API</h2>
-    <a href='/query' class='btn'>Open Explorer</a>
-  </header>
-  <div class='container'>
-    <h2 id='name'></h2>
-    <div id='description'></div>
-    <div id='readme'></div> 
-  </div>
-</body>
+  <head>
+    <style>
+      body {
+        font-family: Menlo, monaco, arial;
+        font-size: 11px;
+      }
+      header {
+        text-align: center;
+        padding: 100px;
+      }
+      .container {
+        margin: 0 auto;
+        max-width: 800px;
+      }
+      .logo {
+        color: #7387f5;
+      }
+      .btn {
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 2px;
+        text-decoration: none;
+        margin: 20px;
+        display: inline-block;
+      }
+    </style>
+    <link
+      rel="stylesheet"
+      href="https://use.fontawesome.com/releases/v5.9.0/css/all.css"
+      type="text/css"
+      media="all"
+    />
+    <script>
+      // JavaScript function to load collections when the page is loaded
+      document.addEventListener('DOMContentLoaded', function () {
+        // Replace with your actual endpoint
+        var endpoint = `${window.location.origin}`
+        fetch(`${endpoint}/collections`)
+          .then((response) => response.json())
+          .then((data) => {
+            const container = document.querySelector('.container')
+
+            data.forEach((collection) => {
+              const name = collection.name
+              const count = collection.count
+
+              // Create HTML elements
+              const h3 = document.createElement('h3')
+              h3.textContent = name
+
+              const p = document.createElement('p')
+              p.textContent = `Total Documents: ${count}`
+
+              const a = document.createElement('a')
+              a.textContent = 'Explore'
+              a.href = `/q/${name}`
+              a.className = 'btn'
+
+              // Append to container
+              container.appendChild(h3)
+              container.appendChild(p)
+              container.appendChild(a)
+            })
+          })
+      })
+    </script>
+  </head>
+  <body>
+    <header>
+      <h2 class="logo"><i class="fas fa-2x fa-hat-wizard"></i></h2>
+      <h2>BMAP API</h2>
+
+      <div class="container">
+        <!-- Collections will be appended here -->
+      </div>
+    </header>
+    <div class="container">
+      <h2 id="name"></h2>
+      <div id="description"></div>
+      <div id="readme"></div>
+    </div>
+  </body>
 </html>

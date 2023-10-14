@@ -9,7 +9,7 @@ import asyncHandler from 'express-async-handler'
 import { ChangeStreamDocument } from 'mongodb'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { getDbo } from './db.js'
+import { getCollectionCounts, getDbo } from './db.js'
 
 import dotenv from 'dotenv'
 dotenv.config()
@@ -173,6 +173,22 @@ const start = async function () {
     res.write(JSON.stringify({ Pong: req.get('Referrer') }))
     res.end()
   })
+
+  app.get(
+    '/collections',
+    asyncHandler(async (req, res) => {
+      // return a list of collection names and the count of records for each from the bmap database
+      try {
+        const timestamp = Math.floor(Date.now() / 1000) - 86400 // For example, 24 hours ago
+        const counts = await getCollectionCounts(timestamp)
+        console.log(counts)
+        res.send(counts) // Output: { "collectionName": count, ... }
+      } catch (error) {
+        console.error('An error occurred:', error)
+        res.status(500).send()
+      }
+    })
+  )
 
   app.get('/query', function (req, res) {
     let code = JSON.stringify(defaultQuery, null, 2)
