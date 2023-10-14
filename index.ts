@@ -300,6 +300,7 @@ const start = async function () {
         ],
       },
       options: {
+        defaultColor: 'rgba(255, 255, 255, 0.9)', // Setting a light color as default
         backgroundColor: 'rgba(0, 0, 0, 0.5)', // Dark background color
         scales: {
           x: {
