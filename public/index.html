@@ -25,6 +25,16 @@
         margin: 20px;
         display: inline-block;
       }
+      .grid-container {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+      }
+      .grid-item {
+        border: 1px solid #ccc;
+        padding: 10px;
+        text-align: center;
+      }
     </style>
     <link
       rel="stylesheet"
@@ -45,6 +55,10 @@
             Object.keys(data).forEach((name) => {
               const count = data[name]
 
+              // Create a grid item div
+              const div = document.createElement('div')
+              div.className = 'grid-item'
+
               // Create HTML elements
               const h3 = document.createElement('h3')
               h3.textContent = name
@@ -57,10 +71,13 @@
               a.href = `/q/${name}`
               a.className = 'btn'
 
-              // Append to container
-              container.appendChild(h3)
-              container.appendChild(p)
-              container.appendChild(a)
+              // Append to grid item
+              div.appendChild(h3)
+              div.appendChild(p)
+              div.appendChild(a)
+
+              // Append grid item to grid container
+              container.appendChild(div)
             })
           })
       })
