@@ -321,14 +321,6 @@ const start = async function () {
   }[]
 
   function generateChart(timeSeriesData: TimeSeriesData): QuickChart {
-    const labels: number[] = []
-    const data: number[] = []
-
-    for (const entry of timeSeriesData) {
-      labels.push(entry._id)
-      data.push(entry.count)
-    }
-
     const chartConfig = {
       type: 'line',
       data: {
@@ -389,7 +381,7 @@ const start = async function () {
       const startBlock = currentBlockHeight - blocks
       const endBlock = currentBlockHeight
 
-      let chart
+      let chart: QuickChart
 
       if (collectionName) {
         // Generate a chart for the specific collection based on timePeriod
@@ -419,9 +411,9 @@ const start = async function () {
         const allTimeSeriesData = await Promise.all(allDataPromises)
         // Sum or otherwise process allTimeSeriesData here
         chart = generateChart(allTimeSeriesData)
+        res.send(`<img src='${chart.getUrl()}' alt='Chart' class='mt-2 mb-2'>`)
+        return
       }
-      res.send(`<img src='${chart.getUrl()}' alt='Chart' class='mt-2 mb-2'>`)
-      return
     })
   )
 
