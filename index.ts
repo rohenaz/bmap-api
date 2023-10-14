@@ -434,7 +434,7 @@ const start = async function () {
         // Sum or otherwise process allTimeSeriesData here
         chart = generateChart(allTimeSeriesData)
       }
-      res.send(`<img src="${chart}" alt="Chart">`)
+      res.send(chart.getUrl())
     })
   )
 
