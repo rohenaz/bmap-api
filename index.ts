@@ -288,7 +288,6 @@ const start = async function () {
   function generateChart(timeSeriesData: TimeSeriesData): QuickChart {
     const chartConfig = {
       type: 'bar',
-      backgroundColor: '#000000',
       data: {
         labels: timeSeriesData.map((d) => d._id),
         datasets: [
@@ -303,6 +302,7 @@ const start = async function () {
       },
       options: {
         defaultColor: '#ffffff',
+        backgroundColor: '#000000',
         scales: {
           x: {
             title: {
