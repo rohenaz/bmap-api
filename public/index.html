@@ -42,9 +42,8 @@
           .then((data) => {
             const container = document.querySelector('.container')
 
-            data.forEach((collection) => {
-              const name = collection.name
-              const count = collection.count
+            Object.keys(data).forEach((name) => {
+              const count = data[name]
 
               // Create HTML elements
               const h3 = document.createElement('h3')
