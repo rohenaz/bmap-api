@@ -210,7 +210,7 @@ const start = async function () {
           </div>`
         })
 
-        res.send(`<div class="grid grid-cols-3 gap-4">${gridItemsHtml}</div>`)
+        res.send(gridItemsHtml)
       } catch (error) {
         console.error('An error occurred:', error)
         res.status(500).send()
