@@ -10,7 +10,7 @@
   <body class="dark bg-[#121212] text-white">
     <header class="bg-zinc-900">
       <div
-        class="text-4xl bg-black font-semibold mb-4 flex items-center font-semibold w-full px-2"
+        class="text-4xl bg-black bg-opacity-50 font-semibold mb-4 flex items-center font-semibold w-full px-2"
       >
         <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <svg
@@ -31,7 +31,7 @@
       <div
         hx-get="/htmx-chart"
         hx-trigger="load"
-        class="mt-8 flex justify-center py-20"
+        class="flex justify-center py-10 max-h-40vh"
       >
         <!-- Chart will be loaded here -->
       </div>
