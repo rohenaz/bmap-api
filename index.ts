@@ -290,18 +290,19 @@ const start = async function () {
       type: 'line',
       data: {
         labels: timeSeriesData.map((d) => d._id),
+
         datasets: [
           {
             label: 'Number of Records',
             data: timeSeriesData.map((d) => d.count),
             fill: false,
             borderColor: 'rgba(255, 255, 255, 0.8)',
+            backgroundColor: 'rgba(0, 0, 0, 0)',
           },
         ],
       },
       options: {
         defaultColor: 'rgba(255, 255, 255, 0.9)', // Setting a light color as default
-        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Dark background color
         scales: {
           x: {
             title: {
