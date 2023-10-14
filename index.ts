@@ -307,7 +307,10 @@ const start = async function () {
               color: 'rgba(255, 255, 255, 0.9)',
             },
             grid: {
-              color: 'rgba(0, 0, 0, 0.3)',
+              color: 'rgba(200, 200, 200, 0.25)',
+            },
+            ticks: {
+              color: 'rgba(255, 255, 255, 0.9)', // Ticks text color
             },
           },
           y: {
@@ -317,7 +320,10 @@ const start = async function () {
               color: 'rgba(255, 255, 255, 0.9)',
             },
             grid: {
-              color: 'rgba(0, 0, 0, 0.3)',
+              color: 'rgba(200, 200, 200, 0.25)',
+            },
+            ticks: {
+              color: 'rgba(255, 255, 255, 0.9)', // Ticks text color
             },
           },
         },
