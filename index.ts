@@ -360,7 +360,7 @@ const start = async function () {
 
       // Fetch current block height first
       const currentBlockHeight = await getCurrentBlockHeight()
-
+      console.log({ currentBlockHeight, collectionName })
       // Translate selected time period to block range
       const blocks = timePeriodToBlocks(timePeriod as string)
 
@@ -391,7 +391,7 @@ const start = async function () {
         // Sum or otherwise process allTimeSeriesData here
         chart = generateChart(allTimeSeriesData)
       }
-      res.send(chart) // Send the generated chart as the response
+      res.send(`<img src="${chart}" alt="Chart">`)
     })
   )
 
