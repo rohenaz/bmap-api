@@ -301,9 +301,6 @@ const start = async function () {
         ],
       },
       options: {
-        defaultColor: '#ffffff',
-        backgroundColor: '#000000',
-        format: 'svg',
         scales: {
           x: {
             title: {
@@ -343,6 +340,7 @@ const start = async function () {
     } as ChartConfiguration
 
     const qc = new QuickChart()
+    qc.setBackgroundColor('#000000')
     qc.setConfig(chartConfig)
 
     return qc
