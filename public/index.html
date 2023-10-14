@@ -22,11 +22,14 @@
         </svg>
       </h2>
       <h2 class="text-3xl font-semibold">BMAP API</h2>
-      <a
-        href="/query"
-        class="bg-indigo-600 text-white rounded px-6 py-3 inline-block mt-8 text-lg"
-        >Open Explorer</a
-      >
+
+      <h2 class="text-4xl font-semibold mb-4">
+        <!-- SVG and other elements -->
+      </h2>
+      <h2 class="text-3xl font-semibold">BMAP API</h2>
+      <div hx-get="/htmx-chart" hx-trigger="load" class="mt-8">
+        <!-- Chart will be loaded here -->
+      </div>
     </header>
     <main class="container mx-auto max-w-6xl py-12 px-8">
       <div

@@ -8,6 +8,7 @@ import express from 'express'
 import asyncHandler from 'express-async-handler'
 import { ChangeStreamDocument } from 'mongodb'
 import { dirname } from 'path'
+import QuickChart from 'quickchart-js'
 import { fileURLToPath } from 'url'
 import { getCollectionCounts, getDbo } from './db.js'
 
@@ -218,6 +219,39 @@ const start = async function () {
     })
   )
 
+  app.get(
+    '/htmx-chart',
+    asyncHandler(async (req, res) => {
+      try {
+        const timestamp = Math.floor(Date.now() / 1000) - 86400
+        const counts = await getCollectionCounts(timestamp) // Your existing function to get counts
+
+        // Create a new chart
+        const myChart = new QuickChart()
+        myChart.setConfig({
+          type: 'line',
+          data: {
+            labels: Object.keys(counts),
+            datasets: [
+              {
+                label: 'Totals Over Time',
+                data: Object.values(counts),
+              },
+            ],
+          },
+        })
+
+        // Generate URL of the chart image
+        const chartUrl = myChart.getUrl()
+
+        // Send the URL back
+        res.send(`<img src="${chartUrl}" alt="Totals Over Time"/>`)
+      } catch (error) {
+        console.error('An error occurred:', error)
+        res.status(500).send()
+      }
+    })
+  )
   app.get('/query', function (req, res) {
     let code = JSON.stringify(defaultQuery, null, 2)
     res.render('explorer', {

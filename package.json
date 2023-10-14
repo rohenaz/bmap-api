@@ -20,7 +20,8 @@
     "mongodb": "^5.2.0",
     "node-fetch": "^3.3.1",
     "node-persist": "^3.1.3",
-    "prompt-async": "^0.9.9"
+    "prompt-async": "^0.9.9",
+    "quickchart-js": "^3.1.3"
   },
   "engines": {
     "node": "18"
