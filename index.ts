@@ -324,7 +324,6 @@ const start = async function () {
     const labels: number[] = []
     const data: number[] = []
 
-    console.log({ timeSeriesData })
     for (const entry of timeSeriesData) {
       labels.push(entry._id)
       data.push(entry.count)
@@ -402,6 +401,10 @@ const start = async function () {
         )
 
         chart = generateChart(timeSeriesData) // Replace with your chart generation function
+        res.send(
+          `<img src='${chart.getUrl()}' alt='Chart for ${collectionName}' class='mt-2 mb-2'>`
+        )
+        return
       } else {
         // Generate a chart for all collections based on timePeriod
         // Fetch time series data for this block range
@@ -417,7 +420,8 @@ const start = async function () {
         // Sum or otherwise process allTimeSeriesData here
         chart = generateChart(allTimeSeriesData)
       }
-      res.send(chart.getUrl())
+      res.send(`<img src='${chart.getUrl()}' alt='Chart' class='mt-2 mb-2'>`)
+      return
     })
   )
 
