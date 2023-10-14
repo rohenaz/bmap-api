@@ -11,9 +11,8 @@ import { dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { getCollectionCounts, getDbo } from './db.js'
 
-import QuickChart from 'quickchart-js'
-
 import dotenv from 'dotenv'
+import QuickChart from 'quickchart-js'
 dotenv.config()
 
 const { allProtocols, TransformTx } = bmapjs
@@ -33,6 +32,54 @@ const defaultQuery = {
     limit: 10,
     project: { out: 0, in: 0 },
   },
+}
+
+async function getCurrentBlockHeight(): Promise<number> {
+  const dbo = await getDbo()
+  const state = await dbo.collection('_state').findOne({})
+  return state ? state.height : 0
+}
+
+const timePeriodToBlocks = (period: string) => {
+  // Example mapping from time period to number of blocks
+  switch (period) {
+    case '24h':
+      return 144 // Approximate number of blocks in 24 hours
+    case '7d':
+      return 1008 // Approximate number of blocks in 7 days
+    case '1m':
+      return 4320 // Approximate number of blocks in a month
+    default:
+      return 0
+  }
+}
+
+async function getTimeSeriesData(
+  collectionName: string,
+  startBlock: number,
+  endBlock: number
+): Promise<any> {
+  const dbo = await getDbo()
+  const pipeline = [
+    {
+      $match: {
+        'blk.i': {
+          $gte: startBlock,
+          $lte: endBlock,
+        },
+      },
+    },
+    {
+      $group: {
+        _id: '$blk.i', // Group by block height
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $sort: { _id: 1 },
+    },
+  ]
+  return dbo.collection(collectionName).aggregate(pipeline).toArray()
 }
 
 const start = async function () {
@@ -192,7 +239,6 @@ const start = async function () {
     })
   )
 
-  // New endpoint for HTMX
   app.get(
     '/htmx-collections',
     asyncHandler(async (req, res) => {
@@ -220,39 +266,131 @@ const start = async function () {
     })
   )
 
-  app.get(
-    '/htmx-chart',
-    asyncHandler(async (req, res) => {
-      try {
-        const timestamp = Math.floor(Date.now() / 1000) - 86400
-        const counts = await getCollectionCounts(timestamp) // Your existing function to get counts
+  // app.get(
+  //   '/htmx-chart',
+  //   asyncHandler(async (req, res) => {
+  //     try {
+  //       const timePeriod = req.query.timePeriod || '24h'
 
-        // Create a new chart
-        const myChart = new QuickChart()
-        myChart.setConfig({
-          type: 'line',
-          data: {
-            labels: Object.keys(counts),
-            datasets: [
-              {
-                label: 'Totals Over Time',
-                data: Object.values(counts),
-              },
-            ],
+  //       const timestamp = Math.floor(Date.now() / 1000) - 86400
+  //       const counts = await getCollectionCounts(timestamp) // Your existing function to get counts
+
+  //       // Create a new chart
+  //       const myChart = new QuickChart()
+  //       myChart.setConfig({
+  //         type: 'line',
+  //         data: {
+  //           labels: Object.keys(counts),
+  //           datasets: [
+  //             {
+  //               label: 'Totals Over Time',
+  //               data: Object.values(counts),
+  //             },
+  //           ],
+  //         },
+  //       })
+
+  //       // Generate URL of the chart image
+  //       const chartUrl = myChart.getUrl()
+
+  //       // Send the URL back
+  //       res.send(`<img src="${chartUrl}" alt="Totals Over Time"/>`)
+  //     } catch (error) {
+  //       console.error('An error occurred:', error)
+  //       res.status(500).send()
+  //     }
+  //   })
+  // )
+
+  type TimeSeriesData = {
+    _id: number // Block height
+    count: number
+  }[]
+
+  function generateChart(timeSeriesData: TimeSeriesData): string {
+    const labels: number[] = []
+    const data: number[] = []
+
+    for (const entry of timeSeriesData) {
+      labels.push(entry._id)
+      data.push(entry.count)
+    }
+
+    const qc = new QuickChart()
+    qc.setConfig({
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Number of Records',
+            data: data,
+            fill: false,
+            borderColor: 'blue',
           },
-        })
+        ],
+      },
+      options: {
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Block Height',
+            },
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Count',
+            },
+          },
+        },
+      },
+    })
+    // qc.set('width',500).setHeight(300)
 
-        // Generate URL of the chart image
-        const chartUrl = myChart.getUrl()
+    return qc.getUrl()
+  }
 
-        // Send the URL back
-        res.send(`<img src="${chartUrl}" alt="Totals Over Time"/>`)
-      } catch (error) {
-        console.error('An error occurred:', error)
-        res.status(500).send()
+  app.get(
+    '/htmx-chart/:name?',
+    asyncHandler(async (req, res) => {
+      const timePeriod = req.query.timePeriod || '24h'
+      const collectionName = req.params.name
+
+      // Fetch current block height first
+      const currentBlockHeight = await getCurrentBlockHeight()
+
+      // Translate selected time period to block range
+      const blocks = timePeriodToBlocks(timePeriod as string)
+
+      const startBlock = currentBlockHeight - blocks
+      const endBlock = currentBlockHeight
+
+      let chart
+
+      if (collectionName) {
+        // Generate a chart for the specific collection based on timePeriod
+        // Fetch time series data for this block range
+        const timeSeriesData = await getTimeSeriesData(
+          collectionName,
+          startBlock,
+          endBlock
+        )
+        chart = generateChart(timeSeriesData) // Replace with your chart generation function
+      } else {
+        // Generate a chart for all collections based on timePeriod
+        // Fetch time series data for this block range
+        const timeSeriesData = await getTimeSeriesData(
+          'collectionName',
+          startBlock,
+          endBlock
+        )
       }
+      res.send(chart) // Send the generated chart as the response
     })
   )
+
   app.get('/query', function (req, res) {
     let code = JSON.stringify(defaultQuery, null, 2)
     res.render('explorer', {
