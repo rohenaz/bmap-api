@@ -1,47 +1,25 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
   <head>
-    <style>
-      body {
-        font-family: Menlo, monaco, arial;
-        font-size: 11px;
-      }
-      header {
-        text-align: center;
-        padding: 100px;
-      }
-      .container {
-        margin: 0 auto;
-        max-width: 800px;
-      }
-      .logo {
-        color: #7387f5;
-      }
-      .btn {
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 5px 10px;
-        border-radius: 2px;
-        text-decoration: none;
-        margin: 20px;
-        display: inline-block;
-      }
-      .grid-container {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 20px;
-      }
-      .grid-item {
-        border: 1px solid #ccc;
-        padding: 10px;
-        text-align: center;
-      }
-    </style>
+    <meta charset="UTF-8" />
+    <title>BMAP API</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
     <link
       rel="stylesheet"
       href="https://use.fontawesome.com/releases/v5.9.0/css/all.css"
       type="text/css"
       media="all"
     />
+    <style>
+      body {
+        background-color: #121212; /* Even darker background */
+        color: #ffffff; /* White text */
+      }
+    </style>
+    <script src="https://unpkg.com/htmx.org@1.6.1"></script>
     <script>
       // JavaScript function to load collections when the page is loaded
       document.addEventListener('DOMContentLoaded', function () {
@@ -83,18 +61,23 @@
       })
     </script>
   </head>
-  <body>
-    <header>
-      <h2 class="logo"><i class="fas fa-2x fa-hat-wizard"></i></h2>
+  <body class="dark">
+    <header class="text-center py-24 bg-gray-900 text-white">
+      <h2 class="text-2xl font-semibold">
+        <i class="fas fa-2x fa-hat-wizard"></i>
+        <!-- FontAwesome icon -->
+      </h2>
       <h2>BMAP API</h2>
-
-      <div class="container">
-        <!-- Collections will be appended here -->
-      </div>
+      <a
+        href="/query"
+        class="bg-indigo-600 text-white rounded px-4 py-2 inline-block mt-4"
+        >Open Explorer</a
+      >
     </header>
-    <div class="container">
-      <div class="grid-container">
-        <!-- Grid items will be appended here -->
+    <div class="container mx-auto max-w-4xl">
+      <!-- Updated hx-get to point to the new HTMX endpoint -->
+      <div hx-get="/htmx-collections" hx-trigger="load">
+        <!-- Grid items will be replaced by HTMX -->
       </div>
     </div>
   </body>

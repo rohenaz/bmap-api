@@ -190,6 +190,34 @@ const start = async function () {
     })
   )
 
+  // New endpoint for HTMX
+  app.get(
+    '/htmx-collections',
+    asyncHandler(async (req, res) => {
+      try {
+        const timestamp = Math.floor(Date.now() / 1000) - 86400
+        const counts = await getCollectionCounts(timestamp)
+
+        let gridItemsHtml = ''
+
+        Object.keys(counts).forEach((collection) => {
+          const count = counts[collection]
+          gridItemsHtml += `
+          <div class='border border-gray-700 p-4 text-center dark:bg-gray-800 dark:text-white'>
+            <h3 class='text-lg font-semibold dark:text-white'>${collection}</h3>
+            <p class='text-sm dark:text-gray-400'>Total Documents: ${count}</p>
+            <a href='/q/${collection}' class='bg-indigo-600 text-white rounded px-2 py-1 inline-block mt-2'>Explore</a>
+          </div>`
+        })
+
+        res.send(`<div class="grid grid-cols-3 gap-4">${gridItemsHtml}</div>`)
+      } catch (error) {
+        console.error('An error occurred:', error)
+        res.status(500).send()
+      }
+    })
+  )
+
   app.get('/query', function (req, res) {
     let code = JSON.stringify(defaultQuery, null, 2)
     res.render('explorer', {
