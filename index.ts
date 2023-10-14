@@ -279,42 +279,6 @@ const start = async function () {
     })
   )
 
-  // app.get(
-  //   '/htmx-chart',
-  //   asyncHandler(async (req, res) => {
-  //     try {
-  //       const timePeriod = req.query.timePeriod || '24h'
-
-  //       const timestamp = Math.floor(Date.now() / 1000) - 86400
-  //       const counts = await getCollectionCounts(timestamp) // Your existing function to get counts
-
-  //       // Create a new chart
-  //       const myChart = new QuickChart()
-  //       myChart.setConfig({
-  //         type: 'line',
-  //         data: {
-  //           labels: Object.keys(counts),
-  //           datasets: [
-  //             {
-  //               label: 'Totals Over Time',
-  //               data: Object.values(counts),
-  //             },
-  //           ],
-  //         },
-  //       })
-
-  //       // Generate URL of the chart image
-  //       const chartUrl = myChart.getUrl()
-
-  //       // Send the URL back
-  //       res.send(`<img src="${chartUrl}" alt="Totals Over Time"/>`)
-  //     } catch (error) {
-  //       console.error('An error occurred:', error)
-  //       res.status(500).send()
-  //     }
-  //   })
-  // )
-
   type TimeSeriesData = {
     _id: number // Block height
     count: number
@@ -340,20 +304,27 @@ const start = async function () {
             title: {
               display: true,
               text: 'Block Height',
-              color: 'rgba(255, 255, 255, 0.8)',
+              color: 'rgba(255, 255, 255, 0.9)',
             },
             grid: {
-              color: 'rgba(255, 255, 255, 0.1)',
+              color: 'rgba(0, 0, 0, 0.3)',
             },
           },
           y: {
             title: {
               display: true,
               text: 'Count',
-              color: 'rgba(255, 255, 255, 0.8)',
+              color: 'rgba(255, 255, 255, 0.9)',
             },
             grid: {
-              color: 'rgba(255, 255, 255, 0.1)',
+              color: 'rgba(0, 0, 0, 0.3)',
+            },
+          },
+        },
+        plugins: {
+          legend: {
+            labels: {
+              color: 'rgba(255, 255, 255, 0.9)',
             },
           },
         },
