@@ -290,7 +290,6 @@ const start = async function () {
       type: 'bar',
       data: {
         labels: timeSeriesData.map((d) => d._id),
-        backgroundColor: '#000000',
         datasets: [
           {
             label: 'Number of Records',
@@ -302,7 +301,8 @@ const start = async function () {
         ],
       },
       options: {
-        defaultColor: 'rgba(255, 255, 255, 0.9)', // Setting a light color as default
+        backgroundColor: '#000000',
+        defaultColor: '#ffffff',
         scales: {
           x: {
             title: {
