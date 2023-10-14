@@ -308,26 +308,26 @@ const start = async function () {
             title: {
               display: true,
               text: 'Block Height',
-              color: 'rgba(255, 255, 255, 0.9)',
+              color: '#333333',
             },
             grid: {
-              color: 'rgba(200, 200, 200, 0.25)',
+              color: '#111111',
             },
             ticks: {
-              color: 'rgba(255, 255, 255, 0.9)', // Ticks text color
+              color: '#ffffff', // Ticks text color
             },
           },
           y: {
             title: {
               display: true,
               text: 'Count',
-              color: 'rgba(255, 255, 255, 0.9)',
+              color: '#333333',
             },
             grid: {
-              color: 'rgba(200, 200, 200, 0.25)',
+              color: '#111111',
             },
             ticks: {
-              color: 'rgba(255, 255, 255, 0.9)', // Ticks text color
+              color: '#ffffff', // Ticks text color
             },
           },
         },
