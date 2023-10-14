@@ -297,7 +297,7 @@ const start = async function () {
             data: timeSeriesData.map((d) => d.count),
             fill: false,
             borderColor: 'rgba(255, 255, 255, 0.8)',
-            backgroundColor: 'rgba(0, 0, 0, 0)',
+            backgroundColor: '#000000',
           },
         ],
       },
