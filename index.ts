@@ -320,7 +320,7 @@ const start = async function () {
     count: number
   }[]
 
-  function generateChart(timeSeriesData: TimeSeriesData): string {
+  function generateChart(timeSeriesData: TimeSeriesData): QuickChart {
     const labels: number[] = []
     const data: number[] = []
 
@@ -372,7 +372,7 @@ const start = async function () {
     const qc = new QuickChart()
     qc.setConfig(chartConfig)
 
-    return qc.getUrl()
+    return qc
   }
 
   app.get(
