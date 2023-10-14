@@ -292,7 +292,7 @@ const start = async function () {
         labels: timeSeriesData.map((d) => d._id),
         datasets: [
           {
-            label: 'Number of Records',
+            label: 'Transactions',
             data: timeSeriesData.map((d) => d.count),
             fill: true,
             borderColor: 'rgba(255, 255, 255, 0.8)',
