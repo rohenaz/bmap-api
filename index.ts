@@ -206,7 +206,7 @@ const start = async function () {
           <div class='border border-gray-700 p-4 text-center dark:bg-gray-800 dark:text-white'>
             <h3 class='text-lg font-semibold dark:text-white'>${collection}</h3>
             <p class='text-sm dark:text-gray-400'>Total Documents: ${count}</p>
-            <a href='/q/${collection}' class='bg-indigo-600 text-white rounded px-2 py-1 inline-block mt-2'>Explore</a>
+            <a href='/query/${collection}' class='bg-indigo-600 text-white rounded px-2 py-1 inline-block mt-2'>Explore</a>
           </div>`
         })
 
