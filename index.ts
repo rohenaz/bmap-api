@@ -316,7 +316,48 @@ const start = async function () {
       data.push(entry.count)
     }
 
+    const chartConfig = {
+      type: 'line',
+      data: {
+        labels: timeSeriesData.map((d) => d._id),
+        datasets: [
+          {
+            label: 'Number of Records',
+            data: timeSeriesData.map((d) => d.count),
+            fill: false,
+            borderColor: 'rgba(255, 255, 255, 0.8)',
+          },
+        ],
+      },
+      options: {
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Block Height',
+              color: 'rgba(255, 255, 255, 0.8)',
+            },
+            grid: {
+              color: 'rgba(255, 255, 255, 0.1)',
+            },
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Count',
+              color: 'rgba(255, 255, 255, 0.8)',
+            },
+            grid: {
+              color: 'rgba(255, 255, 255, 0.1)',
+            },
+          },
+        },
+      },
+    } as any
+
     const qc = new QuickChart()
+    qc.setConfig(chartConfig)
+
     qc.setConfig({
       type: 'line',
       data: {
@@ -384,8 +425,10 @@ const start = async function () {
         const dbo = await getDbo()
 
         const allCollections = await dbo.listCollections().toArray()
-        const allDataPromises = allCollections.map(
-          async (c) => await getTimeSeriesData(c.name, startBlock, endBlock)
+        const allDataPromises = await Promise.all(
+          allCollections.map((c) =>
+            getTimeSeriesData(c.name, startBlock, endBlock)
+          )
         )
         const allTimeSeriesData = await Promise.all(allDataPromises)
         // Sum or otherwise process allTimeSeriesData here
