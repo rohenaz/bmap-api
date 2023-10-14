@@ -303,6 +303,7 @@ const start = async function () {
       options: {
         defaultColor: '#ffffff',
         backgroundColor: '#000000',
+        format: 'svg',
         scales: {
           x: {
             title: {
