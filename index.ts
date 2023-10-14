@@ -8,9 +8,10 @@ import express from 'express'
 import asyncHandler from 'express-async-handler'
 import { ChangeStreamDocument } from 'mongodb'
 import { dirname } from 'path'
-import QuickChart from 'quickchart-js'
 import { fileURLToPath } from 'url'
 import { getCollectionCounts, getDbo } from './db.js'
+
+import QuickChart from 'quickchart-js'
 
 import dotenv from 'dotenv'
 dotenv.config()
