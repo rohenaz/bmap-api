@@ -287,7 +287,7 @@ const start = async function () {
 
   function generateChart(timeSeriesData: TimeSeriesData): QuickChart {
     const chartConfig = {
-      type: 'line',
+      type: 'bar',
       data: {
         labels: timeSeriesData.map((d) => d._id),
         backgroundColor: '#000000',
@@ -295,7 +295,7 @@ const start = async function () {
           {
             label: 'Number of Records',
             data: timeSeriesData.map((d) => d.count),
-            fill: false,
+            fill: true,
             borderColor: 'rgba(255, 255, 255, 0.8)',
             backgroundColor: '#498fff',
           },
