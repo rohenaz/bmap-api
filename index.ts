@@ -359,38 +359,6 @@ const start = async function () {
     const qc = new QuickChart()
     qc.setConfig(chartConfig)
 
-    qc.setConfig({
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            label: 'Number of Records',
-            data: data,
-            fill: false,
-            borderColor: 'blue',
-          },
-        ],
-      },
-      options: {
-        scales: {
-          x: {
-            title: {
-              display: true,
-              text: 'Block Height',
-            },
-          },
-          y: {
-            title: {
-              display: true,
-              text: 'Count',
-            },
-          },
-        },
-      },
-    })
-    // qc.set('width',500).setHeight(300)
-
     return qc.getUrl()
   }
 
