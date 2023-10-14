@@ -381,11 +381,15 @@ const start = async function () {
       } else {
         // Generate a chart for all collections based on timePeriod
         // Fetch time series data for this block range
-        const timeSeriesData = await getTimeSeriesData(
-          'collectionName',
-          startBlock,
-          endBlock
+        const dbo = await getDbo()
+
+        const allCollections = await dbo.listCollections().toArray()
+        const allDataPromises = allCollections.map((c) =>
+          getTimeSeriesData(c.name, startBlock, endBlock)
         )
+        const allTimeSeriesData = await Promise.all(allDataPromises)
+        // Sum or otherwise process allTimeSeriesData here
+        chart = generateChart(allTimeSeriesData)
       }
       res.send(chart) // Send the generated chart as the response
     })
