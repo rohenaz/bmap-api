@@ -27,7 +27,7 @@ const defaultQuery = {
   v: 3,
   q: {
     find: {
-      'blk.t': { $gt: Math.floor(new Date().getTime() / 1000 - 86400) },
+      // 'blk.t': { $gt: Math.floor(new Date().getTime() / 1000 - 86400) },
     },
     limit: 10,
     project: { out: 0, in: 0 },
