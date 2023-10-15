@@ -12,7 +12,7 @@ const generateChart = (
   globalChart: boolean
 ): QuickChart => {
   const chartConfig = {
-    type: 'bar',
+    type: 'line',
     data: {
       labels: timeSeriesData.map((d) => d._id),
       datasets: [
