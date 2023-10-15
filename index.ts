@@ -267,16 +267,17 @@ const start = async function () {
             endBlock
           )
           const chart = generateChart(timeSeriesData)
-
-          gridItemsHtml += `
-            <div class='border border-zinc-700 p-4 text-center dark:bg-zinc-800 dark:text-white'>
-              <h3 class='text-lg font-semibold dark:text-white'>${collection}</h3>
-              <p class='text-sm dark:text-zinc-400'>${count.toLocaleString()} Txs</p>
-              <img src='${chart.getUrl()}' alt='Chart for ${collection}' class='mt-2 mb-2'>
-              <a href='/query/${encodeURIComponent(
-                collection
-              )}' class='bg-indigo-600 text-white rounded px-2 py-1 inline-block mt-2'>Explore</a>
-            </div>`
+          if (collection !== '_state') {
+            gridItemsHtml += `
+  <div class='border border-zinc-700 p-4 text-center dark:bg-zinc-800 dark:text-white'>
+  <h3 class='text-lg font-semibold dark:text-white'>${collection}</h3>
+  <p class='text-sm dark:text-zinc-400'>${count.toLocaleString()} Txs</p>
+  <img src='${chart.getUrl()}' alt='Chart for ${collection}' class='mt-2 mb-2'>
+  <a href='/query/${encodeURIComponent(
+    collection
+  )}' class='bg-indigo-600 text-white rounded px-2 py-1 inline-block mt-2'>Explore</a>
+    </div>`
+          }
         }
 
         res.send(gridItemsHtml)
