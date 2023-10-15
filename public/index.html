@@ -20,11 +20,6 @@
           })
         })
       })
-
-      // Define a function to return the current timeframe value
-      function getTimeframe() {
-        return JSON.stringify({ timeframe: timeframe })
-      }
     </script>
   </head>
   <body class="dark bg-[#121212] text-white">
@@ -61,17 +56,43 @@
     </header>
     <main class="container mx-auto max-w-7xl py-12 px-8">
       <div class="flex items-center justify-end">
-        <button class="timeframe-button" data-timeframe="24h">24h</button>
-        <button class="timeframe-button" data-timeframe="week">Week</button>
-        <button class="timeframe-button" data-timeframe="month">Month</button>
-        <button class="timeframe-button" data-timeframe="year">Year</button>
-        <button class="timeframe-button" data-timeframe="all">All</button>
+        <button
+          hx-get="/htmx-chart"
+          hx-trigger="click"
+          hx-vals='{"timeframe": "24h"}'
+        >
+          24h
+        </button>
+        <button
+          hx-get="/htmx-chart"
+          hx-trigger="click"
+          hx-vals='{"timeframe": "week"}'
+        >
+          Week
+        </button>
+        <button
+          hx-get="/htmx-chart"
+          hx-trigger="click"
+          hx-vals='{"timeframe": "month"}'
+        >
+          Month
+        </button>
+        <button
+          hx-get="/htmx-chart"
+          hx-trigger="click"
+          hx-vals='{"timeframe": "year"}'
+        >
+          Year
+        </button>
+        <button
+          hx-get="/htmx-chart"
+          hx-trigger="click"
+          hx-vals='{"timeframe": "all"}'
+        >
+          All
+        </button>
       </div>
-      <div
-        hx-get="/htmx-collections"
-        hx-trigger="load update-charts"
-        hx-vals="getTimeframe()"
-      >
+      <div hx-get="/htmx-collections" hx-trigger="load">
         <!-- Grid items will be replaced by HTMX -->
       </div>
     </main>
