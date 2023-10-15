@@ -78,6 +78,7 @@
           hx-get="/htmx-chart"
           hx-trigger="click"
           hx-vals='{"timeframe": "24h"}'
+          hx-ext="debug"
           hx-target=".chart-container"
         >
           24h
@@ -115,7 +116,11 @@
           All
         </button>
       </div>
-      <div hx-get="/htmx-collections" hx-trigger="load htmx:trigger">
+      <div
+        hx-get="/htmx-collections"
+        hx-trigger="load htmx:trigger"
+        hx-ext="debug"
+      >
         <!-- Grid items will be replaced by HTMX -->
       </div>
     </main>
