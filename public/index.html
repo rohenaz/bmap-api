@@ -6,6 +6,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <script src="https://unpkg.com/htmx.org@1.6.1"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/debug.js"></script>
 
     <script type="application/javascript">
       let timeframe = '24h' // Default value
@@ -65,6 +66,7 @@
         hx-get="/htmx-chart"
         hx-trigger="load htmx:trigger"
         hx-vals="js:{timeframe: getTimeframe()}"
+        hx-ext="debug"
         class="chart-container flex justify-center py-10 max-w-7xl mx-auto"
       >
         <!-- Chart will be loaded here -->
