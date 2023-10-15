@@ -37,6 +37,7 @@ const bitcoinSchemaTypes = [
   'unfriend',
   'unfollow',
   'unlike',
+  'ord',
 ]
 
 export { bitcoinSchemaTypes, defaultQuery, getGridItemsHtml }
