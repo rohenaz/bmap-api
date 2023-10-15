@@ -64,7 +64,7 @@
 
       <div
         hx-get="/htmx-chart"
-        hx-trigger="load htmx:trigger"
+        hx-trigger="load, htmx:trigger"
         hx-vals="js:{timeframe: getTimeframe()}"
         hx-ext="debug"
         class="chart-container flex justify-center py-10 max-w-7xl mx-auto"
@@ -118,7 +118,7 @@
       </div>
       <div
         hx-get="/htmx-collections"
-        hx-trigger="load htmx:trigger"
+        hx-trigger="load, htmx:trigger"
         hx-ext="debug"
       >
         <!-- Grid items will be replaced by HTMX -->
