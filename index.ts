@@ -302,9 +302,10 @@ const start = async function () {
           gridItemsHtml2 += getGridItemsHtml(collection, count, chart)
         }
 
-        res.send(`<div
-    class="grid grid-cols-4 gap-8"
+        res.send(`<h3>Bitcoin Schema</h3><div
+    class="grid grid-cols-4 gap-8 mb-8"
   >${gridItemsHtml}</div>
+  <h3>Other MAP.type collections</h3>
   <div
   class="grid grid-cols-4 gap-8"
   >${gridItemsHtml2}</div>`)
