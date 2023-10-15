@@ -365,14 +365,35 @@ const start = async function () {
       const endBlock = currentBlockHeight
 
       let chart: QuickChart
+      let range = 10
+      switch (timeframe) {
+        case '24h':
+          range = 10
+          break
+        case 'week':
+          range = 100
+          break
+        case 'month':
+          range = 500
+          break
+        default:
+          range = 10
+          break
+      }
 
       if (collectionName) {
-        chart = await generateTotalsChart(collectionName, startBlock, endBlock)
+        chart = await generateTotalsChart(
+          collectionName,
+          startBlock,
+          endBlock,
+          range
+        )
       } else {
         chart = await generateCollectionChart(
           collectionName,
           startBlock,
-          endBlock
+          endBlock,
+          range
         )
       }
       res.send(
@@ -770,14 +791,16 @@ const generateChart = (
 const generateTotalsChart = async (
   collectionName: string,
   startBlock: number,
-  endBlock: number
+  endBlock: number,
+  blockRange: number = 10 // Default grouping range of 10 blocks
 ) => {
   // Generate a chart for the specific collection based on timePeriod
   // Fetch time series data for this block range
   const timeSeriesData = await getTimeSeriesData(
     collectionName,
     startBlock,
-    endBlock
+    endBlock,
+    blockRange
   )
 
   return generateChart(timeSeriesData, false) // Replace with your chart generation function
@@ -786,12 +809,13 @@ const generateTotalsChart = async (
 const generateCollectionChart = async (
   collectionName: string,
   startBlock: number,
-  endBlock: number
+  endBlock: number,
+  range: number
 ) => {
   const dbo = await getDbo()
   const allCollections = await dbo.listCollections().toArray()
   const allDataPromises = allCollections.map((c) =>
-    getTimeSeriesData(c.name, startBlock, endBlock)
+    getTimeSeriesData(c.name, startBlock, endBlock, range)
   )
   const allTimeSeriesData = await Promise.all(allDataPromises)
 
