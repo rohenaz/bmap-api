@@ -11,9 +11,15 @@ import { dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { getCollectionCounts, getDbo } from './db.js'
 
-import { ChartConfiguration } from 'chart.js'
 import dotenv from 'dotenv'
 import QuickChart from 'quickchart-js'
+import {
+  generateChart,
+  generateCollectionChart,
+  generateTotalsChart,
+  getTimeSeriesData,
+} from './chart.js'
+import { bitcoinSchemaTypes, defaultQuery, getGridItemsHtml } from './dash.js'
 dotenv.config()
 
 const { allProtocols, TransformTx } = bmapjs
@@ -23,33 +29,6 @@ const __dirname = dirname(__filename)
 
 const app = express()
 app.use(bodyParser.json())
-
-type TimeSeriesData = {
-  _id: number // Block height
-  count: number
-}[]
-
-const defaultQuery = {
-  v: 3,
-  q: {
-    find: {
-      'blk.t': { $gt: Math.floor(new Date().getTime() / 1000 - 86400) },
-    },
-    limit: 10,
-    project: { out: 0, in: 0 },
-  },
-}
-
-const bitcoinSchemaTypes = [
-  'like',
-  'post',
-  'message',
-  'friend',
-  'follow',
-  'unfriend',
-  'unfollow',
-  'unlike',
-]
 
 async function getCurrentBlockHeight(): Promise<number> {
   const dbo = await getDbo()
@@ -73,43 +52,6 @@ const timeframeToBlocks = (period: string) => {
     default:
       return 0
   }
-}
-
-async function getTimeSeriesData(
-  collectionName: string,
-  startBlock: number,
-  endBlock: number,
-  blockRange: number = 10 // Default grouping range of 10 blocks
-): Promise<any> {
-  const dbo = await getDbo()
-  const pipeline = [
-    {
-      $match: {
-        'blk.i': {
-          $gte: startBlock,
-          $lte: endBlock,
-        },
-      },
-    },
-    {
-      $project: {
-        // Calculate the block group identifier
-        blockGroup: {
-          $subtract: ['$blk.i', { $mod: ['$blk.i', blockRange] }],
-        },
-      },
-    },
-    {
-      $group: {
-        _id: '$blockGroup', // Group by block group identifier
-        count: { $sum: 1 },
-      },
-    },
-    {
-      $sort: { _id: 1 },
-    },
-  ]
-  return dbo.collection(collectionName).aggregate(pipeline).toArray()
 }
 
 const start = async function () {
@@ -337,23 +279,6 @@ const start = async function () {
       }
     })
   )
-
-  function getGridItemsHtml(
-    collection: string,
-    count: number,
-    chart: QuickChart
-  ) {
-    return `
-  <a href='/query/${encodeURIComponent(collection)}'>
-    <div class='border border-zinc-700 p-4 text-center dark:bg-zinc-800 dark:text-white'>
-      <div class='text-lg font-semibold dark:text-white flex justify-between'>
-        ${collection}
-        <div class='text-sm dark:text-zinc-400'>${count.toLocaleString()} Txs</div>
-      </div>
-      <img src='${chart.getUrl()}' alt='Chart for ${collection}' class='mt-2 mb-2' />
-    </div>
-  </a>`
-  }
 
   app.get(
     '/htmx-chart/:name?',
@@ -706,139 +631,4 @@ const rawTxFromTxid = async (txid: string) => {
   return await res.text()
 }
 
-const generateChart = (
-  timeSeriesData: TimeSeriesData,
-  globalChart: boolean
-): QuickChart => {
-  const chartConfig = {
-    type: 'bar',
-    data: {
-      labels: timeSeriesData.map((d) => d._id),
-      datasets: [
-        {
-          data: timeSeriesData.map((d) => d.count),
-          fill: true,
-          borderColor: 'rgba(255, 255, 255, 0.8)',
-          backgroundColor: '#498fff',
-        },
-      ],
-    },
-  } as ChartConfiguration
-
-  if (globalChart) {
-    chartConfig.options = {
-      legend: {
-        display: false,
-      },
-      scales: {
-        x: {
-          title: {
-            display: true,
-            text: 'Block Height',
-            color: '#333333',
-          },
-          grid: {
-            color: '#111111',
-          },
-          ticks: {
-            color: '#ffffff', // Ticks text color
-          },
-        },
-        y: {
-          title: {
-            display: true,
-            text: 'Count',
-            color: '#333333',
-          },
-          grid: {
-            color: '#111111',
-          },
-          ticks: {
-            color: '#ffffff', // Ticks text color
-          },
-        },
-      },
-    } as ChartConfiguration['options']
-  } else {
-    chartConfig.options = {
-      scales: {
-        display: false,
-        scaleLabel: {
-          display: false,
-        },
-        xAxes: [
-          {
-            display: false,
-          },
-        ],
-        yAxes: [
-          {
-            display: false,
-          },
-        ],
-        x: {
-          display: false,
-        },
-        y: {
-          display: false,
-        },
-      },
-      legend: {
-        display: false,
-      },
-    } as ChartConfiguration['options']
-  }
-  const qc = new QuickChart()
-  qc.setConfig(chartConfig)
-  qc.setWidth(1280).setHeight(300).setBackgroundColor('transparent')
-
-  return qc
-}
-
-const generateTotalsChart = async (
-  collectionName: string,
-  startBlock: number,
-  endBlock: number,
-  blockRange: number = 10 // Default grouping range of 10 blocks
-) => {
-  // Generate a chart for the specific collection based on timePeriod
-  // Fetch time series data for this block range
-  const timeSeriesData = await getTimeSeriesData(
-    collectionName,
-    startBlock,
-    endBlock,
-    blockRange
-  )
-
-  return generateChart(timeSeriesData, false) // Replace with your chart generation function
-}
-
-const generateCollectionChart = async (
-  collectionName: string,
-  startBlock: number,
-  endBlock: number,
-  range: number
-) => {
-  const dbo = await getDbo()
-  const allCollections = await dbo.listCollections().toArray()
-  const allDataPromises = allCollections.map((c) =>
-    getTimeSeriesData(c.name, startBlock, endBlock, range)
-  )
-  const allTimeSeriesData = await Promise.all(allDataPromises)
-
-  // Sum up counts for each block height across all collections
-  const globalData: Record<number, number> = {}
-  allTimeSeriesData.forEach((collectionData) => {
-    collectionData.forEach(({ _id, count }) => {
-      globalData[_id] = (globalData[_id] || 0) + count
-    })
-  })
-
-  const aggregatedData = Object.keys(globalData).map((blockHeight) => ({
-    _id: Number(blockHeight),
-    count: globalData[blockHeight],
-  }))
-
-  return generateChart(aggregatedData, true)
-}
 start()
