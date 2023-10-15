@@ -270,17 +270,14 @@ const start = async function () {
         const startBlock = currentBlockHeight - blocks
         const endBlock = currentBlockHeight
 
-        for (const collection of Object.keys(counts).sort((a, b) => {
-          // if this is a type included in bitcoinSchemaTypes, sort to top
-          if (bitcoinSchemaTypes.includes(a)) {
-            return -1
-          }
-          if (bitcoinSchemaTypes.includes(b)) {
-            return 1
-          }
-          // otherwise sort alphabetically
-          return a.localeCompare(b)
-        })) {
+        const bitcoinSchemaCollections = Object.keys(counts).filter((c) =>
+          bitcoinSchemaTypes.includes(c)
+        )
+        const otherCollections = Object.keys(counts).filter(
+          (c) => !bitcoinSchemaTypes.includes(c)
+        )
+
+        for (const collection of bitcoinSchemaCollections) {
           const count = counts[collection]
           const timeSeriesData = await getTimeSeriesData(
             collection,
@@ -289,17 +286,19 @@ const start = async function () {
           )
           const chart = generateChart(timeSeriesData, false)
           if (collection !== '_state') {
-            gridItemsHtml += `
-  <a href='/query/${encodeURIComponent(collection)}'>
-  <div class='border border-zinc-700 p-4 text-center dark:bg-zinc-800 dark:text-white'>
-  <div class='text-lg font-semibold dark:text-white flex justify-between'>
-    ${collection}
-    <div class='text-sm dark:text-zinc-400'>${count.toLocaleString()} Txs</div>
-  </div>
-  <img src='${chart.getUrl()}' alt='Chart for ${collection}' class='mt-2 mb-2'>
-  </div>
-  </a>`
+            gridItemsHtml += getGridItemsHtml(collection, count, chart)
           }
+        }
+
+        for (const collection of otherCollections) {
+          const count = counts[collection]
+          const timeSeriesData = await getTimeSeriesData(
+            collection,
+            startBlock,
+            endBlock
+          )
+          const chart = generateChart(timeSeriesData, false)
+          gridItemsHtml += getGridItemsHtml(collection, count, chart)
         }
 
         res.send(gridItemsHtml)
@@ -314,6 +313,23 @@ const start = async function () {
     _id: number // Block height
     count: number
   }[]
+
+  function getGridItemsHtml(
+    collection: string,
+    count: number,
+    chart: QuickChart
+  ) {
+    return `
+  <a href='/query/${encodeURIComponent(collection)}'>
+  <div class='border border-zinc-700 p-4 text-center dark:bg-zinc-800 dark:text-white'>
+  <div class='text-lg font-semibold dark:text-white flex justify-between'>
+    ${collection}
+    <div class='text-sm dark:text-zinc-400'>${count.toLocaleString()} Txs</div>
+  </div>
+  <img src='${chart.getUrl()}' alt='Chart for ${collection}' class='mt-2 mb-2'>
+  </div>
+  </a>`
+  }
 
   function generateChart(
     timeSeriesData: TimeSeriesData,
