@@ -24,6 +24,11 @@ const __dirname = dirname(__filename)
 const app = express()
 app.use(bodyParser.json())
 
+type TimeSeriesData = {
+  _id: number // Block height
+  count: number
+}[]
+
 const defaultQuery = {
   v: 3,
   q: {
@@ -317,11 +322,6 @@ const start = async function () {
     })
   )
 
-  type TimeSeriesData = {
-    _id: number // Block height
-    count: number
-  }[]
-
   function getGridItemsHtml(
     collection: string,
     count: number,
@@ -337,95 +337,6 @@ const start = async function () {
       <img src='${chart.getUrl()}' alt='Chart for ${collection}' class='mt-2 mb-2'>
     </div>
   </a>`
-  }
-
-  function generateChart(
-    timeSeriesData: TimeSeriesData,
-    globalChart: boolean
-  ): QuickChart {
-    const chartConfig = {
-      type: 'bar',
-      data: {
-        labels: timeSeriesData.map((d) => d._id),
-        datasets: [
-          {
-            data: timeSeriesData.map((d) => d.count),
-            fill: true,
-            borderColor: 'rgba(255, 255, 255, 0.8)',
-            backgroundColor: '#498fff',
-          },
-        ],
-      },
-    } as ChartConfiguration
-
-    if (globalChart) {
-      chartConfig.options = {
-        legend: {
-          display: false,
-        },
-        scales: {
-          x: {
-            title: {
-              display: true,
-              text: 'Block Height',
-              color: '#333333',
-            },
-            grid: {
-              color: '#111111',
-            },
-            ticks: {
-              color: '#ffffff', // Ticks text color
-            },
-          },
-          y: {
-            title: {
-              display: true,
-              text: 'Count',
-              color: '#333333',
-            },
-            grid: {
-              color: '#111111',
-            },
-            ticks: {
-              color: '#ffffff', // Ticks text color
-            },
-          },
-        },
-      } as ChartConfiguration['options']
-    } else {
-      chartConfig.options = {
-        scales: {
-          display: false,
-          scaleLabel: {
-            display: false,
-          },
-          xAxes: [
-            {
-              display: false,
-            },
-          ],
-          yAxes: [
-            {
-              display: false,
-            },
-          ],
-          x: {
-            display: false,
-          },
-          y: {
-            display: false,
-          },
-        },
-        legend: {
-          display: false,
-        },
-      } as ChartConfiguration['options']
-    }
-    const qc = new QuickChart()
-    qc.setConfig(chartConfig)
-    qc.setWidth(1280).setHeight(300).setBackgroundColor('transparent')
-
-    return qc
   }
 
   app.get(
@@ -779,6 +690,95 @@ const rawTxFromTxid = async (txid: string) => {
   // let res = await fetch(url, header)
   const res = await fetch(url)
   return await res.text()
+}
+
+const generateChart = (
+  timeSeriesData: TimeSeriesData,
+  globalChart: boolean
+): QuickChart => {
+  const chartConfig = {
+    type: 'bar',
+    data: {
+      labels: timeSeriesData.map((d) => d._id),
+      datasets: [
+        {
+          data: timeSeriesData.map((d) => d.count),
+          fill: true,
+          borderColor: 'rgba(255, 255, 255, 0.8)',
+          backgroundColor: '#498fff',
+        },
+      ],
+    },
+  } as ChartConfiguration
+
+  if (globalChart) {
+    chartConfig.options = {
+      legend: {
+        display: false,
+      },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: 'Block Height',
+            color: '#333333',
+          },
+          grid: {
+            color: '#111111',
+          },
+          ticks: {
+            color: '#ffffff', // Ticks text color
+          },
+        },
+        y: {
+          title: {
+            display: true,
+            text: 'Count',
+            color: '#333333',
+          },
+          grid: {
+            color: '#111111',
+          },
+          ticks: {
+            color: '#ffffff', // Ticks text color
+          },
+        },
+      },
+    } as ChartConfiguration['options']
+  } else {
+    chartConfig.options = {
+      scales: {
+        display: false,
+        scaleLabel: {
+          display: false,
+        },
+        xAxes: [
+          {
+            display: false,
+          },
+        ],
+        yAxes: [
+          {
+            display: false,
+          },
+        ],
+        x: {
+          display: false,
+        },
+        y: {
+          display: false,
+        },
+      },
+      legend: {
+        display: false,
+      },
+    } as ChartConfiguration['options']
+  }
+  const qc = new QuickChart()
+  qc.setConfig(chartConfig)
+  qc.setWidth(1280).setHeight(300).setBackgroundColor('transparent')
+
+  return qc
 }
 
 start()
