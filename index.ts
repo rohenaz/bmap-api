@@ -636,8 +636,9 @@ const bobFromRawTx = async (rawtx: string) => {
     ],
   })
 }
+
+// TODO: Old functions should use new services to accomplish this
 const bobFromPlanariaByTxid = async (txid: string) => {
-  // // The query we constructed from step 2.
   const query = {
     v: 3,
     q: {
@@ -662,6 +663,7 @@ const bobFromPlanariaByTxid = async (txid: string) => {
   const j = await res.json()
   return j.c.concat(j.u)[0]
 }
+
 const jsonFromTxid = async (txid: string) => {
   // get rawtx for txid
   const url = 'https://api.whatsonchain.com/v1/bsv/main/tx/' + txid
@@ -670,6 +672,7 @@ const jsonFromTxid = async (txid: string) => {
   const res = await fetch(url)
   return await res.json()
 }
+
 const bobFromTxid = async (txid: string) => {
   const rawtx = await rawTxFromTxid(txid)
   // Transform using BPU
@@ -685,6 +688,7 @@ const bobFromTxid = async (txid: string) => {
     return await bobFromPlanariaByTxid(txid)
   }
 }
+
 const rawTxFromTxid = async (txid: string) => {
   // get rawtx for txid
   const url = 'https://api.whatsonchain.com/v1/bsv/main/tx/' + txid + '/hex'

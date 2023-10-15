@@ -175,6 +175,7 @@
         transition: background 1000ms ease-in;
         border-radius: 0;
         -webkit-appearance: none;
+        appearance: none;
       }
       input.url.updated {
         background: gold;
@@ -302,6 +303,7 @@
             })
             .then(function (r) {
               document.querySelector('.window').innerHTML = ''
+              console.log('setting to', r)
               Object.keys(r).forEach(function (k) {
                 render(k, r[k])
               })
