@@ -366,19 +366,19 @@ const start = async function () {
       const endBlock = currentBlockHeight
 
       let chart: QuickChart
-      let range = 10
+      let range = 1
       switch (timeframe) {
         case '24h':
-          range = 10
+          range = 1
           break
         case 'week':
-          range = 100
+          range = 144 * 7
           break
         case 'month':
-          range = 500
+          range = 144 * 30
           break
-        default:
-          range = 10
+        case 'year':
+          range = 144 * 365
           break
       }
 
