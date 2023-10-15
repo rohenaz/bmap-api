@@ -169,7 +169,12 @@ const start = async function () {
 
       const dbo = await getDbo()
 
-      let code = Buffer.from(b64, 'base64').toString()
+      let code
+      if (b64 && collectionName) {
+        code = Buffer.from(b64, 'base64').toString()
+      } else {
+        code = Buffer.from(JSON.stringify(defaultQuery), 'base64').toString()
+      }
       let j = JSON.parse(code)
       if (j.q.aggregate) {
         try {

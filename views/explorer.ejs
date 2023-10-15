@@ -233,7 +233,7 @@
       const urlSegments = window.location.pathname.split('/')
       const collectionName = urlSegments[2]
       var endpoint = `${window.location.origin}/q/${collectionName}/`
-      console.log({ collectionName, endpoint })
+
       var source = document.getElementById('grid-template').innerHTML
       var template = Handlebars.compile(source)
       var editor
