@@ -350,7 +350,7 @@ const start = async function () {
         ${collection}
         <div class='text-sm dark:text-zinc-400'>${count.toLocaleString()} Txs</div>
       </div>
-      <img src='${chart.getUrl()}' alt='Chart for ${collection}' class='mt-2 mb-2'>
+      <img src='${chart.getUrl()}' alt='Chart for ${collection}' class='mt-2 mb-2' />
     </div>
   </a>`
   }
@@ -406,7 +406,7 @@ const start = async function () {
       res.send(
         `<img src='${chart.getUrl()}' alt='Transaction${
           collectionName ? 's for ' + collectionName : 'totals'
-        }' class='mt-2 mb-2'>`
+        }' class='mt-2 mb-2' />`
       )
     })
   )
