@@ -9,7 +9,7 @@ import asyncHandler from 'express-async-handler'
 import { ChangeStreamDocument } from 'mongodb'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { getCollectionCounts, getDbo } from './db.js'
+import { getCollectionCounts, getCurrentBlockHeight, getDbo } from './db.js'
 
 import dotenv from 'dotenv'
 import QuickChart from 'quickchart-js'
@@ -29,12 +29,6 @@ const __dirname = dirname(__filename)
 
 const app = express()
 app.use(bodyParser.json())
-
-async function getCurrentBlockHeight(): Promise<number> {
-  const dbo = await getDbo()
-  const state = await dbo.collection('_state').findOne({})
-  return state ? state.height : 0
-}
 
 const timeframeToBlocks = (period: string) => {
   // Example mapping from time period to number of blocks

@@ -51,7 +51,13 @@ async function getCollectionCounts(timestamp: number) {
   return countsObject
 }
 
-export { closeDb, getCollectionCounts, getDbo }
+async function getCurrentBlockHeight(): Promise<number> {
+  const dbo = await getDbo()
+  const state = await dbo.collection('_state').findOne({})
+  return state ? state.height : 0
+}
+
+export { closeDb, getCollectionCounts, getCurrentBlockHeight, getDbo }
 
 // db.c.createIndex({
 //   "MAP.app": 1,

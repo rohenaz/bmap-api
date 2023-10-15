@@ -1,4 +1,11 @@
+import { ChartConfiguration } from 'chart.js'
+import QuickChart from 'quickchart-js'
 import { getDbo } from './db'
+
+type TimeSeriesData = {
+  _id: number // Block height
+  count: number
+}[]
 
 const generateChart = (
   timeSeriesData: TimeSeriesData,
@@ -115,8 +122,8 @@ const generateCollectionChart = async (
 ) => {
   const dbo = await getDbo()
   const allCollections = await dbo.listCollections().toArray()
-  const allDataPromises = allCollections.map(
-    (c) => (c.name, startBlock, endBlock, range)
+  const allDataPromises = allCollections.map((c) =>
+    getTimeSeriesData(c.name, startBlock, endBlock, range)
   )
   const allTimeSeriesData = await Promise.all(allDataPromises)
 
