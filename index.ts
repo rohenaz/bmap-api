@@ -276,12 +276,13 @@ const start = async function () {
       try {
         const timestamp = Math.floor(Date.now() / 1000) - 86400
         const counts = await getCollectionCounts(timestamp)
+        const timeframe = req.query.timeframe || '24h'
 
         let gridItemsHtml = ''
         let gridItemsHtml2 = ''
 
         const currentBlockHeight = await getCurrentBlockHeight()
-        const blocks = timeframeToBlocks('24h')
+        const blocks = timeframeToBlocks(timeframe)
         const startBlock = currentBlockHeight - blocks
         const endBlock = currentBlockHeight
 
