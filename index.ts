@@ -291,9 +291,8 @@ const start = async function () {
             endBlock
           )
           const chart = generateChart(timeSeriesData, false)
-          if (collection !== '_state') {
-            gridItemsHtml += getGridItemsHtml(collection, count, chart)
-          }
+
+          gridItemsHtml += getGridItemsHtml(collection, count, chart)
         }
 
         for (const collection of otherCollections) {
@@ -304,7 +303,9 @@ const start = async function () {
             endBlock
           )
           const chart = generateChart(timeSeriesData, false)
-          gridItemsHtml2 += getGridItemsHtml(collection, count, chart)
+          if (collection !== '_state') {
+            gridItemsHtml2 += getGridItemsHtml(collection, count, chart)
+          }
         }
 
         res.send(`<h3 class="mb-4">Bitcoin Schema Types</h3>
