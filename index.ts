@@ -341,7 +341,7 @@ const start = async function () {
         labels: timeSeriesData.map((d) => d._id),
         datasets: [
           {
-            label: 'Transactions',
+            label: globalChart ? 'Transactions' : undefined,
             data: timeSeriesData.map((d) => d.count),
             fill: true,
             borderColor: 'rgba(255, 255, 255, 0.8)',
