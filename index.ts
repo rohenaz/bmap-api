@@ -338,13 +338,6 @@ const start = async function () {
             },
           },
         },
-        plugins: {
-          legend: {
-            labels: {
-              color: 'rgba(255, 255, 255, 0.9)',
-            },
-          },
-        },
       },
     } as ChartConfiguration
 
