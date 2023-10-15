@@ -40,20 +40,20 @@
     </header>
     <main class="container mx-auto max-w-7xl py-12 px-8">
       <div>
-        <div
+        <button
           hx-get="/htmx-chart"
           hx-trigger="click"
           hx-vals="{timeframe: '24h'}"
         >
           24h
-        </div>
-        <div
+        </button>
+        <button
           hx-get="/htmx-chart"
           hx-trigger="click"
           hx-vals="{timeframe: 'week'}"
         >
           Week
-        </div>
+        </button>
         <div>Month</div>
         <div>Year</div>
         <div>All</div>

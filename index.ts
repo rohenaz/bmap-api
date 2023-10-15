@@ -62,9 +62,9 @@ const timeframeToBlocks = (period: string) => {
   switch (period) {
     case '24h':
       return 144 // Approximate number of blocks in 24 hours
-    case '7d':
+    case 'week':
       return 1008 // Approximate number of blocks in 7 days
-    case '1m':
+    case 'month':
       return 4320 // Approximate number of blocks in a month
     default:
       return 0
