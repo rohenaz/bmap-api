@@ -48,7 +48,7 @@
       <div
         hx-get="/htmx-chart"
         hx-trigger="load update-charts"
-        hx-vals="getTimeframe()"
+        hx-vals="{timeframe: timeframe}"
         class="chart-container flex justify-center py-10 max-w-7xl mx-auto"
       >
         <!-- Chart will be loaded here -->
