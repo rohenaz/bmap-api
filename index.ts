@@ -70,6 +70,7 @@ const timeframeToBlocks = (period: string) => {
       return 0
   }
 }
+
 async function getTimeSeriesData(
   collectionName: string,
   startBlock: number,
