@@ -330,8 +330,11 @@ const start = async function () {
     })
   )
 
-  app.get('/query', function (req, res) {
-    let code = JSON.stringify(defaultQuery, null, 2)
+  app.get('/query/:collectionName', function (req, res) {
+    let collectionName = req.params.collectionName
+    let q = Object.assign({}, defaultQuery)
+    q.q.find['MAP.type'] = collectionName
+    let code = JSON.stringify(q, null, 2)
     res.render('explorer', {
       name: 'BMAP',
       code: code,
