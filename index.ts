@@ -349,6 +349,14 @@ const start = async function () {
         ],
       },
       options: {
+        scales: {
+          x: {
+            title: { display: false },
+          },
+          y: {
+            title: { display: false },
+          },
+        },
         legend: {
           display: false,
         },
