@@ -338,14 +338,18 @@ const start = async function () {
     })
   })
 
-  app.get(/^\/query\/(.+)$/, function (req, res) {
-    let b64 = req.params[1]
-    let code = Buffer.from(b64, 'base64').toString()
-    res.render('explorer', {
-      name: 'BMAP',
-      code: code,
+  app.get(
+    '/query/:collectionName/:base64Query',
+    asyncHandler(async function (req, res) {
+      let collectionName = req.params.collectionName
+      let b64 = req.params.base64Query
+      let code = Buffer.from(b64, 'base64').toString()
+      res.render('explorer', {
+        name: 'BMAP',
+        code: code,
+      })
     })
-  })
+  )
 
   app.post('/ingest', function (req, res) {
     // ingest a raw tx
