@@ -66,6 +66,10 @@ const timeframeToBlocks = (period: string) => {
       return 1008 // Approximate number of blocks in 7 days
     case 'month':
       return 4320 // Approximate number of blocks in a month
+    case 'year':
+      return 52560 // Approximate number of blocks in a year
+    case 'all':
+      return 0 // All blocks
     default:
       return 0
   }
