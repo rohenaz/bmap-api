@@ -70,11 +70,11 @@ const timeframeToBlocks = (period: string) => {
       return 0
   }
 }
-
 async function getTimeSeriesData(
   collectionName: string,
   startBlock: number,
-  endBlock: number
+  endBlock: number,
+  blockRange: number = 10 // Default grouping range of 10 blocks
 ): Promise<any> {
   const dbo = await getDbo()
   const pipeline = [
@@ -87,8 +87,16 @@ async function getTimeSeriesData(
       },
     },
     {
+      $project: {
+        // Calculate the block group identifier
+        blockGroup: {
+          $subtract: ['$blk.i', { $mod: ['$blk.i', blockRange] }],
+        },
+      },
+    },
+    {
       $group: {
-        _id: '$blk.i', // Group by block height
+        _id: '$blockGroup', // Group by block group identifier
         count: { $sum: 1 },
       },
     },
