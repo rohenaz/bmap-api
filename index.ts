@@ -357,37 +357,13 @@ const start = async function () {
       let chart: QuickChart
 
       if (collectionName) {
-        // Generate a chart for the specific collection based on timePeriod
-        // Fetch time series data for this block range
-        const timeSeriesData = await getTimeSeriesData(
+        chart = await generateTotalsChart(collectionName, startBlock, endBlock)
+      } else {
+        chart = await generateCollectionChart(
           collectionName,
           startBlock,
           endBlock
         )
-
-        chart = generateChart(timeSeriesData, false) // Replace with your chart generation function
-      } else {
-        const dbo = await getDbo()
-        const allCollections = await dbo.listCollections().toArray()
-        const allDataPromises = allCollections.map((c) =>
-          getTimeSeriesData(c.name, startBlock, endBlock)
-        )
-        const allTimeSeriesData = await Promise.all(allDataPromises)
-
-        // Sum up counts for each block height across all collections
-        const globalData: Record<number, number> = {}
-        allTimeSeriesData.forEach((collectionData) => {
-          collectionData.forEach(({ _id, count }) => {
-            globalData[_id] = (globalData[_id] || 0) + count
-          })
-        })
-
-        const aggregatedData = Object.keys(globalData).map((blockHeight) => ({
-          _id: Number(blockHeight),
-          count: globalData[blockHeight],
-        }))
-
-        chart = generateChart(aggregatedData, true)
       }
       res.send(
         `<img src='${chart.getUrl()}' alt='Transaction${
@@ -781,4 +757,47 @@ const generateChart = (
   return qc
 }
 
+const generateTotalsChart = async (
+  collectionName: string,
+  startBlock: number,
+  endBlock: number
+) => {
+  // Generate a chart for the specific collection based on timePeriod
+  // Fetch time series data for this block range
+  const timeSeriesData = await getTimeSeriesData(
+    collectionName,
+    startBlock,
+    endBlock
+  )
+
+  return generateChart(timeSeriesData, false) // Replace with your chart generation function
+}
+
+const generateCollectionChart = async (
+  collectionName: string,
+  startBlock: number,
+  endBlock: number
+) => {
+  const dbo = await getDbo()
+  const allCollections = await dbo.listCollections().toArray()
+  const allDataPromises = allCollections.map((c) =>
+    getTimeSeriesData(c.name, startBlock, endBlock)
+  )
+  const allTimeSeriesData = await Promise.all(allDataPromises)
+
+  // Sum up counts for each block height across all collections
+  const globalData: Record<number, number> = {}
+  allTimeSeriesData.forEach((collectionData) => {
+    collectionData.forEach(({ _id, count }) => {
+      globalData[_id] = (globalData[_id] || 0) + count
+    })
+  })
+
+  const aggregatedData = Object.keys(globalData).map((blockHeight) => ({
+    _id: Number(blockHeight),
+    count: globalData[blockHeight],
+  }))
+
+  return generateChart(aggregatedData, true)
+}
 start()
