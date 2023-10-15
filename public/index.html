@@ -8,18 +8,23 @@
     <script src="https://unpkg.com/htmx.org@1.6.1"></script>
 
     <script type="application/javascript">
-      document.addEventListener('DOMContentLoaded', (event) => {
-        let updateEvent = new Event('update-charts')
+      // Define a global variable to hold the timeframe value
+      let timeframe = '24h' // Default value
 
+      document.addEventListener('DOMContentLoaded', (event) => {
         document.querySelectorAll('.timeframe-button').forEach((button) => {
           button.addEventListener('click', function () {
-            let timeframe = button.getAttribute('data-timeframe')
-            updateEvent.timeframe = timeframe // Attach the timeframe to the event
-            console.log('clicked', timeframe)
+            timeframe = button.getAttribute('data-timeframe') // Update the global timeframe variable
+            let updateEvent = new Event('update-charts')
             document.dispatchEvent(updateEvent)
           })
         })
       })
+
+      // Define a function to return the current timeframe value
+      function getTimeframe() {
+        return { timeframe: timeframe }
+      }
     </script>
   </head>
   <body class="dark bg-[#121212] text-white">
@@ -47,8 +52,8 @@
 
       <div
         hx-get="/htmx-chart"
-        hx-trigger="update-charts"
-        hx-vals="{timeframe: updateEvent.timeframe}"
+        hx-trigger="load update-charts"
+        hx-vals="getTimeframe()"
         class="chart-container flex justify-center py-10 max-w-7xl mx-auto"
       >
         <!-- Chart will be loaded here -->
@@ -64,8 +69,8 @@
       </div>
       <div
         hx-get="/htmx-collections"
-        hx-trigger="update-charts"
-        hx-vals="{timeframe: updateEvent.timeframe}"
+        hx-trigger="load update-charts"
+        hx-vals="getTimeframe()"
       >
         <!-- Grid items will be replaced by HTMX -->
       </div>
