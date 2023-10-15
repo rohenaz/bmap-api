@@ -15,6 +15,7 @@
           button.addEventListener('click', function () {
             let timeframe = button.getAttribute('data-timeframe')
             updateEvent.timeframe = timeframe // Attach the timeframe to the event
+            console.log('clicked', timeframe)
             document.dispatchEvent(updateEvent)
           })
         })
