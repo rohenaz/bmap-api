@@ -6,6 +6,12 @@ type TimeSeriesData = {
   _id: number // Block height
   count: number
 }[]
+const canvas = document.getElementById('myChart') as HTMLCanvasElement
+const ctx = canvas.getContext('2d')
+
+const gradient = ctx.createLinearGradient(0, 0, 0, 400)
+gradient.addColorStop(0, 'rgba(255, 0,0, 0.5)')
+gradient.addColorStop(1, 'rgba(0, 0, 255, 0.5)')
 
 const generateChart = (
   timeSeriesData: TimeSeriesData,
@@ -18,9 +24,9 @@ const generateChart = (
       datasets: [
         {
           data: timeSeriesData.map((d) => d.count),
+          backgroundColor: gradient, // '#498fff',
           fill: true,
           borderColor: 'rgba(255, 255, 255, 0.8)',
-          backgroundColor: '#498fff',
         },
       ],
     },
