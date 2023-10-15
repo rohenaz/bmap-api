@@ -15,7 +15,7 @@
       }
 
       function getTimeframeJSON() {
-        return JSON.stringify({ timeframe: timeframe })
+        return `{ "timeframe": ${timeframe} }`
       }
 
       document.addEventListener('DOMContentLoaded', (event) => {
