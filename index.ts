@@ -387,22 +387,7 @@ const start = async function () {
     } else {
       chartConfig.options = {
         scales: {
-          x: {
-            title: { display: false },
-          },
-          y: {
-            title: { display: false },
-          },
-          xAxes: [
-            {
-              display: false,
-            },
-          ],
-          yAxes: [
-            {
-              display: false,
-            },
-          ],
+          display: false,
         },
         legend: {
           display: false,
