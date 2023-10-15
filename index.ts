@@ -348,19 +348,6 @@ const start = async function () {
           },
         ],
       },
-      options: {
-        scales: {
-          x: {
-            title: { display: false },
-          },
-          y: {
-            title: { display: false },
-          },
-        },
-        legend: {
-          display: false,
-        },
-      },
     } as ChartConfiguration
 
     if (globalChart) {
@@ -395,6 +382,22 @@ const start = async function () {
               color: '#ffffff', // Ticks text color
             },
           },
+        },
+      } as ChartConfiguration['options']
+    } else {
+      chartConfig.options = {
+        scales: {
+          x: {
+            title: { display: false },
+            ticks: { display: false },
+          },
+          y: {
+            title: { display: false },
+            ticks: { display: false },
+          },
+        },
+        legend: {
+          display: false,
         },
       } as ChartConfiguration['options']
     }
