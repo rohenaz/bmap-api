@@ -302,13 +302,14 @@ const start = async function () {
           gridItemsHtml2 += getGridItemsHtml(collection, count, chart)
         }
 
-        res.send(`<h3 class="mb-4">Bitcoin Schema Types</h3><div
-    class="grid grid-cols-4 gap-8 mb-8"
-  >${gridItemsHtml}</div>
+        res.send(`<h3 class="mb-4">Bitcoin Schema Types</h3>
+  <div class="grid grid-cols-4 gap-8 mb-8">
+    ${gridItemsHtml}
+  </div>
   <h3 class="mb-4">Other Types</h3>
-  <div
-  class="grid grid-cols-4 gap-8"
-  >${gridItemsHtml2}</div>`)
+  <div class="grid grid-cols-4 gap-8">
+    ${gridItemsHtml2}
+  </div>`)
       } catch (error) {
         console.error('An error occurred:', error)
         res.status(500).send()
@@ -328,13 +329,13 @@ const start = async function () {
   ) {
     return `
   <a href='/query/${encodeURIComponent(collection)}'>
-  <div class='border border-zinc-700 p-4 text-center dark:bg-zinc-800 dark:text-white'>
-  <div class='text-lg font-semibold dark:text-white flex justify-between'>
-    ${collection}
-    <div class='text-sm dark:text-zinc-400'>${count.toLocaleString()} Txs</div>
-  </div>
-  <img src='${chart.getUrl()}' alt='Chart for ${collection}' class='mt-2 mb-2'>
-  </div>
+    <div class='border border-zinc-700 p-4 text-center dark:bg-zinc-800 dark:text-white'>
+      <div class='text-lg font-semibold dark:text-white flex justify-between'>
+        ${collection}
+        <div class='text-sm dark:text-zinc-400'>${count.toLocaleString()} Txs</div>
+      </div>
+      <img src='${chart.getUrl()}' alt='Chart for ${collection}' class='mt-2 mb-2'>
+    </div>
   </a>`
   }
 
@@ -478,7 +479,9 @@ const start = async function () {
         chart = generateChart(aggregatedData, true)
       }
       res.send(
-        `<img src='${chart.getUrl()}' alt='Chart for ${collectionName}' class='mt-2 mb-2'>`
+        `<img src='${chart.getUrl()}' alt='Transaction${
+          collectionName ? 's for ' + collectionName : 'totals'
+        }' class='mt-2 mb-2'>`
       )
     })
   )
