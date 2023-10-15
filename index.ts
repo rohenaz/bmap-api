@@ -348,6 +348,11 @@ const start = async function () {
           },
         ],
       },
+      elements: {
+        legend: {
+          display: false,
+        },
+      },
     } as ChartConfiguration
 
     if (globalChart) {
@@ -385,6 +390,7 @@ const start = async function () {
     const qc = new QuickChart()
     qc.setConfig(chartConfig)
     qc.setWidth(1280).setHeight(300).setBackgroundColor('transparent')
+
     return qc
   }
 
