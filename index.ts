@@ -264,6 +264,7 @@ const start = async function () {
         const counts = await getCollectionCounts(timestamp)
 
         let gridItemsHtml = ''
+        let gridItemsHtml2 = ''
 
         const currentBlockHeight = await getCurrentBlockHeight()
         const blocks = timePeriodToBlocks('24h')
@@ -298,10 +299,19 @@ const start = async function () {
             endBlock
           )
           const chart = generateChart(timeSeriesData, false)
-          gridItemsHtml += getGridItemsHtml(collection, count, chart)
+          gridItemsHtml2 += getGridItemsHtml(collection, count, chart)
         }
 
-        res.send(gridItemsHtml)
+        res.send(`<div
+    hx-get="/htmx-collections"
+    hx-trigger="load"
+    class="grid grid-cols-4 gap-8"
+  >${gridItemsHtml}</div>
+  <div
+  hx-get="/htmx-collections"
+  hx-trigger="load"
+  class="grid grid-cols-4 gap-8"
+  >${gridItemsHtml2}</div>`)
       } catch (error) {
         console.error('An error occurred:', error)
         res.status(500).send()
