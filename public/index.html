@@ -43,20 +43,38 @@
         <button
           hx-get="/htmx-chart"
           hx-trigger="click"
-          hx-vals="{timeframe: '24h'}"
+          hx-vals='{"timeframe": "24h"}'
         >
           24h
         </button>
         <button
           hx-get="/htmx-chart"
           hx-trigger="click"
-          hx-vals="{timeframe: 'week'}"
+          hx-vals='{"timeframe": "week"}'
         >
           Week
         </button>
-        <div>Month</div>
-        <div>Year</div>
-        <div>All</div>
+        <button
+          hx-get="/htmx-chart"
+          hx-trigger="click"
+          hx-vals='{"timeframe": "month"}'
+        >
+          Month
+        </button>
+        <button
+          hx-get="/htmx-chart"
+          hx-trigger="click"
+          hx-vals='{"timeframe": "year"}'
+        >
+          Year
+        </button>
+        <button
+          hx-get="/htmx-chart"
+          hx-trigger="click"
+          hx-vals='{"timeframe": "all"}'
+        >
+          All
+        </button>
       </div>
       <div hx-get="/htmx-collections" hx-trigger="load">
         <!-- Grid items will be replaced by HTMX -->
