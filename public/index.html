@@ -6,6 +6,18 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <script src="https://unpkg.com/htmx.org@1.6.1"></script>
+
+    <script type="application/javascript">
+      let updateEvent = new Event('update-charts')
+
+      document.querySelectorAll('.timeframe-button').forEach((button) => {
+        button.addEventListener('click', function () {
+          let timeframe = button.getAttribute('data-timeframe')
+          updateEvent.timeframe = timeframe // Attach the timeframe to the event
+          document.dispatchEvent(updateEvent)
+        })
+      })
+    </script>
   </head>
   <body class="dark bg-[#121212] text-white">
     <header class="bg-zinc-900">
@@ -33,48 +45,18 @@
       <div
         hx-get="/htmx-chart"
         hx-trigger="load"
-        class="flex justify-center py-10 max-w-7xl mx-auto"
+        class="chart-container flex justify-center py-10 max-w-7xl mx-auto"
       >
         <!-- Chart will be loaded here -->
       </div>
     </header>
     <main class="container mx-auto max-w-7xl py-12 px-8">
       <div class="flex items-center justify-end">
-        <button
-          hx-get="/htmx-chart,/htmx-collections"
-          hx-trigger="click"
-          hx-vals='{"timeframe": "24h"}'
-        >
-          24h
-        </button>
-        <button
-          hx-get="/htmx-chart,/htmx-collections"
-          hx-trigger="click"
-          hx-vals='{"timeframe": "week"}'
-        >
-          Week
-        </button>
-        <button
-          hx-get="/htmx-chart,/htmx-collections"
-          hx-trigger="click"
-          hx-vals='{"timeframe": "month"}'
-        >
-          Month
-        </button>
-        <button
-          hx-get="/htmx-chart,/htmx-collections"
-          hx-trigger="click"
-          hx-vals='{"timeframe": "year"}'
-        >
-          Year
-        </button>
-        <button
-          hx-get="/htmx-chart,/htmx-collections"
-          hx-trigger="click"
-          hx-vals='{"timeframe": "all"}'
-        >
-          All
-        </button>
+        <button class="timeframe-button" data-timeframe="24h">24h</button>
+        <button class="timeframe-button" data-timeframe="week">Week</button>
+        <button class="timeframe-button" data-timeframe="month">Month</button>
+        <button class="timeframe-button" data-timeframe="year">Year</button>
+        <button class="timeframe-button" data-timeframe="all">All</button>
       </div>
       <div hx-get="/htmx-collections" hx-trigger="load">
         <!-- Grid items will be replaced by HTMX -->
