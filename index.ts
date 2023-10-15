@@ -303,13 +303,9 @@ const start = async function () {
         }
 
         res.send(`<div
-    hx-get="/htmx-collections"
-    hx-trigger="load"
     class="grid grid-cols-4 gap-8"
   >${gridItemsHtml}</div>
   <div
-  hx-get="/htmx-collections"
-  hx-trigger="load"
   class="grid grid-cols-4 gap-8"
   >${gridItemsHtml2}</div>`)
       } catch (error) {
