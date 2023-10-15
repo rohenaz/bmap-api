@@ -14,6 +14,10 @@
         return timeframe
       }
 
+      function getTimeframeJSON() {
+        return JSON.stringify({ timeframe: timeframe })
+      }
+
       document.addEventListener('DOMContentLoaded', (event) => {
         document.querySelectorAll('.timeframe-button').forEach((button) => {
           button.addEventListener('click', function () {
@@ -64,7 +68,7 @@
       <div
         hx-get="/htmx-chart"
         hx-trigger="load htmx:trigger"
-        hx-vals="getTimeframe()"
+        hx-vals="getTimeframeJSON()"
         class="chart-container flex justify-center py-10 max-w-7xl mx-auto"
       >
         <!-- Chart will be loaded here -->
