@@ -35,6 +35,17 @@ const defaultQuery = {
   },
 }
 
+const bitcoinSchemaTypes = [
+  'like',
+  'post',
+  'message',
+  'friend',
+  'follow',
+  'unfriend',
+  'unfollow',
+  'unlike',
+]
+
 async function getCurrentBlockHeight(): Promise<number> {
   const dbo = await getDbo()
   const state = await dbo.collection('_state').findOne({})
@@ -259,7 +270,17 @@ const start = async function () {
         const startBlock = currentBlockHeight - blocks
         const endBlock = currentBlockHeight
 
-        for (const collection of Object.keys(counts)) {
+        for (const collection of Object.keys(counts).sort((a, b) => {
+          // if this is a type included in bitcoinSchemaTypes, sort to top
+          if (bitcoinSchemaTypes.includes(a)) {
+            return -1
+          }
+          if (bitcoinSchemaTypes.includes(b)) {
+            return 1
+          }
+          // otherwise sort alphabetically
+          return a.localeCompare(b)
+        })) {
           const count = counts[collection]
           const timeSeriesData = await getTimeSeriesData(
             collection,
