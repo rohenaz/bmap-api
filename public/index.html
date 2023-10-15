@@ -46,7 +46,8 @@
 
       <div
         hx-get="/htmx-chart"
-        hx-trigger="load"
+        hx-trigger="update-charts"
+        hx-vals="{timeframe: updateEvent.timeframe}"
         class="chart-container flex justify-center py-10 max-w-7xl mx-auto"
       >
         <!-- Chart will be loaded here -->
@@ -60,7 +61,11 @@
         <button class="timeframe-button" data-timeframe="year">Year</button>
         <button class="timeframe-button" data-timeframe="all">All</button>
       </div>
-      <div hx-get="/htmx-collections" hx-trigger="load">
+      <div
+        hx-get="/htmx-collections"
+        hx-trigger="update-charts"
+        hx-vals="{timeframe: updateEvent.timeframe}"
+      >
         <!-- Grid items will be replaced by HTMX -->
       </div>
     </main>
