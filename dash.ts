@@ -1,8 +1,8 @@
 import QuickChart from 'quickchart-js'
 function collectionQuery(collection: string) {
-  return Buffer.from((defaultQuery.q.find['MAP.type'] = collection)).toString(
-    'base64'
-  )
+  return Buffer.from(
+    JSON.stringify((defaultQuery.q.find['MAP.type'] = collection))
+  ).toString('base64')
 }
 function getGridItemsHtml(
   collection: string,
