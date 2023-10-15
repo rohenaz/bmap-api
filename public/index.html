@@ -24,6 +24,18 @@
           })
         })
       })
+
+      // Listen to the 'update-charts' event
+      document.addEventListener('update-charts', function () {
+        // Trigger HTMX AJAX request for the top chart
+        document
+          .querySelector('.chart-container')
+          .dispatchEvent(new Event('htmx:trigger'))
+        // Trigger HTMX AJAX request for collections
+        document
+          .querySelector('[hx-get="/htmx-collections"]')
+          .dispatchEvent(new Event('htmx:trigger'))
+      })
     </script>
   </head>
   <body class="dark bg-[#121212] text-white">
@@ -51,7 +63,7 @@
 
       <div
         hx-get="/htmx-chart"
-        hx-trigger="load update-charts"
+        hx-trigger="load htmx:trigger"
         hx-vals="{timeframe: timeframe}"
         class="chart-container flex justify-center py-10 max-w-7xl mx-auto"
       >
@@ -64,6 +76,7 @@
           hx-get="/htmx-chart"
           hx-trigger="click"
           hx-vals='{"timeframe": "24h"}'
+          hx-target=".chart-container"
         >
           24h
         </button>
@@ -71,6 +84,7 @@
           hx-get="/htmx-chart"
           hx-trigger="click"
           hx-vals='{"timeframe": "week"}'
+          hx-target=".chart-container"
         >
           Week
         </button>
@@ -78,6 +92,7 @@
           hx-get="/htmx-chart"
           hx-trigger="click"
           hx-vals='{"timeframe": "month"}'
+          hx-target=".chart-container"
         >
           Month
         </button>
@@ -85,6 +100,7 @@
           hx-get="/htmx-chart"
           hx-trigger="click"
           hx-vals='{"timeframe": "year"}'
+          hx-target=".chart-container"
         >
           Year
         </button>
@@ -92,11 +108,12 @@
           hx-get="/htmx-chart"
           hx-trigger="click"
           hx-vals='{"timeframe": "all"}'
+          hx-target=".chart-container"
         >
           All
         </button>
       </div>
-      <div hx-get="/htmx-collections" hx-trigger="load">
+      <div hx-get="/htmx-collections" hx-trigger="load htmx:trigger">
         <!-- Grid items will be replaced by HTMX -->
       </div>
     </main>
