@@ -266,7 +266,7 @@ const start = async function () {
             startBlock,
             endBlock
           )
-          const chart = generateChart(timeSeriesData)
+          const chart = generateChart(timeSeriesData, false)
           if (collection !== '_state') {
             gridItemsHtml += `
   <a href='/query/${encodeURIComponent(collection)}'>
@@ -294,7 +294,10 @@ const start = async function () {
     count: number
   }[]
 
-  function generateChart(timeSeriesData: TimeSeriesData): QuickChart {
+  function generateChart(
+    timeSeriesData: TimeSeriesData,
+    globalChart: boolean
+  ): QuickChart {
     const chartConfig = {
       type: 'bar',
       data: {
@@ -309,7 +312,10 @@ const start = async function () {
           },
         ],
       },
-      options: {
+    } as ChartConfiguration
+
+    if (globalChart) {
+      chartConfig.options = {
         scales: {
           x: {
             title: {
@@ -338,9 +344,8 @@ const start = async function () {
             },
           },
         },
-      },
-    } as ChartConfiguration
-
+      } as ChartConfiguration['options']
+    }
     const qc = new QuickChart()
     qc.setConfig(chartConfig)
     qc.setWidth(1280).setHeight(300).setBackgroundColor('transparent')
@@ -373,7 +378,7 @@ const start = async function () {
           endBlock
         )
 
-        chart = generateChart(timeSeriesData) // Replace with your chart generation function
+        chart = generateChart(timeSeriesData, false) // Replace with your chart generation function
       } else {
         const dbo = await getDbo()
         const allCollections = await dbo.listCollections().toArray()
@@ -395,7 +400,7 @@ const start = async function () {
           count: globalData[blockHeight],
         }))
 
-        chart = generateChart(aggregatedData)
+        chart = generateChart(aggregatedData, true)
       }
       res.send(
         `<img src='${chart.getUrl()}' alt='Chart for ${collectionName}' class='mt-2 mb-2'>`
