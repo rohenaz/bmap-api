@@ -303,7 +303,8 @@ const start = async function () {
             endBlock
           )
           const chart = generateChart(timeSeriesData, false)
-          if (collection !== '_state') {
+          // TODO: Investigate how 0 count collections are being created
+          if (collection !== '_state' && count > 0) {
             gridItemsHtml2 += getGridItemsHtml(collection, count, chart)
           }
         }
