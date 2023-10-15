@@ -57,7 +57,7 @@ async function getCurrentBlockHeight(): Promise<number> {
   return state ? state.height : 0
 }
 
-const timePeriodToBlocks = (period: string) => {
+const timeframeToBlocks = (period: string) => {
   // Example mapping from time period to number of blocks
   switch (period) {
     case '24h':
@@ -272,7 +272,7 @@ const start = async function () {
         let gridItemsHtml2 = ''
 
         const currentBlockHeight = await getCurrentBlockHeight()
-        const blocks = timePeriodToBlocks('24h')
+        const blocks = timeframeToBlocks('24h')
         const startBlock = currentBlockHeight - blocks
         const endBlock = currentBlockHeight
 
@@ -344,14 +344,14 @@ const start = async function () {
   app.get(
     '/htmx-chart/:name?',
     asyncHandler(async (req, res) => {
-      const timePeriod = req.query.timePeriod || '24h'
+      const timeframe = req.query.timeframe || '24h'
       const collectionName = req.params.name
 
       // Fetch current block height first
       const currentBlockHeight = await getCurrentBlockHeight()
       console.log({ currentBlockHeight, collectionName })
       // Translate selected time period to block range
-      const blocks = timePeriodToBlocks(timePeriod as string)
+      const blocks = timeframeToBlocks(timeframe as string)
 
       const startBlock = currentBlockHeight - blocks
       const endBlock = currentBlockHeight

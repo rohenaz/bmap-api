@@ -38,12 +38,29 @@
         <!-- Chart will be loaded here -->
       </div>
     </header>
-    <main
-      class="container mx-auto max-w-7xl py-12 px-8"
-      hx-get="/htmx-collections"
-      hx-trigger="load"
-    >
-      <!-- Grid items will be replaced by HTMX -->
+    <main class="container mx-auto max-w-7xl py-12 px-8">
+      <div>
+        <div
+          hx-get="/htmx-chart"
+          hx-trigger="click"
+          hx-vals="{timeframe: '24h'}"
+        >
+          24h
+        </div>
+        <div
+          hx-get="/htmx-chart"
+          hx-trigger="click"
+          hx-vals="{timeframe: 'week'}"
+        >
+          Week
+        </div>
+        <div>Month</div>
+        <div>Year</div>
+        <div>All</div>
+      </div>
+      <div hx-get="/htmx-collections" hx-trigger="load">
+        <!-- Grid items will be replaced by HTMX -->
+      </div>
     </main>
   </body>
 </html>
