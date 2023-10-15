@@ -348,7 +348,7 @@ const start = async function () {
           },
         ],
       },
-      elements: {
+      options: {
         legend: {
           display: false,
         },
