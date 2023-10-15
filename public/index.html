@@ -6,6 +6,20 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <script src="https://unpkg.com/htmx.org@1.6.1"></script>
+
+    <script type="application/javascript">
+      document.addEventListener('DOMContentLoaded', (event) => {
+        let updateEvent = new Event('update-charts')
+
+        document.querySelectorAll('.timeframe-button').forEach((button) => {
+          button.addEventListener('click', function () {
+            let timeframe = button.getAttribute('data-timeframe')
+            updateEvent.timeframe = timeframe // Attach the timeframe to the event
+            document.dispatchEvent(updateEvent)
+          })
+        })
+      })
+    </script>
   </head>
   <body class="dark bg-[#121212] text-white">
     <header class="bg-zinc-900">
@@ -50,16 +64,5 @@
         <!-- Grid items will be replaced by HTMX -->
       </div>
     </main>
-    <script type="application/javascript">
-      let updateEvent = new Event('update-charts')
-
-      document.querySelectorAll('.timeframe-button').forEach((button) => {
-        button.addEventListener('click', function () {
-          let timeframe = button.getAttribute('data-timeframe')
-          updateEvent.timeframe = timeframe // Attach the timeframe to the event
-          document.dispatchEvent(updateEvent)
-        })
-      })
-    </script>
   </body>
 </html>
