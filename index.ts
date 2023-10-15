@@ -369,16 +369,17 @@ const start = async function () {
       let range = 1
       switch (timeframe) {
         case '24h':
+          // will have 144 bars
           range = 1
           break
         case 'week':
-          range = 144 * 7
+          range = 7
           break
         case 'month':
-          range = 144 * 30
+          range = 30
           break
         case 'year':
-          range = 144 * 365
+          range = 365
           break
       }
 
