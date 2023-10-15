@@ -8,14 +8,18 @@
     <script src="https://unpkg.com/htmx.org@1.6.1"></script>
 
     <script type="application/javascript">
-      // Define a global variable to hold the timeframe value
       let timeframe = '24h' // Default value
+
+      function getTimeframe() {
+        return JSON.stringify({ timeframe: timeframe })
+      }
 
       document.addEventListener('DOMContentLoaded', (event) => {
         document.querySelectorAll('.timeframe-button').forEach((button) => {
           button.addEventListener('click', function () {
-            timeframe = button.getAttribute('data-timeframe') // Update the global timeframe variable
+            timeframe = button.getAttribute('data-timeframe')
             let updateEvent = new Event('update-charts')
+            console.log('update-charts', updateEvent)
             document.dispatchEvent(updateEvent)
           })
         })
