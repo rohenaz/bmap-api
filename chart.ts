@@ -1,6 +1,6 @@
 import { ChartConfiguration } from 'chart.js'
 import QuickChart from 'quickchart-js'
-import { getDbo } from './db'
+import { getDbo } from './db.js'
 
 type TimeSeriesData = {
   _id: number // Block height
