@@ -255,7 +255,7 @@
             null,
             window.location.origin +
               '/query/' +
-              collectionName +
+              encodeURIComponent(collectionName) +
               '/' +
               btoa(query)
           )
