@@ -365,6 +365,9 @@ const start = async function () {
 
     if (globalChart) {
       chartConfig.options = {
+        legend: {
+          display: false,
+        },
         scales: {
           x: {
             title: {
