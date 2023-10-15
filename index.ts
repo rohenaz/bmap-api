@@ -389,12 +389,20 @@ const start = async function () {
         scales: {
           x: {
             title: { display: false },
-            ticks: { display: false },
           },
           y: {
             title: { display: false },
-            ticks: { display: false },
           },
+          xAxes: [
+            {
+              display: false,
+            },
+          ],
+          yAxes: [
+            {
+              display: false,
+            },
+          ],
         },
         legend: {
           display: false,
