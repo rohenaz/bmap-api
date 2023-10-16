@@ -6,12 +6,39 @@ type TimeSeriesData = {
   _id: number // Block height
   count: number
 }[]
-const canvas = document.getElementById('myChart') as HTMLCanvasElement
-const ctx = canvas.getContext('2d')
 
-const gradient = ctx.createLinearGradient(0, 0, 0, 400)
-gradient.addColorStop(0, 'rgba(255, 0,0, 0.5)')
-gradient.addColorStop(1, 'rgba(0, 0, 255, 0.5)')
+// Interpolate between two values
+function lerp(a: number, b: number, t: number): number {
+  return (1 - t) * a + t * b
+}
+
+// Generate gradient colors between startColor and endColor over 'steps' steps
+function generateGradientColors(
+  startColor: string,
+  endColor: string,
+  steps: number
+): string[] {
+  const start = startColor.match(/\d+/g)!.map(Number)
+  const end = endColor.match(/\d+/g)!.map(Number)
+  const gradientColors: string[] = []
+
+  for (let step = 0; step < steps; step++) {
+    const t = step / (steps - 1)
+    const r = Math.round(lerp(start[0], end[0], t))
+    const g = Math.round(lerp(start[1], end[1], t))
+    const b = Math.round(lerp(start[2], end[2], t))
+    const a = lerp(start[3] / 255, end[3] / 255, t).toFixed(2)
+    gradientColors.push(`rgba(${r}, ${g}, ${b}, ${a})`)
+  }
+
+  return gradientColors
+}
+
+const gradientColors = generateGradientColors(
+  'rgba(255, 0, 0, 0.5)',
+  'rgba(0, 0, 255, 0.5)',
+  10
+)
 
 const generateChart = (
   timeSeriesData: TimeSeriesData,
@@ -24,7 +51,7 @@ const generateChart = (
       datasets: [
         {
           data: timeSeriesData.map((d) => d.count),
-          backgroundColor: gradient, // '#498fff',
+          backgroundColor: gradientColors, // '#498fff',
           fill: true,
           // borderColor: 'rgba(255, 255, 255, 0.8)',
           borderColor: 'rgba(255, 99, 132, 1)',
