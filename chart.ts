@@ -34,16 +34,18 @@ function generateGradientColors(
   return gradientColors
 }
 
-const gradientColors = generateGradientColors(
-  'rgba(255, 0, 0, 0.5)',
-  'rgba(0, 0, 255, 0.5)',
-  10
-)
-
 const generateChart = (
   timeSeriesData: TimeSeriesData,
   globalChart: boolean
 ): QuickChart => {
+  const timeSeriesLength = timeSeriesData.length
+
+  const gradientColors = generateGradientColors(
+    'rgba(26, 13, 171, 0.5)',
+    'rgba(0, 204, 255, 0.5)',
+    timeSeriesLength
+  )
+
   const chartConfig = {
     type: 'line',
     data: {
