@@ -63,6 +63,7 @@ const generateChart = (
     },
   } as ChartConfiguration
 
+  console.log({ gradientColors })
   if (globalChart) {
     chartConfig.options = {
       legend: {
