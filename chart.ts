@@ -1,5 +1,5 @@
 import { ChartConfiguration } from 'chart.js'
-import QuickChart from 'quickchart-js'
+import QuickChart, { getGradientFillHelper } from 'quickchart-js'
 import { getDbo } from './db.js'
 
 type TimeSeriesData = {
@@ -58,6 +58,10 @@ const generateChart = (
           pointBackgroundColor: 'rgba(255, 99, 132, 0.8)',
           pointRadius: 5,
           lineTension: 0.2,
+          backgroundColor: getGradientFillHelper('horizontal', [
+            'red',
+            'green',
+          ]),
         },
       ],
     },
