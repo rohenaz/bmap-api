@@ -24,7 +24,7 @@ const generateChart = (
           borderColor: 'rgb(213, 99, 255, 0.5)',
           borderWidth: 3,
           pointBackgroundColor: 'rgba(255, 99, 255, 0.5)',
-          pointRadius: 5,
+          pointRadius: 3,
           lineTension: 0.4,
           backgroundColor: getGradientFillHelper('vertical', [
             'rgba(255, 99, 255, 1)',
