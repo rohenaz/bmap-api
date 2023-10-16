@@ -7,51 +7,44 @@ type TimeSeriesData = {
   count: number
 }[]
 
+// Interpolate between two values
+function lerp(a: number, b: number, t: number): number {
+  return (1 - t) * a + t * b
+}
+
+// Generate gradient colors between startColor and endColor over 'steps' steps
+function generateGradientColors(
+  startColor: string,
+  endColor: string,
+  steps: number
+): string[] {
+  const start = startColor.match(/\d+/g)!.map(Number)
+  const end = endColor.match(/\d+/g)!.map(Number)
+  const gradientColors: string[] = []
+
+  for (let step = 0; step < steps; step++) {
+    const t = step / (steps - 1)
+    const r = Math.round(lerp(start[0], end[0], t))
+    const g = Math.round(lerp(start[1], end[1], t))
+    const b = Math.round(lerp(start[2], end[2], t))
+    const a = Number(lerp(start[3], end[3], t).toFixed(2))
+    gradientColors.push(`rgba(${r}, ${g}, ${b}, ${a})`)
+  }
+
+  return gradientColors
+}
+
+// Sample usage
+const gradientColors = generateGradientColors(
+  'rgba(26, 13, 171, 1)', // Top: Solid purple
+  'rgba(0, 204, 255, 0)', // Bottom: Transparent light blue
+  10 // Number of steps
+)
+
 const generateChart = (
   timeSeriesData: TimeSeriesData,
   globalChart: boolean
 ): QuickChart => {
-  const gradientColors: Chart.Scriptable<Chart.ChartColor> = (context) => {
-    console.log({ context })
-
-    // Interpolate between two values
-    function lerp(a: number, b: number, t: number): number {
-      return (1 - t) * a + t * b
-    }
-
-    // Generate gradient colors between startColor and endColor over 'steps' steps
-    const generateGradientColors = (
-      startColor: string,
-      endColor: string,
-      steps: number
-    ): string[] => {
-      const start = startColor.match(/\d+/g)!.map(Number)
-      const end = endColor.match(/\d+/g)!.map(Number)
-      const gc: string[] = []
-
-      for (let step = 0; step < steps; step++) {
-        const t = step / (steps - 1)
-        const r = Math.round(lerp(start[0], end[0], t))
-        const g = Math.round(lerp(start[1], end[1], t))
-        const b = Math.round(lerp(start[2], end[2], t))
-        const a = Number(lerp(start[3], end[3], t).toFixed(2))
-        gc.push(`rgba(${r}, ${g}, ${b}, ${a})`)
-      }
-
-      return gc
-    }
-
-    const maxDataValue = Math.max(
-      ...(context.chart.data.datasets[0].data as number[])
-    )
-
-    return generateGradientColors(
-      'rgba(26, 13, 171, 1)',
-      'rgba(0, 204, 255, 0)',
-      maxDataValue
-    ) as Chart.ChartColor
-  }
-
   const chartConfig = {
     type: 'line',
     data: {
@@ -108,11 +101,8 @@ const generateChart = (
           line: {
             backgroundColor: {
               type: 'linear',
-              angle: -45,
-              colors: [
-                { offset: 0, color: 'rgba(26, 13, 171, 1)' },
-                { offset: 1, color: 'rgba(0, 204, 255, 0)' },
-              ],
+              angle: 90,
+              colors: gradientColors,
             },
           },
         },
