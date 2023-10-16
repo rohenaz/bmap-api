@@ -59,7 +59,6 @@ const generateChart = (
       datasets: [
         {
           data: timeSeriesData.map((d) => d.count),
-          backgroundColor: gradientColors, // '#498fff',
           fill: true,
           borderColor: 'rgb(213, 99, 255, 0.9)',
           borderWidth: 3,
