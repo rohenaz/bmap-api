@@ -27,7 +27,7 @@ function generateGradientColors(
     const r = Math.round(lerp(start[0], end[0], t))
     const g = Math.round(lerp(start[1], end[1], t))
     const b = Math.round(lerp(start[2], end[2], t))
-    const a = lerp(start[3] / 255, end[3] / 255, t).toFixed(2)
+    const a = lerp(start[3], end[3], t).toFixed(2)
     gradientColors.push(`rgba(${r}, ${g}, ${b}, ${a})`)
   }
 
@@ -132,9 +132,7 @@ const generateChart = (
   }
   const qc = new QuickChart()
   qc.setConfig(chartConfig)
-  if (!globalChart) {
-    qc.setBackgroundColor('transparent')
-  }
+  qc.setBackgroundColor('transparent')
   qc.setWidth(1280).setHeight(300)
 
   return qc
