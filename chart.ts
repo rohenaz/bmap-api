@@ -40,11 +40,14 @@ const generateChart = (
 ): QuickChart => {
   const timeSeriesLength = timeSeriesData.length
 
-  const gradientColors = generateGradientColors(
-    'rgba(26, 13, 171, 1)',
-    'rgba(0, 204, 255, 0)',
-    timeSeriesLength
-  )
+  const gradientColors = (context) => {
+    console.log({ context })
+    return generateGradientColors(
+      'rgba(26, 13, 171, 1)',
+      'rgba(0, 204, 255, 0)',
+      timeSeriesLength
+    )
+  }
 
   console.log({ gradientColors })
   const chartConfig = {
