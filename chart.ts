@@ -46,6 +46,7 @@ const generateChart = (
     timeSeriesLength
   )
 
+  console.log({ gradientColors })
   const chartConfig = {
     type: 'line',
     data: {
