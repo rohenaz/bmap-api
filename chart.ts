@@ -11,7 +11,6 @@ const generateChart = (
   timeSeriesData: TimeSeriesData,
   globalChart: boolean
 ): QuickChart => {
-  const timeSeriesLength = timeSeriesData.length
   const gradientColors: Chart.Scriptable<Chart.ChartColor> = (context) => {
     console.log({ context })
 
