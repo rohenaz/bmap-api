@@ -12,28 +12,6 @@ function lerp(a: number, b: number, t: number): number {
   return (1 - t) * a + t * b
 }
 
-// Generate gradient colors between startColor and endColor over 'steps' steps
-const generateGradientColors = (
-  startColor: string,
-  endColor: string,
-  steps: number
-): string[] => {
-  const start = startColor.match(/\d+/g)!.map(Number)
-  const end = endColor.match(/\d+/g)!.map(Number)
-  const gradientColors: string[] = []
-
-  for (let step = 0; step < steps; step++) {
-    const t = step / (steps - 1)
-    const r = Math.round(lerp(start[0], end[0], t))
-    const g = Math.round(lerp(start[1], end[1], t))
-    const b = Math.round(lerp(start[2], end[2], t))
-    const a = Number(lerp(start[3], end[3], t).toFixed(2))
-    gradientColors.push(`rgba(${r}, ${g}, ${b}, ${a})`)
-  }
-
-  return gradientColors
-}
-
 const generateChart = (
   timeSeriesData: TimeSeriesData,
   globalChart: boolean
@@ -42,11 +20,34 @@ const generateChart = (
 
   const gradientColors: Chart.Scriptable<Chart.ChartColor> = (context) => {
     console.log({ context })
+
+    // Generate gradient colors between startColor and endColor over 'steps' steps
+    const generateGradientColors = (
+      startColor: string,
+      endColor: string,
+      steps: number
+    ): string[] => {
+      const start = startColor.match(/\d+/g)!.map(Number)
+      const end = endColor.match(/\d+/g)!.map(Number)
+      const gradientColors: string[] = []
+
+      for (let step = 0; step < steps; step++) {
+        const t = step / (steps - 1)
+        const r = Math.round(lerp(start[0], end[0], t))
+        const g = Math.round(lerp(start[1], end[1], t))
+        const b = Math.round(lerp(start[2], end[2], t))
+        const a = Number(lerp(start[3], end[3], t).toFixed(2))
+        gradientColors.push(`rgba(${r}, ${g}, ${b}, ${a})`)
+      }
+
+      return gradientColors
+    }
+
     return generateGradientColors(
       'rgba(26, 13, 171, 1)',
       'rgba(0, 204, 255, 0)',
       timeSeriesLength
-    )
+    ) as Chart.ChartColor
   }
 
   const chartConfig = {
