@@ -21,14 +21,14 @@ const generateChart = (
         {
           data: timeSeriesData.map((d) => d.count),
           fill: true,
-          borderColor: 'rgb(213, 99, 255, 0.9)',
+          borderColor: 'rgb(213, 99, 255, 0.5)',
           borderWidth: 3,
-          pointBackgroundColor: 'rgba(255, 99, 132, 0.8)',
+          pointBackgroundColor: 'rgba(255, 99, 132, 0.5)',
           pointRadius: 5,
           lineTension: 0.2,
           backgroundColor: getGradientFillHelper('vertical', [
-            'rgba(255, 99, 132, 0.8)',
-            'rgba(255, 99, 132, 0)',
+            'rgba(255, 99, 132, 0.5)',
+            'rgba(255, 99, 132, 0.1)',
           ]),
         },
       ],
