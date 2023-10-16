@@ -29,7 +29,7 @@ const generateChart = (
     ): string[] => {
       const start = startColor.match(/\d+/g)!.map(Number)
       const end = endColor.match(/\d+/g)!.map(Number)
-      const gradientColors: string[] = []
+      const gc: string[] = []
 
       for (let step = 0; step < steps; step++) {
         const t = step / (steps - 1)
@@ -37,10 +37,10 @@ const generateChart = (
         const g = Math.round(lerp(start[1], end[1], t))
         const b = Math.round(lerp(start[2], end[2], t))
         const a = Number(lerp(start[3], end[3], t).toFixed(2))
-        gradientColors.push(`rgba(${r}, ${g}, ${b}, ${a})`)
+        gc.push(`rgba(${r}, ${g}, ${b}, ${a})`)
       }
 
-      return gradientColors
+      return gc
     }
 
     return generateGradientColors(
