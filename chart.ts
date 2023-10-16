@@ -59,7 +59,7 @@ const generateChart = (
           fill: true,
           borderColor: 'rgb(213, 99, 255, 0.9)',
           borderWidth: 3,
-          pointBackgroundColor: 'rgba(255, 99, 132, 0.5)',
+          pointBackgroundColor: 'rgba(255, 99, 132, 0.8)',
           pointRadius: 5,
           lineTension: 0.2,
         },
@@ -132,7 +132,7 @@ const generateChart = (
   }
   const qc = new QuickChart()
   qc.setConfig(chartConfig)
-  qc.setWidth(1280).setHeight(300).setBackgroundColor('transparent')
+  qc.setWidth(1280).setHeight(300)
 
   return qc
 }
