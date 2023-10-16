@@ -42,11 +42,14 @@ const generateChart = (
       return gc
     }
 
+    const maxDataValue = Math.max(
+      ...(context.chart.data.datasets[0].data as number[])
+    )
+
     return generateGradientColors(
       'rgba(26, 13, 171, 1)',
       'rgba(0, 204, 255, 0)',
-      // get the maximum value in the dataset
-      timeSeriesData.reduce((max, { count }) => Math.max(max, count), 0)
+      maxDataValue
     ) as Chart.ChartColor
   }
 
