@@ -54,7 +54,6 @@ const generateChart = (
 
   const chartConfig = {
     type: 'line',
-
     data: {
       labels: timeSeriesData.map((d) => d._id),
       datasets: [
@@ -102,6 +101,20 @@ const generateChart = (
           },
           ticks: {
             color: '#ffffff', // Ticks text color
+          },
+        },
+      },
+      options: {
+        elements: {
+          line: {
+            backgroundColor: {
+              type: 'linear',
+              angle: -45,
+              colors: [
+                { offset: 0, color: 'rgba(26, 13, 171, 1)' },
+                { offset: 1, color: 'rgba(0, 204, 255, 0)' },
+              ],
+            },
           },
         },
       },
