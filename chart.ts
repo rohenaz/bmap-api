@@ -13,11 +13,11 @@ function lerp(a: number, b: number, t: number): number {
 }
 
 // Generate gradient colors between startColor and endColor over 'steps' steps
-function generateGradientColors(
+const generateGradientColors = (
   startColor: string,
   endColor: string,
   steps: number
-): string[] {
+): string[] => {
   const start = startColor.match(/\d+/g)!.map(Number)
   const end = endColor.match(/\d+/g)!.map(Number)
   const gradientColors: string[] = []
@@ -49,7 +49,6 @@ const generateChart = (
     )
   }
 
-  console.log({ gradientColors })
   const chartConfig = {
     type: 'line',
 
