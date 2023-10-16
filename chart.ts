@@ -16,9 +16,9 @@ const generateChart = (
   timeSeriesData: TimeSeriesData,
   globalChart: boolean
 ): QuickChart => {
+  const timeSeriesLength = timeSeriesData.length
   const gradientColors: Chart.Scriptable<Chart.ChartColor> = (context) => {
     console.log({ context })
-    const timeSeriesLength = timeSeriesData.length
 
     // Generate gradient colors between startColor and endColor over 'steps' steps
     const generateGradientColors = (
@@ -45,7 +45,7 @@ const generateChart = (
     return generateGradientColors(
       'rgba(26, 13, 171, 1)',
       'rgba(0, 204, 255, 0)',
-      timeSeriesLength
+      context.dataset.data.length
     ) as Chart.ChartColor
   }
 
