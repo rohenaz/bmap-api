@@ -40,7 +40,7 @@ const generateChart = (
 ): QuickChart => {
   const timeSeriesLength = timeSeriesData.length
 
-  const gradientColors = (context) => {
+  const gradientColors: Chart.Scriptable<Chart.ChartColor> = (context) => {
     console.log({ context })
     return generateGradientColors(
       'rgba(26, 13, 171, 1)',
