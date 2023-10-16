@@ -60,6 +60,7 @@ const generateChart = (
           borderWidth: 3,
           pointBackgroundColor: 'rgba(255, 99, 132, 1)',
           pointRadius: 5,
+          lineTension: 0.2,
         },
       ],
     },
