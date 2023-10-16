@@ -9,11 +9,10 @@ function getGridItemsHtml(
   count: number,
   chart: QuickChart
 ) {
-  return `
-<a href='/query/${encodeURIComponent(collection)}/${collectionQuery(
+  return `<a href='/query/${encodeURIComponent(collection)}/${collectionQuery(
     collection
   )}'>
-  <div class='border border-zinc-700 p-4 text-center dark:bg-zinc-800 dark:text-white'>
+  <div class='border border-zinc-800 p-4 text-center dark:bg-zinc-900 dark:text-white'>
     <div class='text-lg font-semibold dark:text-white flex justify-between'>
       ${collection}
       <div class='text-sm dark:text-zinc-400'>${count.toLocaleString()} Txs</div>
