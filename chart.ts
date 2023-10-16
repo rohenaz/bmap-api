@@ -1,5 +1,7 @@
 import { ChartConfiguration } from 'chart.js'
-import QuickChart, { getGradientFillHelper } from 'quickchart-js'
+import QuickChart from 'quickchart-js'
+const getGradientFillHelper = QuickChart.getGradientFillHelper
+
 import { getDbo } from './db.js'
 
 type TimeSeriesData = {
@@ -67,7 +69,6 @@ const generateChart = (
     },
   } as ChartConfiguration
 
-  console.log({ gradientColors })
   if (globalChart) {
     chartConfig.options = {
       legend: {
@@ -98,17 +99,6 @@ const generateChart = (
           },
           ticks: {
             color: '#ffffff', // Ticks text color
-          },
-        },
-      },
-      options: {
-        elements: {
-          line: {
-            backgroundColor: {
-              type: 'linear',
-              angle: 90,
-              colors: gradientColors,
-            },
           },
         },
       },
