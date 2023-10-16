@@ -41,8 +41,8 @@ const generateChart = (
   const timeSeriesLength = timeSeriesData.length
 
   const gradientColors = generateGradientColors(
-    'rgba(26, 13, 171, 0.5)',
-    'rgba(0, 204, 255, 0.5)',
+    'rgba(26, 13, 171, 1)',
+    'rgba(0, 204, 255, 0)',
     timeSeriesLength
   )
 
