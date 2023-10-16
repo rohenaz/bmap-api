@@ -9,40 +9,6 @@ type TimeSeriesData = {
   count: number
 }[]
 
-// Interpolate between two values
-function lerp(a: number, b: number, t: number): number {
-  return (1 - t) * a + t * b
-}
-
-// Generate gradient colors between startColor and endColor over 'steps' steps
-function generateGradientColors(
-  startColor: string,
-  endColor: string,
-  steps: number
-): Array<{ offset: number; color: string }> {
-  const start = startColor.match(/\d+/g)!.map(Number)
-  const end = endColor.match(/\d+/g)!.map(Number)
-  const gradientColors: Array<{ offset: number; color: string }> = []
-
-  for (let step = 0; step < steps; step++) {
-    const t = step / (steps - 1)
-    const r = Math.round(lerp(start[0], end[0], t))
-    const g = Math.round(lerp(start[1], end[1], t))
-    const b = Math.round(lerp(start[2], end[2], t))
-    const a = Number(lerp(start[3], end[3], t).toFixed(2))
-    gradientColors.push({ offset: t, color: `rgba(${r}, ${g}, ${b}, ${a})` })
-  }
-
-  return gradientColors
-}
-
-// Sample usage
-const gradientColors = generateGradientColors(
-  'rgba(26, 13, 171, 1)', // Top: Solid purple
-  'rgba(0, 204, 255, 0)', // Bottom: Transparent light blue
-  10 // Number of steps
-)
-
 const generateChart = (
   timeSeriesData: TimeSeriesData,
   globalChart: boolean
@@ -60,9 +26,9 @@ const generateChart = (
           pointBackgroundColor: 'rgba(255, 99, 132, 0.8)',
           pointRadius: 5,
           lineTension: 0.2,
-          backgroundColor: getGradientFillHelper('horizontal', [
-            'red',
-            'green',
+          backgroundColor: getGradientFillHelper('vertical', [
+            'rgba(26, 13, 171, 1)',
+            'rgba(0, 204, 255, 0)',
           ]),
         },
       ],
