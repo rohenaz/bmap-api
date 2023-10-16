@@ -132,6 +132,9 @@ const generateChart = (
   }
   const qc = new QuickChart()
   qc.setConfig(chartConfig)
+  if (!globalChart) {
+    qc.setBackgroundColor('transparent')
+  }
   qc.setWidth(1280).setHeight(300)
 
   return qc
