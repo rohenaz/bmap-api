@@ -49,6 +49,7 @@ const generateChart = (
   console.log({ gradientColors })
   const chartConfig = {
     type: 'line',
+
     data: {
       labels: timeSeriesData.map((d) => d._id),
       datasets: [
@@ -56,10 +57,9 @@ const generateChart = (
           data: timeSeriesData.map((d) => d.count),
           backgroundColor: gradientColors, // '#498fff',
           fill: true,
-          // borderColor: 'rgba(255, 255, 255, 0.8)',
-          borderColor: 'rgba(255, 99, 132, 1)',
+          borderColor: 'rgb(213, 99, 255, 0.9)',
           borderWidth: 3,
-          pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+          pointBackgroundColor: 'rgba(255, 99, 132, 0.5)',
           pointRadius: 5,
           lineTension: 0.2,
         },
