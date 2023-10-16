@@ -7,11 +7,6 @@ type TimeSeriesData = {
   count: number
 }[]
 
-// Interpolate between two values
-function lerp(a: number, b: number, t: number): number {
-  return (1 - t) * a + t * b
-}
-
 const generateChart = (
   timeSeriesData: TimeSeriesData,
   globalChart: boolean
@@ -19,6 +14,11 @@ const generateChart = (
   const timeSeriesLength = timeSeriesData.length
   const gradientColors: Chart.Scriptable<Chart.ChartColor> = (context) => {
     console.log({ context })
+
+    // Interpolate between two values
+    function lerp(a: number, b: number, t: number): number {
+      return (1 - t) * a + t * b
+    }
 
     // Generate gradient colors between startColor and endColor over 'steps' steps
     const generateGradientColors = (
@@ -45,7 +45,8 @@ const generateChart = (
     return generateGradientColors(
       'rgba(26, 13, 171, 1)',
       'rgba(0, 204, 255, 0)',
-      context.dataset.data.length
+      // get the maximum value in the dataset
+      timeSeriesData.reduce((max, { count }) => Math.max(max, count), 0)
     ) as Chart.ChartColor
   }
 
