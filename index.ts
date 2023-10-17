@@ -199,6 +199,9 @@ const start = async function () {
   app.get(
     '/htmx-collections',
     asyncHandler(async (req, res) => {
+      console.time('Total Execution Time') // Start timer for total execution
+
+      console.time('getCollectionCounts')
       try {
         const timestamp = Math.floor(Date.now() / 1000) - 86400
         // Cache counts
@@ -208,6 +211,9 @@ const start = async function () {
           counts = await getCollectionCounts(timestamp)
           cache.set(countsKey, { type: 'count', value: counts })
         }
+        console.timeEnd('getCollectionCounts') // End timer for getCollectionCounts
+        console.time('getBlockHeightFromCache')
+
         const timeframe = (req.query.timeframe as string) || '24h'
 
         let gridItemsHtml = ''
@@ -218,10 +224,13 @@ const start = async function () {
           currentBlockHeight,
           timeframe
         )
+        console.timeEnd('getBlockHeightFromCache') // End timer for getBlockHeightFromCache
+        console.time('Loop over bitcoinSchemaCollections')
 
         const bitcoinSchemaCollections = Object.keys(counts).filter((c) =>
           bitcoinSchemaTypes.includes(c)
         )
+
         const otherCollections = Object.keys(counts).filter(
           (c) => !bitcoinSchemaTypes.includes(c)
         )
@@ -246,16 +255,12 @@ const start = async function () {
             })
           }
 
-          // const timeSeriesData = await getTimeSeriesData(
-          //   collection,
-          //   startBlock,
-          //   endBlock
-          // )
           const chart = generateChart(timeSeriesData, false)
 
           gridItemsHtml += getGridItemsHtml(collection, count, chart)
         }
-
+        console.timeEnd('Loop over bitcoinSchemaCollections') // End timer for loop over bitcoinSchemaCollections
+        console.time('Loop over otherCollections')
         for (const collection of otherCollections) {
           const count = counts[collection]
           const timeSeriesData = await getTimeSeriesData(
@@ -269,6 +274,8 @@ const start = async function () {
             gridItemsHtml2 += getGridItemsHtml(collection, count, chart)
           }
         }
+        console.timeEnd('Loop over otherCollections') // End timer for loop over otherCollections
+        console.timeEnd('Total Execution Time') // End timer for total execution
 
         res.send(`<h3 class="mb-4">Bitcoin Schema Types</h3>
   <div class="grid grid-cols-4 gap-8 mb-8">
