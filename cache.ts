@@ -1,5 +1,5 @@
 import QuickChart from 'quickchart-js'
-import { TimeSeriesData, timeframeToBlocks } from './chart.js'
+import { TimeSeriesData } from './chart.js'
 import { getCurrentBlockHeight } from './db.js'
 
 // cache for express responses
@@ -20,19 +20,10 @@ async function getBlockHeightFromCache(): Promise<number> {
       type: 'blockHeight',
       value: currentBlockHeight,
     })
+  } else {
+    console.info('Using cached block height')
   }
   return currentBlockHeight
 }
 
-// Shared utility function to get blocks range
-function getBlocksRange(
-  currentBlockHeight: number,
-  timeframe: string
-): [number, number] {
-  const blocks = timeframeToBlocks(timeframe)
-  const startBlock = currentBlockHeight - blocks
-  const endBlock = currentBlockHeight
-  return [startBlock, endBlock]
-}
-
-export { cache, getBlockHeightFromCache, getBlocksRange }
+export { cache, getBlockHeightFromCache }

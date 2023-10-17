@@ -213,10 +213,21 @@ const timeframeToBlocks = (period: string) => {
   }
 }
 
+// Shared utility function to get blocks range
+function getBlocksRange(
+  currentBlockHeight: number,
+  timeframe: string
+): [number, number] {
+  const blocks = timeframeToBlocks(timeframe)
+  const startBlock = currentBlockHeight - blocks
+  const endBlock = currentBlockHeight
+  return [startBlock, endBlock]
+}
+
 export {
   generateChart,
   generateCollectionChart,
   generateTotalsChart,
+  getBlocksRange,
   getTimeSeriesData,
-  timeframeToBlocks,
 }

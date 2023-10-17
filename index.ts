@@ -14,12 +14,13 @@ import { getCollectionCounts, getDbo } from './db.js'
 import dotenv from 'dotenv'
 import QuickChart from 'quickchart-js'
 
-import { cache, getBlockHeightFromCache, getBlocksRange } from './cache.js'
+import { cache, getBlockHeightFromCache } from './cache.js'
 import {
   TimeSeriesData,
   generateChart,
   generateCollectionChart,
   generateTotalsChart,
+  getBlocksRange,
   getTimeSeriesData,
 } from './chart.js'
 import { bitcoinSchemaTypes, defaultQuery, getGridItemsHtml } from './dash.js'
