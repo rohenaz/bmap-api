@@ -291,6 +291,7 @@ const start = async function () {
       let currentBlockHeight = cache.get('currentBlockHeight')?.value as
         | number
         | undefined
+      // TODO: bust cache when new blocks come in in another process
       if (!currentBlockHeight) {
         console.log('Fetching current block height withouth cache')
         currentBlockHeight = await getCurrentBlockHeight()
