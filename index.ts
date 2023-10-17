@@ -359,11 +359,13 @@ const start = async function () {
       //     range
       //   )
       // }
-      // res.send(
-      //   `<img src='${chart.getUrl()}' alt='Transaction${
-      //     collectionName ? 's for ' + collectionName : 'totals'
-      //   }' class='mt-2 mb-2' />`
-      // )
+      res.set('Cache-Control', 'public, max-age=3600')
+
+      res.send(
+        `<img src='${chart.getUrl()}' alt='Transaction${
+          collectionName ? 's for ' + collectionName : 'totals'
+        }' class='mt-2 mb-2' />`
+      )
     })
   )
 
