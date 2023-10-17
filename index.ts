@@ -292,6 +292,7 @@ const start = async function () {
         | number
         | undefined
       if (!currentBlockHeight) {
+        console.log('Fetching current block height withouth cache')
         currentBlockHeight = await getCurrentBlockHeight()
         cache.set('currentBlockHeight', {
           type: 'blockHeight',
@@ -299,7 +300,6 @@ const start = async function () {
         })
       }
 
-      console.log({ currentBlockHeight, collectionName })
       // Translate selected time period to block range
       const blocks = timeframeToBlocks(timeframe as string)
 
@@ -327,6 +327,7 @@ const start = async function () {
       const chartKey = `${collectionName}-${startBlock}-${endBlock}-${range}`
       let chart = cache.get(chartKey)?.value as QuickChart | undefined
       if (!chart) {
+        console.log('Fetching chart without cache', { collectionName })
         chart = collectionName
           ? await generateTotalsChart(
               collectionName,
