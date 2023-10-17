@@ -1,6 +1,6 @@
 import QuickChart from 'quickchart-js'
-import { TimeSeriesData, timeframeToBlocks } from './chart'
-import { getCurrentBlockHeight } from './db'
+import { TimeSeriesData, timeframeToBlocks } from './chart.js'
+import { getCurrentBlockHeight } from './db.js'
 
 // cache for express responses
 type CacheValue =
