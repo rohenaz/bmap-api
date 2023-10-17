@@ -4,7 +4,7 @@ const getGradientFillHelper = QuickChart.getGradientFillHelper
 
 import { getDbo } from './db.js'
 
-type TimeSeriesData = {
+export type TimeSeriesData = {
   _id: number // Block height
   count: number
 }[]
@@ -160,7 +160,7 @@ async function getTimeSeriesData(
   startBlock: number,
   endBlock: number,
   blockRange: number = 10 // Default grouping range of 10 blocks
-): Promise<any> {
+): Promise<TimeSeriesData> {
   const dbo = await getDbo()
   const pipeline = [
     {
@@ -189,7 +189,28 @@ async function getTimeSeriesData(
       $sort: { _id: 1 },
     },
   ]
-  return dbo.collection(collectionName).aggregate(pipeline).toArray()
+  return (await dbo
+    .collection(collectionName)
+    .aggregate(pipeline)
+    .toArray()) as TimeSeriesData
+}
+
+const timeframeToBlocks = (period: string) => {
+  // Example mapping from time period to number of blocks
+  switch (period) {
+    case '24h':
+      return 144 // Approximate number of blocks in 24 hours
+    case 'week':
+      return 1008 // Approximate number of blocks in 7 days
+    case 'month':
+      return 4320 // Approximate number of blocks in a month
+    case 'year':
+      return 52560 // Approximate number of blocks in a year
+    case 'all':
+      return 0 // All blocks
+    default:
+      return 0
+  }
 }
 
 export {
@@ -197,4 +218,5 @@ export {
   generateCollectionChart,
   generateTotalsChart,
   getTimeSeriesData,
+  timeframeToBlocks,
 }

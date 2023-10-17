@@ -35,7 +35,9 @@ const closeDb = async () => {
   }
 }
 
-async function getCollectionCounts(timestamp: number) {
+async function getCollectionCounts(
+  timestamp: number
+): Promise<Record<string, number>> {
   const dbo = await getDbo()
   const collections = await dbo.listCollections().toArray()
 
@@ -48,7 +50,7 @@ async function getCollectionCounts(timestamp: number) {
   const countsArray = await Promise.all(countPromises)
   const countsObject = Object.fromEntries(countsArray)
 
-  return countsObject
+  return countsObject as Record<string, number>
 }
 
 async function getCurrentBlockHeight(): Promise<number> {

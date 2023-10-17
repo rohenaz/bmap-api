@@ -9,12 +9,14 @@ import asyncHandler from 'express-async-handler'
 import { ChangeStreamDocument } from 'mongodb'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { getCollectionCounts, getCurrentBlockHeight, getDbo } from './db.js'
+import { getCollectionCounts, getDbo } from './db.js'
 
 import dotenv from 'dotenv'
 import QuickChart from 'quickchart-js'
 
+import { cache, getBlockHeightFromCache, getBlocksRange } from './cache.js'
 import {
+  TimeSeriesData,
   generateChart,
   generateCollectionChart,
   generateTotalsChart,
@@ -25,35 +27,11 @@ dotenv.config()
 
 const { allProtocols, TransformTx } = bmapjs
 
-// cache for express responses
-type CacheValue =
-  | { type: 'blockHeight'; value: number }
-  | { type: 'chart'; value: QuickChart }
-
-const cache = new Map<string, CacheValue>()
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 const app = express()
 app.use(bodyParser.json())
-
-const timeframeToBlocks = (period: string) => {
-  // Example mapping from time period to number of blocks
-  switch (period) {
-    case '24h':
-      return 144 // Approximate number of blocks in 24 hours
-    case 'week':
-      return 1008 // Approximate number of blocks in 7 days
-    case 'month':
-      return 4320 // Approximate number of blocks in a month
-    case 'year':
-      return 52560 // Approximate number of blocks in a year
-    case 'all':
-      return 0 // All blocks
-    default:
-      return 0
-  }
-}
 
 const start = async function () {
   console.log(chalk.magenta('BMAP API'), chalk.cyan('initializing machine...'))
@@ -222,16 +200,23 @@ const start = async function () {
     asyncHandler(async (req, res) => {
       try {
         const timestamp = Math.floor(Date.now() / 1000) - 86400
-        const counts = await getCollectionCounts(timestamp)
+        // Cache counts
+        const countsKey = `counts-${timestamp}`
+        let counts = cache.get(countsKey)?.value as Record<string, number>
+        if (!counts) {
+          counts = await getCollectionCounts(timestamp)
+          cache.set(countsKey, { type: 'count', value: counts })
+        }
         const timeframe = (req.query.timeframe as string) || '24h'
 
         let gridItemsHtml = ''
         let gridItemsHtml2 = ''
 
-        const currentBlockHeight = await getCurrentBlockHeight()
-        const blocks = timeframeToBlocks(timeframe)
-        const startBlock = currentBlockHeight - blocks
-        const endBlock = currentBlockHeight
+        const currentBlockHeight = await getBlockHeightFromCache()
+        const [startBlock, endBlock] = getBlocksRange(
+          currentBlockHeight,
+          timeframe
+        )
 
         const bitcoinSchemaCollections = Object.keys(counts).filter((c) =>
           bitcoinSchemaTypes.includes(c)
@@ -242,11 +227,29 @@ const start = async function () {
 
         for (const collection of bitcoinSchemaCollections) {
           const count = counts[collection]
-          const timeSeriesData = await getTimeSeriesData(
-            collection,
-            startBlock,
-            endBlock
-          )
+          const timeSeriesKey = `${collection}-${startBlock}-${endBlock}`
+
+          // Cache time series data
+          let timeSeriesData = cache.get(timeSeriesKey)?.value as
+            | TimeSeriesData
+            | undefined
+          if (!timeSeriesData) {
+            timeSeriesData = await getTimeSeriesData(
+              collection,
+              startBlock,
+              endBlock
+            )
+            cache.set(timeSeriesKey, {
+              type: 'timeSeriesData',
+              value: timeSeriesData,
+            })
+          }
+
+          // const timeSeriesData = await getTimeSeriesData(
+          //   collection,
+          //   startBlock,
+          //   endBlock
+          // )
           const chart = generateChart(timeSeriesData, false)
 
           gridItemsHtml += getGridItemsHtml(collection, count, chart)
@@ -284,28 +287,18 @@ const start = async function () {
   app.get(
     '/htmx-chart/:name?',
     asyncHandler(async (req, res) => {
-      const timeframe = req.query.timeframe || '24h'
+      const timeframe = (req.query.timeframe as string) || '24h'
       const collectionName = req.params.name
 
       // Fetch and store current block height with type
-      let currentBlockHeight = cache.get('currentBlockHeight')?.value as
-        | number
-        | undefined
+      let currentBlockHeight = await getBlockHeightFromCache()
       // TODO: bust cache when new blocks come in in another process
-      if (!currentBlockHeight) {
-        console.log('Fetching current block height withouth cache')
-        currentBlockHeight = await getCurrentBlockHeight()
-        cache.set('currentBlockHeight', {
-          type: 'blockHeight',
-          value: currentBlockHeight,
-        })
-      }
 
       // Translate selected time period to block range
-      const blocks = timeframeToBlocks(timeframe as string)
-
-      const startBlock = currentBlockHeight - blocks
-      const endBlock = currentBlockHeight
+      const [startBlock, endBlock] = getBlocksRange(
+        currentBlockHeight,
+        timeframe
+      )
 
       let range = 1
       switch (timeframe) {
