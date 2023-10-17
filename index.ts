@@ -13,6 +13,7 @@ import { getCollectionCounts, getCurrentBlockHeight, getDbo } from './db.js'
 
 import dotenv from 'dotenv'
 import QuickChart from 'quickchart-js'
+
 import {
   generateChart,
   generateCollectionChart,
@@ -24,6 +25,12 @@ dotenv.config()
 
 const { allProtocols, TransformTx } = bmapjs
 
+// cache for express responses
+type CacheValue =
+  | { type: 'blockHeight'; value: number }
+  | { type: 'chart'; value: QuickChart }
+
+const cache = new Map<string, CacheValue>()
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
@@ -280,8 +287,18 @@ const start = async function () {
       const timeframe = req.query.timeframe || '24h'
       const collectionName = req.params.name
 
-      // Fetch current block height first
-      const currentBlockHeight = await getCurrentBlockHeight()
+      // Fetch and store current block height with type
+      let currentBlockHeight = cache.get('currentBlockHeight')?.value as
+        | number
+        | undefined
+      if (!currentBlockHeight) {
+        currentBlockHeight = await getCurrentBlockHeight()
+        cache.set('currentBlockHeight', {
+          type: 'blockHeight',
+          value: currentBlockHeight,
+        })
+      }
+
       console.log({ currentBlockHeight, collectionName })
       // Translate selected time period to block range
       const blocks = timeframeToBlocks(timeframe as string)
@@ -289,7 +306,6 @@ const start = async function () {
       const startBlock = currentBlockHeight - blocks
       const endBlock = currentBlockHeight
 
-      let chart: QuickChart
       let range = 1
       switch (timeframe) {
         case '24h':
@@ -307,26 +323,46 @@ const start = async function () {
           break
       }
 
-      if (collectionName) {
-        chart = await generateTotalsChart(
-          collectionName,
-          startBlock,
-          endBlock,
-          range
-        )
-      } else {
-        chart = await generateCollectionChart(
-          collectionName,
-          startBlock,
-          endBlock,
-          range
-        )
+      // Fetch and store chart with type
+      const chartKey = `${collectionName}-${startBlock}-${endBlock}-${range}`
+      let chart = cache.get(chartKey)?.value as QuickChart | undefined
+      if (!chart) {
+        chart = collectionName
+          ? await generateTotalsChart(
+              collectionName,
+              startBlock,
+              endBlock,
+              range
+            )
+          : await generateCollectionChart(
+              collectionName,
+              startBlock,
+              endBlock,
+              range
+            )
+        cache.set(chartKey, { type: 'chart', value: chart })
       }
-      res.send(
-        `<img src='${chart.getUrl()}' alt='Transaction${
-          collectionName ? 's for ' + collectionName : 'totals'
-        }' class='mt-2 mb-2' />`
-      )
+
+      // if (collectionName) {
+      //   chart = await generateTotalsChart(
+      //     collectionName,
+      //     startBlock,
+      //     endBlock,
+      //     range
+      //   )
+      // } else {
+      //   chart = await generateCollectionChart(
+      //     collectionName,
+      //     startBlock,
+      //     endBlock,
+      //     range
+      //   )
+      // }
+      // res.send(
+      //   `<img src='${chart.getUrl()}' alt='Transaction${
+      //     collectionName ? 's for ' + collectionName : 'totals'
+      //   }' class='mt-2 mb-2' />`
+      // )
     })
   )
 
