@@ -233,7 +233,7 @@ const start = async function () {
       <div class="text-2xl">${latestHeight}</div> 
     </div>
     <div class="flex flex-col">
-      <div class="text-gray-500">Progress</div>
+      <div class="text-gray-500">Sync Progress</div>
       ${progress}
     </div>
   </div>`
