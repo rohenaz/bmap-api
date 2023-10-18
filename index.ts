@@ -217,9 +217,9 @@ const start = async function () {
       // htmx + tailwind progress bar component
       const progress = `<div class="relative pt-1">
   <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-pink-200">
-    <div style="width:${
-      (crawlHeight / latestHeight) * 100
-    }%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-pink-500"></div>
+    <div style="width:${Math.floor(
+      (crawlHeight * 100) / latestHeight
+    )}%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-pink-500"></div>
   </div>
 </div>`
       res.send(
@@ -229,7 +229,7 @@ const start = async function () {
       <div class="text-2xl">${crawlHeight}</div>
     </div>
     <div class="flex flex-col">
-      <div class="text-gray-500">Latest Height</div>
+      <div class="text-gray-500">Chain Height</div>
       <div class="text-2xl">${latestHeight}</div> 
     </div>
     <div class="flex flex-col">
