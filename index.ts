@@ -9,7 +9,7 @@ import asyncHandler from 'express-async-handler'
 import { ChangeStreamDocument } from 'mongodb'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { getCollectionCounts, getDbo } from './db.js'
+import { getCollectionCounts, getDbo, getState } from './db.js'
 
 import dotenv from 'dotenv'
 import QuickChart from 'quickchart-js'
@@ -193,6 +193,44 @@ const start = async function () {
         console.error('An error occurred:', error)
         res.status(500).send()
       }
+    })
+  )
+
+  app.get(
+    '/htmx-state',
+    asyncHandler(async (req, res) => {
+      const state = await getState()
+      const crawlHeight = state.height
+
+      // geet latest block from whatstonchain api
+      const url = 'https://api.whatsonchain.com/v1/bsv/main/chain/info'
+      const resp = await fetch(url)
+      const json = await resp.json()
+      const latestHeight = json.blocks
+      // htmx + tailwind progress bar component
+      const progress = `<div class="relative pt-1">
+  <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-pink-200">
+    <div style="width:${
+      (crawlHeight / latestHeight) * 100
+    }%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-pink-500"></div>
+  </div>
+</div>`
+      res.send(
+        `<div class="grid grid-cols-1 gap-4">
+  <div class="flex flex-col">
+    <div class="text-gray-500">Crawl Height</div>
+    <div class="text-2xl">${crawlHeight}</div>
+  </div>
+  <div class="flex flex-col">
+    <div class="text-gray-500">Latest Height</div>
+    <div class="text-2xl">${latestHeight}</div> 
+  </div>
+  <div class="flex flex-col">
+    <div class="text-gray-500">Progress</div>
+    ${progress}
+  </div>
+</div>`
+      )
     })
   )
 

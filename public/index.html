@@ -74,6 +74,7 @@
     </header>
     <main class="container mx-auto max-w-7xl py-12 px-8">
       <div class="flex items-center justify-end gap-2">
+        <div hx-get="htmx-state" hx-trigger="load"></div>
         <button
           hx-get="/htmx-chart"
           hx-trigger="click"

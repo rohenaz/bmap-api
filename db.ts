@@ -5,6 +5,11 @@ const MongoClient = mongo.MongoClient
 let client: mongo.MongoClient = null
 let db: mongo.Db = null
 
+type State = {
+  _id: string
+  height: number
+}
+
 const getDbo = async () => {
   if (db) {
     return db
@@ -55,11 +60,16 @@ async function getCollectionCounts(
 
 async function getCurrentBlockHeight(): Promise<number> {
   const dbo = await getDbo()
-  const state = await dbo.collection('_state').findOne({})
+  const state = await getState()
   return state ? state.height : 0
 }
 
-export { closeDb, getCollectionCounts, getCurrentBlockHeight, getDbo }
+async function getState(): Promise<State | undefined> {
+  const dbo = await getDbo()
+  return await dbo.collection('_state').findOne<State>({})
+}
+
+export { closeDb, getCollectionCounts, getCurrentBlockHeight, getDbo, getState }
 
 // db.c.createIndex({
 //   "MAP.app": 1,
