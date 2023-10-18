@@ -207,8 +207,15 @@ const start = async function () {
       const resp = await fetch(url)
       const json = await resp.json()
       const latestHeight = json.blocks
+
+      // TODO: If this is a new block, bust the cache
+      // This isnt right yet
+      if (latestHeight > (cache.get('currentBlockHeight')?.value as number)) {
+        cache.delete('currentBlockHeight')
+      }
+
       // htmx + tailwind progress bar component
-      const progress = `<div class="relative pt-1">
+      const progress = `<div class="relative pt-1 flex items-center">
   <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-pink-200">
     <div style="width:${
       (crawlHeight / latestHeight) * 100
