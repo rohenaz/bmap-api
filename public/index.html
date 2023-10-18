@@ -40,7 +40,7 @@
     </script>
   </head>
   <body class="dark bg-[#121212] text-white">
-    <header class="bg-zinc-900 flex justify-between">
+    <header class="bg-zinc-900">
       <div
         class="text-4xl bg-black bg-opacity-50 font-semibold mb-4 flex items-center font-semibold w-full px-2"
       >
@@ -73,49 +73,51 @@
       </div>
     </header>
     <main class="container mx-auto max-w-7xl py-12 px-8">
-      <div class="flex items-center justify-end gap-2">
+      <div class="flex items-center justify-between gap-2">
         <div hx-get="htmx-state" hx-trigger="load"></div>
-        <button
-          hx-get="/htmx-chart"
-          hx-trigger="click"
-          hx-vals='{"timeframe": "24h"}'
-          hx-ext="debug"
-          hx-target=".chart-container"
-        >
-          24h
-        </button>
-        <button
-          hx-get="/htmx-chart"
-          hx-trigger="click"
-          hx-vals='{"timeframe": "week"}'
-          hx-target=".chart-container"
-        >
-          Week
-        </button>
-        <button
-          hx-get="/htmx-chart"
-          hx-trigger="click"
-          hx-vals='{"timeframe": "month"}'
-          hx-target=".chart-container"
-        >
-          Month
-        </button>
-        <button
-          hx-get="/htmx-chart"
-          hx-trigger="click"
-          hx-vals='{"timeframe": "year"}'
-          hx-target=".chart-container"
-        >
-          Year
-        </button>
-        <button
-          hx-get="/htmx-chart"
-          hx-trigger="click"
-          hx-vals='{"timeframe": "all"}'
-          hx-target=".chart-container"
-        >
-          All
-        </button>
+        <div>
+          <button
+            hx-get="/htmx-chart"
+            hx-trigger="click"
+            hx-vals='{"timeframe": "24h"}'
+            hx-ext="debug"
+            hx-target=".chart-container"
+          >
+            24h
+          </button>
+          <button
+            hx-get="/htmx-chart"
+            hx-trigger="click"
+            hx-vals='{"timeframe": "week"}'
+            hx-target=".chart-container"
+          >
+            Week
+          </button>
+          <button
+            hx-get="/htmx-chart"
+            hx-trigger="click"
+            hx-vals='{"timeframe": "month"}'
+            hx-target=".chart-container"
+          >
+            Month
+          </button>
+          <button
+            hx-get="/htmx-chart"
+            hx-trigger="click"
+            hx-vals='{"timeframe": "year"}'
+            hx-target=".chart-container"
+          >
+            Year
+          </button>
+          <button
+            hx-get="/htmx-chart"
+            hx-trigger="click"
+            hx-vals='{"timeframe": "all"}'
+            hx-target=".chart-container"
+          >
+            All
+          </button>
+        </div>
       </div>
       <div
         hx-get="/htmx-collections"
