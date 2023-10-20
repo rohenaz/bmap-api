@@ -1,13 +1,12 @@
 .timeframe-button {
   background-color: rgb(24, 24, 27);
-  border: 1px solid rgb(24, 24, 27);
+  border: 1px solid rgb(39, 39, 42);
   border-radius: 0.25rem;
   color: #f2f2f2;
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   font-weight: 500;
   padding: 0.25rem 0.5rem;
-  text-transform: uppercase;
   transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out,
     color 0.2s ease-in-out;
 }
