@@ -409,7 +409,7 @@ const start = async function () {
       res.send(
         `<img src='${chart.getUrl()}' alt='Transaction${
           collectionName ? 's for ' + collectionName : 'totals'
-        }' class='mt-2 mb-2' />`
+        }' class='mt-2 mb-2' width="1280" height="300" />`
       )
     })
   )
