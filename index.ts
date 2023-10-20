@@ -222,11 +222,15 @@ const start = async function () {
     )}%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-pink-500"></div>
   </div>
 </div>`
-      res.send(
-        `<div class="flex flex-col">
-      <div class="text-2xl">${crawlHeight}/${latestHeight}</div>
-    </div>`
-      )
+
+      // <div class="flex flex-col">
+      // <div class="text-gray-500">Sync Progress</div>
+      // ${progress}
+      // </div>
+      res.send(`<div class="flex flex-col">
+  <div class="text-gray-500">Sync Progress</div>
+  <div class="text-lg font-semibold">${crawlHeight} / ${latestHeight}</div>
+</div>`)
     })
   )
 
