@@ -12,3 +12,15 @@
   transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out,
     color 0.2s ease-in-out;
 }
+
+.timeframe-button:hover {
+  background-color: #374151;
+  border-color: #4b5563;
+  color: #f9fafb;
+}
+
+.timeframe-button.active {
+  background-color: #4b5563;
+  border-color: #4b5563;
+  color: #f9fafb;
+}
