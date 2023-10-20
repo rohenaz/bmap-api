@@ -30,6 +30,7 @@
 
       // Listen to the 'update-charts' event
       document.addEventListener('update-charts', function () {
+        console.log('Trigger update charts event')
         // Trigger HTMX AJAX request for the top chart
         document
           .querySelector('.chart-container')
@@ -129,7 +130,7 @@
       </div>
       <div
         hx-get="/htmx-collections"
-        hx-trigger="load, htmx:trigger"
+        hx-trigger="htmx:trigger"
         hx-ext="debug"
         class="my-2"
       >
