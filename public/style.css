@@ -1,0 +1,14 @@
+.timeframe-button {
+  background-color: #1f2937;
+  border: 1px solid #4b5563;
+  border-radius: 0.25rem;
+  color: #f9fafb;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  padding: 0.5rem 1rem;
+  text-transform: uppercase;
+  transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out,
+    color 0.2s ease-in-out;
+}
