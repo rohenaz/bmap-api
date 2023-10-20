@@ -223,20 +223,9 @@ const start = async function () {
   </div>
 </div>`
       res.send(
-        `<div class="grid grid-cols-3 gap-4">
-    <div class="flex flex-col">
-      <div class="text-gray-500">Crawl Height</div>
-      <div class="text-2xl">${crawlHeight}</div>
-    </div>
-    <div class="flex flex-col">
-      <div class="text-gray-500">Chain Height</div>
-      <div class="text-2xl">${latestHeight}</div> 
-    </div>
-    <div class="flex flex-col">
-      <div class="text-gray-500">Sync Progress</div>
-      ${progress}
-    </div>
-  </div>`
+        `<div class="flex flex-col">
+      <div class="text-2xl">${crawlHeight}/${latestHeight}</div>
+    </div>`
       )
     })
   )
