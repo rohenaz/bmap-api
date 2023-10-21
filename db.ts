@@ -50,7 +50,7 @@ async function getCollectionCounts(
     let count = 0
 
     if (timestamp) {
-      const query = { $gt: timestamp }
+      const query = { timestamp: { $gt: timestamp } }
       count = await dbo.collection(c.name).countDocuments(query)
     } else {
       count = await dbo.collection(c.name).estimatedDocumentCount()
