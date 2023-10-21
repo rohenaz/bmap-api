@@ -3,6 +3,7 @@ import QuickChart from 'quickchart-js'
 const getGradientFillHelper = QuickChart.getGradientFillHelper
 
 import { getDbo } from './db.js'
+import { Timeframe } from './types.js'
 
 export type TimeSeriesData = {
   _id: number // Block height
@@ -198,15 +199,15 @@ async function getTimeSeriesData(
 const timeframeToBlocks = (period: string) => {
   // Example mapping from time period to number of blocks
   switch (period) {
-    case '24h':
+    case Timeframe.Day:
       return 144 // Approximate number of blocks in 24 hours
-    case 'week':
+    case Timeframe.Week:
       return 1008 // Approximate number of blocks in 7 days
-    case 'month':
+    case Timeframe.Month:
       return 4320 // Approximate number of blocks in a month
-    case 'year':
+    case Timeframe.Year:
       return 52560 // Approximate number of blocks in a year
-    case 'all':
+    case Timeframe.All:
       return 0 // All blocks
     default:
       return 0

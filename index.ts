@@ -24,6 +24,7 @@ import {
   getTimeSeriesData,
 } from './chart.js'
 import { bitcoinSchemaTypes, defaultQuery, getGridItemsHtml } from './dash.js'
+import { Timeframe } from './types.js'
 dotenv.config()
 
 const { allProtocols, TransformTx } = bmapjs
@@ -257,7 +258,7 @@ const start = async function () {
         console.timeEnd('getCollectionCounts') // End timer for getCollectionCounts
         console.time('getBlockHeightFromCache')
 
-        const timeframe = (req.query.timeframe as string) || '24h'
+        const timeframe = (req.query.timeframe as string) || Timeframe.Day
 
         let gridItemsHtml = ''
         let gridItemsHtml2 = ''
@@ -338,7 +339,7 @@ const start = async function () {
   app.get(
     '/htmx-chart/:name?',
     asyncHandler(async (req, res) => {
-      const timeframe = (req.query.timeframe as string) || '24h'
+      const timeframe = (req.query.timeframe as string) || Timeframe.Day
       const collectionName = req.params.name
 
       // Fetch and store current block height with type
@@ -353,17 +354,17 @@ const start = async function () {
 
       let range = 1
       switch (timeframe) {
-        case '24h':
+        case Timeframe.Day:
           // will have 144 bars
           range = 1
           break
-        case 'week':
+        case Timeframe.Week:
           range = 7
           break
-        case 'month':
+        case Timeframe.Month:
           range = 30
           break
-        case 'year':
+        case Timeframe.Year:
           range = 365
           break
       }
