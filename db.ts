@@ -47,9 +47,14 @@ async function getCollectionCounts(
   const collections = await dbo.listCollections().toArray()
 
   const countPromises = collections.map(async (c) => {
-    const query = timestamp ? { timestamp: { $gt: timestamp } } : {}
-    // const count = await dbo.collection(c.name).countDocuments(query)
-    const count = await dbo.collection(c.name).estimatedDocumentCount()
+    let count = 0
+
+    if (timestamp) {
+      const query = { $gt: timestamp }
+      count = await dbo.collection(c.name).countDocuments(query)
+    } else {
+      count = await dbo.collection(c.name).estimatedDocumentCount()
+    }
     return [c.name, count]
   })
 
