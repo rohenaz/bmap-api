@@ -43,6 +43,9 @@ const bitcoinSchemaTypes = [
   'unfollow',
   'unlike',
   'ord',
+  'context',
+  'subcontext',
+  'geohash',
 ]
 
 export { bitcoinSchemaTypes, defaultQuery, getGridItemsHtml }
