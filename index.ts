@@ -215,7 +215,7 @@ const start = async function () {
       }
 
       // calculate pct complete based on starting crawl height, current crawl height, and the latest blockheight of the BSV blockchain
-      const startHeight = 800000
+      const startHeight = 574287
       const pctComplete = `${Math.floor(
         ((crawlHeight - startHeight) * 100) / (latestHeight - startHeight)
       )}%`
