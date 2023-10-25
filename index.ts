@@ -121,7 +121,7 @@ const start = async function () {
 
       const dbo = await getDbo()
 
-      let code
+      let code: string
       if (b64 && collectionName) {
         code = Buffer.from(b64, 'base64').toString()
       } else {
@@ -140,7 +140,7 @@ const start = async function () {
             .limit(j.q.limit ? j.q.limit : 10)
             .toArray()
 
-          res.send({ c })
+          res.send({ [collectionName]: c })
         } catch (e) {
           res.status(500).send(e)
           return
