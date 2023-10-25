@@ -46,6 +46,7 @@ const bitcoinSchemaTypes = [
   'context',
   'subcontext',
   'geohash',
+  'repost',
 ]
 
 export { bitcoinSchemaTypes, defaultQuery, getGridItemsHtml }

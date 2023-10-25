@@ -158,7 +158,7 @@ const start = async function () {
           .project(j.q.project || { in: 0, out: 0 })
           .toArray()
 
-        res.send({ c })
+        res.send({ [collectionName]: c })
         return
       } catch (e) {
         if (e) {
