@@ -1,6 +1,7 @@
 import bmapjs from 'bmapjs'
 import { BobTx } from 'bmapjs/types/common'
 import chalk from 'chalk'
+import { head } from 'lodash'
 import { Db } from 'mongodb'
 import { getDbo } from './db.js'
 const { TransformTx } = bmapjs
@@ -53,7 +54,9 @@ export const saveTx = async (tx: BobTx) => {
   }
 
   if (t) {
-    let collection = t.blk ? 'c' : 'u'
+    let mapType = head(t.MAP)['type'] as string
+    // let collection = t.blk ? 'c' : 'u'
+    let collection = mapType
     let txId = tx && tx.tx ? tx.tx.h : undefined
     t._id = txId
     try {

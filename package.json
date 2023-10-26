@@ -3,6 +3,7 @@
   "dependencies": {
     "@gorillapool/js-junglebus": "^0.4.1",
     "@types/chart.js": "^2.9.38",
+    "@types/lodash": "^4.14.200",
     "JSONStream": "^1.3.5",
     "better-queue": "^3.8.12",
     "bmapjs": "^0.4.0-beta.42",
@@ -17,6 +18,7 @@
     "express": "^4.18.2",
     "express-async-handler": "^1.2.0",
     "got": "^12.6.0",
+    "lodash": "^4.17.21",
     "mingo": "^6.3.2",
     "mongodb": "^5.2.0",
     "node-fetch": "^3.3.1",
