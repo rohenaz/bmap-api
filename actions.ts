@@ -55,6 +55,14 @@ export const saveTx = async (tx: BobTx) => {
   }
 
   if (t) {
+    // normalize B content field with the go library
+    if (t.B) {
+      for (let i = 0; i < t.B.length; i++) {
+        t.B[i].Data = { utf8: t.B[i].content }
+        delete t.B[i].content
+      }
+      delete t.B.content
+    }
     let mapType = head(t.MAP)['type'] as string
     // let collection = t.blk ? 'c' : 'u'
     let collection = mapType
