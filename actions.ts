@@ -1,8 +1,9 @@
-import { TransformTx } from 'bmapjs'
+import bmapjs from 'bmapjs'
 import { BobTx } from 'bmapjs/types/common'
 import chalk from 'chalk'
 import { Db } from 'mongodb'
 import { getDbo } from './db.js'
+const { TransformTx } = bmapjs
 const bapCache = new Map<string, Object>()
 
 export const saveTx = async (tx: BobTx) => {
