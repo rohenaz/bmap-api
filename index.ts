@@ -14,6 +14,7 @@ import { getCollectionCounts, getDbo, getState } from './db.js'
 import dotenv from 'dotenv'
 import QuickChart from 'quickchart-js'
 
+import { Transaction } from '@gorillapool/js-junglebus'
 import { cache, getBlockHeightFromCache } from './cache.js'
 import {
   TimeSeriesData,
@@ -24,6 +25,7 @@ import {
   getTimeSeriesData,
 } from './chart.js'
 import { bitcoinSchemaTypes, defaultQuery, getGridItemsHtml } from './dash.js'
+import { processTransaction } from './process.js'
 import { Timeframe } from './types.js'
 dotenv.config()
 
@@ -445,13 +447,13 @@ const start = async function () {
 
     if (req.body.rawTx) {
       // TODO
-      // processTransaction({
-      //   transaction: req.body.rawTx,
-      // } as Partial<Transaction>)
-      //   .then((tx) => {
-      //     res.status(201).send(tx)
-      //   })
-      //   .catch((e) => res.status(500).send(e))
+      processTransaction({
+        transaction: req.body.rawTx,
+      } as Partial<Transaction>)
+        .then((tx) => {
+          res.status(201).send(tx)
+        })
+        .catch((e) => res.status(500).send(e))
 
       return
     } else {
