@@ -1,7 +1,7 @@
 import { Transaction } from '@gorillapool/js-junglebus'
-import { BmapTx, BobTx } from 'bmapjs/types/common.js'
+import { BmapTx, BobTx } from 'bmapjs/types/common'
 import { parse } from 'bpu-ts'
-import { saveTx } from './actions'
+import { saveTx } from './actions.js'
 
 const bobFromRawTx = async (rawtx: string) => {
   return await parse({
