@@ -70,7 +70,9 @@ const start = async function () {
 
       const db = await getDbo()
 
-      console.log(chalk.blue('New change stream subscription'))
+      console.log(
+        chalk.blue('New change stream subscription on', collectionName)
+      )
       let query = JSON.parse(json)
 
       const pipeline = [
@@ -90,6 +92,7 @@ const start = async function () {
         .watch(pipeline, { fullDocument: 'updateLookup' })
 
       changeStream.on('change', (next: ChangeStreamDocument<BmapTx>) => {
+        console.log('CHANGE DETECTED', next.operationType)
         // only updated contain fullDocument
         if (next.operationType === 'update') {
           console.log(
