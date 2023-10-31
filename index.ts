@@ -107,7 +107,8 @@ const start = async function () {
         }
       })
 
-      changeStream.on('error', () => {
+      changeStream.on('error', (e) => {
+        console.log('Changestream error', e)
         changeStream.close()
       })
 
