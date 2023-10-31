@@ -1,4 +1,3 @@
-import chalk from 'chalk'
 import mongo from 'mongodb'
 
 const MongoClient = mongo.MongoClient
@@ -15,7 +14,6 @@ const getDbo = async () => {
     return db
   } else {
     try {
-      console.log(chalk.bgYellow(`Connecting to ${process.env.BMAP_MONGO_URL}`))
       client = await MongoClient.connect(process.env.BMAP_MONGO_URL, {
         minPoolSize: 1,
         maxPoolSize: 10,
