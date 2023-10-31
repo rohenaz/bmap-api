@@ -94,7 +94,10 @@ const start = async function () {
       changeStream.on('change', (next: ChangeStreamDocument<BmapTx>) => {
         console.log('CHANGE DETECTED', next.operationType)
         // only updated contain fullDocument
-        if (next.operationType === 'update') {
+        if (
+          next.operationType === 'update' ||
+          next.operationType === 'insert'
+        ) {
           console.log(
             chalk.blue('New change event - pushing to SSE'),
             next.fullDocument.tx?.h
