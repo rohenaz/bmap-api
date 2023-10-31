@@ -108,7 +108,7 @@ const start = async function () {
       })
 
       changeStream.on('error', (e) => {
-        console.log('Changestream error', e)
+        console.log(chalk.blue('Changestream error - closing SSE'), e)
         changeStream.close()
       })
 
