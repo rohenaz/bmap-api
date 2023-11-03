@@ -38,7 +38,7 @@ const wasIngested = (txid: string): boolean => {
 const cacheIngestedTxid = (txid: string): void => {
   cache.set('ingest', {
     type: 'ingest',
-    value: uniq([...(cache.get('ingest')?.value as string[]), txid]),
+    value: uniq([...((cache.get('ingest').value as string[]) || []), txid]),
   })
 }
 
