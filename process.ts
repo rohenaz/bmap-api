@@ -26,7 +26,7 @@ export async function processTransaction(ctx: Partial<Transaction>) {
 
     result.blk = {
       i: ctx.block_height || 0,
-      t: ctx.block_time || Math.round(new Date().getTime() / 1000 - 86400),
+      t: ctx.block_time || Math.round(new Date().getTime() / 1000),
     }
     if (wasIngested(result.tx.h)) {
       console.log('Already ingested', result.tx.h)
@@ -42,7 +42,7 @@ export async function processTransaction(ctx: Partial<Transaction>) {
     // TODO: it is possible it doesn't have a timestamp at all if we missed it from mempool
     if (!ctx.block_hash) {
       result.timestamp =
-        ctx.block_time || Math.floor(new Date().getTime() / 1000 - 86400)
+        ctx.block_time || Math.floor(new Date().getTime() / 1000)
     }
   } catch (e) {
     console.error('Failed to bob tx', e)
