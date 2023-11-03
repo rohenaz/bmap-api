@@ -26,7 +26,7 @@ export async function processTransaction(ctx: Partial<Transaction>) {
 
     result.blk = {
       i: ctx.block_height || 0,
-      t: ctx.block_time || Math.round(new Date().getTime() / 1000),
+      t: ctx.block_time || Math.round(new Date().getTime() / 1000 - 86400),
     }
     if (wasIngested(result.tx.h)) {
       console.log('Already ingested', result.tx.h)
