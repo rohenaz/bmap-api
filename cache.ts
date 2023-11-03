@@ -1,7 +1,7 @@
-import _ from 'lodash';
-import QuickChart from 'quickchart-js';
-import { TimeSeriesData } from './chart.js';
-import { getCurrentBlockHeight } from './db.js';
+import _ from 'lodash'
+import QuickChart from 'quickchart-js'
+import { TimeSeriesData } from './chart.js'
+import { getCurrentBlockHeight } from './db.js'
 const { uniq } = _
 
 // cache for express responses
@@ -39,13 +39,10 @@ const wasIngested = (txid: string): boolean => {
 }
 
 const cacheIngestedTxid = (txid: string): void => {
-  
-    cache.set('ingest', {
-      type: 'ingest',
-      value: uniq([...(cache.get('ingest')?.value as string[])), txid],
-    })
-  
+  cache.set('ingest', {
+    type: 'ingest',
+    value: uniq([...(cache.get('ingest')?.value as string[]), txid]),
+  })
 }
 
-export { cache, cacheIngestedTxid, getBlockHeightFromCache, wasIngested };
-
+export { cache, cacheIngestedTxid, getBlockHeightFromCache, wasIngested }
