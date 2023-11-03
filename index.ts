@@ -95,7 +95,7 @@ const start = async function () {
         console.log('CHANGE DETECTED', next.operationType)
         // only updated contain fullDocument
         if (
-          next.operationType === 'update' ||
+          // next.operationType === 'update' ||
           next.operationType === 'insert'
         ) {
           console.log(
@@ -126,7 +126,10 @@ const start = async function () {
     asyncHandler(async function (req, res) {
       let collectionName = req.params.collectionName
       let b64 = req.params.base64Query
-      console.log(chalk.magenta('BMAP API'), chalk.cyan('query', b64))
+      console.log(
+        chalk.magenta('BMAP API'),
+        chalk.cyan('query', collectionName)
+      )
 
       const dbo = await getDbo()
 
