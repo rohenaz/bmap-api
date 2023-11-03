@@ -21,6 +21,10 @@ const bobFromRawTx = async (rawtx: string) => {
 
 export async function processTransaction(ctx: Partial<Transaction>) {
   let result: Partial<BobTx>
+  if (wasIngested(ctx.id)) {
+    console.log('Already ingested', ctx.id)
+    return null
+  }
   try {
     result = (await bobFromRawTx(ctx.transaction)) as Partial<BmapTx>
 
@@ -28,10 +32,7 @@ export async function processTransaction(ctx: Partial<Transaction>) {
       i: ctx.block_height || 0,
       t: ctx.block_time || Math.round(new Date().getTime() / 1000),
     }
-    if (wasIngested(result.tx.h)) {
-      console.log('Already ingested', result.tx.h)
-      return null
-    }
+
     cacheIngestedTxid(result.tx.h)
     // TODO: We should enable this field in BmapTx
     // and publish field extensions in docs
