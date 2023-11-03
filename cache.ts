@@ -39,7 +39,7 @@ const cacheIngestedTxid = (txid: string): void => {
   const ingestCache = (cache.get('ingest')?.value as string[]) || []
   cache.set('ingest', {
     type: 'ingest',
-    value: uniq([...ingestCache, txid]),
+    value: ingestCache ? uniq([...ingestCache, txid]) : [txid],
   })
 }
 
