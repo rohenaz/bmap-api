@@ -32,10 +32,7 @@ async function getBlockHeightFromCache(): Promise<number> {
 
 const wasIngested = (txid: string): boolean => {
   const ingest = cache.get('ingest')?.value as string[]
-  if (!ingest) {
-    throw new Error('Ingest cache not initialized')
-  }
-  return ingest.includes(txid)
+  return ingest?.includes(txid)
 }
 
 const cacheIngestedTxid = (txid: string): void => {
