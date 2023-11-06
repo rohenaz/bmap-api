@@ -25,8 +25,10 @@ import {
   getTimeSeriesData,
 } from './chart.js'
 import { bitcoinSchemaTypes, defaultQuery, getGridItemsHtml } from './dash.js'
+import './p2p.js'
 import { processTransaction } from './process.js'
 import { Timeframe } from './types.js'
+
 dotenv.config()
 
 const { allProtocols, TransformTx } = bmapjs
@@ -53,7 +55,7 @@ const start = async function () {
   app.use(express.static(__dirname + '/../public'))
 
   app.get(
-    '/s/:collectionName/:base64Query',
+    '/s/:collectionName?/:base64Query',
     asyncHandler(async function (req, res) {
       let collectionName = req.params.collectionName
       let b64 = req.params.base64Query
@@ -87,9 +89,12 @@ const start = async function () {
         (k) => (pipeline[0]['$match'][`fullDocument.${k}`] = query.q.find[k])
       )
 
-      const changeStream = db
-        .collection(collectionName)
-        .watch(pipeline, { fullDocument: 'updateLookup' })
+      const target =
+        collectionName === '$all' ? db : db.collection(collectionName)
+
+      const changeStream = target.watch(pipeline, {
+        fullDocument: 'updateLookup',
+      })
 
       changeStream.on('change', (next: ChangeStreamDocument<BmapTx>) => {
         console.log('CHANGE DETECTED', next.operationType)

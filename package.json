@@ -1,7 +1,10 @@
 {
   "type": "module",
   "dependencies": {
+    "@constl/orbit-db-types": "^1.2.9",
+    "@firaenix/synapse-core": "^1.0.0-alpha.9",
     "@gorillapool/js-junglebus": "^0.4.1",
+    "@orbitdb/core": "^1.0.0",
     "@types/chart.js": "^2.9.38",
     "@types/lodash": "^4.14.200",
     "JSONStream": "^1.3.5",
@@ -18,6 +21,7 @@
     "express": "^4.18.2",
     "express-async-handler": "^1.2.0",
     "got": "^12.6.0",
+    "ipfs-core": "^0.18.1",
     "libp2p": "^0.46.16",
     "lodash": "^4.17.21",
     "mingo": "^6.3.2",
