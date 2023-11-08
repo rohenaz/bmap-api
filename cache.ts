@@ -114,10 +114,10 @@ async function wasIngested(txid: string): Promise<boolean> {
 
 // Cache a new transaction ID
 async function cacheIngestedTxid(txid: string): Promise<void> {
-  const cachedValue = await readFromRedis<CacheIngest>('ingest')
+  const ingestKey = `ingest-${txid}`
+  const cachedValue = await readFromRedis<CacheIngest>(ingestKey)
   let ingestCache = cachedValue ? cachedValue.value : []
   if (!ingestCache || !ingestCache.includes(txid)) {
-    const ingestKey = `ingest-${txid}`
     ingestCache = ingestCache ? [...ingestCache, txid] : [txid]
     await saveToRedis(ingestKey, { type: 'ingest', value: ingestCache })
   }
