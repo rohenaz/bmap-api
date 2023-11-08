@@ -131,6 +131,5 @@ export const resolveSigners = async (txs: BmapTx[]) => {
       .sort((a, b) => (a.blk?.t > b.blk?.t ? -1 : 1))
       .map((tx) => processSigners(normalize(tx)))
   )
-
   return uniqBy(signerLists.flat(), (b) => b.idKey)
 }
