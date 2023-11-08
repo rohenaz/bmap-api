@@ -206,7 +206,22 @@ const start = async function () {
       error: number | undefined
     }
     if (error === 404) {
-      console.error('No identity exists for this address', error)
+      console.error('No identity found in cache for this address', error)
+
+      try {
+        const identity = await getBAPIdByAddress(address)
+
+        await saveToRedis(key, {
+          type: 'signer',
+          value: identity,
+        })
+        console.log('Resolved identity from indexer')
+        res.status(200).send(identity)
+      } catch (e) {
+        console.error('No identity exists for this address', e)
+        res.status(404).send({ error: e })
+        return
+      }
       res.status(404).send()
       return
     }
@@ -216,41 +231,34 @@ const start = async function () {
       return
     }
 
+    // example response
+    //   {
+    //     "status": "OK",
+    //     "result": {
+    //         "rootAddress": "13ZNtS7f3Yb5QiYsJgNpXq7S994hcPLaKv",
+    //         "currentAddress": "1HjTer9VgkfeNaFibPB8EWUGJLEg8yAHfY",
+    //         "addresses": [
+    //             {
+    //                 "address": "1HjTer9VgkfeNaFibPB8EWUGJLEg8yAHfY",
+    //                 "txId": "f39575e7ac17f8590f42aa2d9f17b743d816985e85632303281fe7c84c3186b3"
+    //             }
+    //         ],
+    //         "identity": "{\"@context\":\"https://schema.org\",\"@type\":\"Person\",\"alternateName\":\"WildSatchmo\",\"logo\":\"bitfs://a53276421d2063a330ebbf003ab5b8d453d81781c6c8440e2df83368862082c5.out.1.1\",\"image\":\"\",\"homeLocation\":{\"@type\":\"Place\",\"name\":\"Bitcoin\"},\"url\":\"https://tonicpow.com\",\"paymail\":\"satchmo@moneybutton.com\"}",
+    //         "identityTxId": "e7becb2968a6afe0f690cbe345fba94b8e4a7da6a014a5d52b080a7d6913c281",
+    //         "idKey": "Go8vCHAa4S6AhXKTABGpANiz35J",
+    //         "block": 594320,
+    //         "timestamp": 1699391776,
+    //         "valid": false
+    //     }
+    // }
+
     let identity = value as BapIdentity | undefined
     console.log('Got identity from redis', identity)
     if (!identity) {
-      // example response
-      //   {
-      //     "status": "OK",
-      //     "result": {
-      //         "rootAddress": "13ZNtS7f3Yb5QiYsJgNpXq7S994hcPLaKv",
-      //         "currentAddress": "1HjTer9VgkfeNaFibPB8EWUGJLEg8yAHfY",
-      //         "addresses": [
-      //             {
-      //                 "address": "1HjTer9VgkfeNaFibPB8EWUGJLEg8yAHfY",
-      //                 "txId": "f39575e7ac17f8590f42aa2d9f17b743d816985e85632303281fe7c84c3186b3"
-      //             }
-      //         ],
-      //         "identity": "{\"@context\":\"https://schema.org\",\"@type\":\"Person\",\"alternateName\":\"WildSatchmo\",\"logo\":\"bitfs://a53276421d2063a330ebbf003ab5b8d453d81781c6c8440e2df83368862082c5.out.1.1\",\"image\":\"\",\"homeLocation\":{\"@type\":\"Place\",\"name\":\"Bitcoin\"},\"url\":\"https://tonicpow.com\",\"paymail\":\"satchmo@moneybutton.com\"}",
-      //         "identityTxId": "e7becb2968a6afe0f690cbe345fba94b8e4a7da6a014a5d52b080a7d6913c281",
-      //         "idKey": "Go8vCHAa4S6AhXKTABGpANiz35J",
-      //         "block": 594320,
-      //         "timestamp": 1699391776,
-      //         "valid": false
-      //     }
-      // }
-      try {
-        const identity = await getBAPIdByAddress(address)
-
-        await saveToRedis(key, {
-          type: 'signer',
-          value: identity,
-        })
-      } catch (e) {
-        console.error('Failed to get identity', e)
-        res.status(500).send()
-        return
-      }
+      res.status(404).send()
+    } else {
+      res.status(200).send(identity)
+      return
     }
   })
 
