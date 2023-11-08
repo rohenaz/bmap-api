@@ -116,7 +116,7 @@ async function wasIngested(txid: string): Promise<boolean> {
 async function cacheIngestedTxid(txid: string): Promise<void> {
   const ingestKey = `ingest-${txid}`
   const cachedValue = await readFromRedis<CacheIngest>(ingestKey)
-  let ingestCache = cachedValue ? cachedValue.value : []
+  let ingestCache = cachedValue?.value ? cachedValue.value : []
   if (!ingestCache || !ingestCache.includes(txid)) {
     ingestCache = ingestCache ? [...ingestCache, txid] : [txid]
     await saveToRedis(ingestKey, { type: 'ingest', value: ingestCache })
@@ -136,13 +136,13 @@ async function addToCache(txid: string): Promise<void> {
 // Function to load all cached txids from Redis
 async function loadCache(): Promise<string[]> {
   const cachedValue = await readFromRedis<CacheIngest>('ingest')
-  return cachedValue ? cachedValue.value : []
+  return cachedValue?.value ? cachedValue.value : []
 }
 
 // Function to count items in Redis cache
 async function countCachedItems(): Promise<number> {
   const cachedValue = await readFromRedis<CacheIngest>('ingest')
-  return cachedValue ? cachedValue.value.length : 0
+  return cachedValue?.value ? cachedValue.value.length : 0
 }
 
 // Additional helper function to delete a key from Redis
