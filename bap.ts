@@ -16,6 +16,7 @@
 //   }
 
 import { BmapTx } from 'bmapjs/types/common'
+import { normalize } from './bmap.js'
 import { readFromRedis, saveToRedis } from './cache.js'
 
 export type BapIdentity = {
@@ -117,7 +118,9 @@ export const resolveSigners = async (txs: BmapTx[]) => {
   }
 
   // Process all transactions and flatten the list of signers
-  const signerLists = await Promise.all(txs.map((tx) => processSigners(tx)))
+  const signerLists = await Promise.all(
+    txs.map((tx) => processSigners(normalize(tx)))
+  )
   signers = signerLists.flat()
 
   return signers
