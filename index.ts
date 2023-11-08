@@ -179,8 +179,8 @@ const start = async function () {
           .limit(j.q.hasOwnProperty('limit') ? j.q.limit : 10)
           .project(j.q.project || { in: 0, out: 0 })
           .toArray()
-
-        res.send({ [collectionName]: c })
+        let signers = await resolveSigners(c as BmapTx[])
+        res.send({ [collectionName]: c, signers })
         return
       } catch (e) {
         if (e) {
