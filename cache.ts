@@ -109,7 +109,7 @@ async function getBlockHeightFromCache(): Promise<number> {
 // Check if a transaction ID was ingested
 async function wasIngested(txid: string): Promise<boolean> {
   const cachedValue = await readFromRedis<CacheIngest>(`ingest-${txid}`)
-  return cachedValue ? cachedValue.value.includes(txid) : false
+  return cachedValue?.value ? cachedValue.value.includes(txid) : false
 }
 
 // Cache a new transaction ID
