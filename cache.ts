@@ -67,7 +67,7 @@ export type CacheValue =
 
 interface CacheError {
   type: 'error'
-  error: Error
+  error: number
   value: null
 }
 
@@ -86,7 +86,7 @@ async function readFromRedis<T extends CacheValue | CacheError>(
   const value = await client.get(key)
   return value
     ? (JSON.parse(value) as T)
-    : ({ type: 'error', value: null, error: new Error('Not Found') } as T)
+    : ({ type: 'error', value: null, error: 404 } as T)
 }
 
 // Shared utility function to get block height

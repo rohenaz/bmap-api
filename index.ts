@@ -203,13 +203,19 @@ const start = async function () {
     console.log('Reading from redis', key)
     const { value, error } = (await readFromRedis(key)) as {
       value: BapIdentity | undefined
-      error: Error | undefined
+      error: number | undefined
+    }
+    if (error === 404) {
+      console.error('No identity exists for this address', error)
+      res.status(404).send()
+      return
     }
     if (error) {
       console.error('Failed to get identity from redis', error)
-      res.status(500).send()
+      res.status(error).send()
       return
     }
+
     let identity = value as BapIdentity | undefined
     console.log('Got identity from redis', identity)
     if (!identity) {
