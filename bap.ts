@@ -16,8 +16,10 @@
 //   }
 
 import { BmapTx } from 'bmapjs/types/common'
+import _ from 'lodash'
 import { normalize } from './bmap.js'
 import { readFromRedis, saveToRedis } from './cache.js'
+const { uniqBy } = _
 
 export type BapIdentity = {
   rootAddress: string
@@ -121,7 +123,5 @@ export const resolveSigners = async (txs: BmapTx[]) => {
   const signerLists = await Promise.all(
     txs.map((tx) => processSigners(normalize(tx)))
   )
-  signers = signerLists.flat()
-
-  return signers
+  return uniqBy(signerLists.flat(), (s: BapIdentity) => s.idKey)
 }
