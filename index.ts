@@ -35,6 +35,7 @@ import { Timeframe } from './types.js'
 
 dotenv.config()
 
+const bapApiUrl = `https://bap-api.com/v1/`
 const { allProtocols, TransformTx } = bmapjs
 
 const __filename = fileURLToPath(import.meta.url)
@@ -161,7 +162,50 @@ const start = async function () {
             .limit(j.q.limit ? j.q.limit : 10)
             .toArray()
 
-          res.send({ [collectionName]: c })
+          // find signers and load signer profiles from cache
+          let signers = []
+          for (let tx of c) {
+            for (let aip of tx.AIP) {
+              // read id profile from cache
+              const { value } = await readFromRedis(`signer-aip-${aip.address}`)
+              signers.push(value)
+            }
+            for (let sigma of tx.SIGMA) {
+              // read id profile from cache
+              const { value } = await readFromRedis(
+                `signer-sigma-${sigma.address}`
+              )
+              if (value) {
+                signers.push(value)
+              } else {
+                // look it up
+                const resp = await fetch(
+                  `${bapApiUrl}/identity/validByAddress`,
+                  {
+                    method: 'POST',
+                    headers: {
+                      Accept: 'application/json',
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      address: sigma.address,
+                    }),
+                  }
+                )
+                const data = await resp.json()
+                if (data && data.status === 'OK' && data.result) {
+                  // save to cache
+                  await saveToRedis(
+                    `signer-sigma-${sigma.address}`,
+                    data.result
+                  )
+
+                  signers.push(data.result)
+                }
+              }
+            }
+          }
+          res.send({ [collectionName]: c, signers })
         } catch (e) {
           res.status(500).send(e)
           return
