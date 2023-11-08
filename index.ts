@@ -169,7 +169,8 @@ const start = async function () {
           res.status(500).send(e)
           return
         }
-
+        let signers = await resolveSigners(c as BmapTx[])
+        res.send({ [collectionName]: c, signers })
         return
       }
 
