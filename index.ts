@@ -15,6 +15,7 @@ import { fileURLToPath } from 'url'
 import { BapIdentity } from './bap.js'
 import {
   CacheCount,
+  client,
   deleteFromCache,
   getBlockHeightFromCache,
   readFromRedis,
@@ -47,7 +48,7 @@ app.use(bodyParser.json())
 
 const start = async function () {
   console.log(chalk.magenta('BMAP API'), chalk.cyan('initializing machine...'))
-
+  await client.connect()
   app.set('port', process.env.PORT || 3055)
   app.set('host', process.env.HOST || '127.0.0.1')
   app.set('view engine', 'ejs')

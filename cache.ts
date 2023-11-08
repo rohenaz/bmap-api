@@ -144,14 +144,11 @@ async function deleteFromCache(key: string): Promise<void> {
   await client.del(key)
 }
 
-;(async () => {
-  await client.connect()
-})()
-
 export {
   addToCache,
   cacheIngestedTxid,
   checkCache,
+  client,
   countCachedItems,
   deleteFromCache,
   getBlockHeightFromCache,
