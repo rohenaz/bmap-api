@@ -165,9 +165,11 @@ const start = async function () {
 
           // find signers and load signer profiles from cache
           let signers = await resolveSigners(c as BmapTx[])
+          console.log({ signers })
           res.send({ [collectionName]: c, signers })
           return
         } catch (e) {
+          console.log(e)
           res.status(500).send(e)
           return
         }
@@ -182,13 +184,13 @@ const start = async function () {
           .project(j.q.project || { in: 0, out: 0 })
           .toArray()
         let signers = await resolveSigners(c as BmapTx[])
+        console.log({ signers })
         res.send({ [collectionName]: c, signers })
         return
       } catch (e) {
-        if (e) {
-          res.status(500).send(e)
-          return
-        }
+        console.log(e)
+        res.status(500).send(e)
+        return
       }
     })
   )
