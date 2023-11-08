@@ -267,6 +267,34 @@ const start = async function () {
     }
   })
 
+  // get all identities
+  app.get('/identities', async (req, res) => {
+    const idCacheKey = 'signer-*'
+
+    const keys = await client.keys(idCacheKey)
+    console.log('keys', keys)
+    try {
+      const identities = await Promise.all(
+        keys.map(async (k) => {
+          const { value, error } = (await readFromRedis(k)) as {
+            value: BapIdentity | undefined
+            error: number | undefined
+          }
+          if (error) {
+            console.error('Failed to get identity from redis', error)
+            return null
+          }
+          return value
+        })
+      )
+
+      res.status(200).send(identities)
+    } catch (e) {
+      console.error('Failed to get identities', e)
+      res.status(500).send()
+    }
+  })
+
   app.get('/ping', async (req, res) => {
     if (req.get('Referrer')) {
       console.log({
