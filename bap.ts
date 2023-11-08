@@ -18,7 +18,7 @@
 import { BmapTx } from 'bmapjs/types/common'
 import _ from 'lodash'
 import { normalize } from './bmap.js'
-import { readFromRedis, saveToRedis } from './cache.js'
+import { CacheSigner, readFromRedis, saveToRedis } from './cache.js'
 const { uniq } = _
 
 export type BapIdentity = {
@@ -81,20 +81,22 @@ export const getBAPIdByAddress = async (
 // This function takes an array of transactions and resolves their signers from AIP and SIGMA
 export const resolveSigners = async (txs: BmapTx[]) => {
   // Helper function to resolve a signer from cache or fetch if not present
-  const resolveSigner = async (address: string) => {
+  const resolveSigner = async (
+    address: string
+  ): Promise<BapIdentity | undefined> => {
     const cacheKey = `signer-${address}`
     let cacheValue = await readFromRedis(cacheKey)
-
+    let identity = {}
     if (
       !cacheValue ||
       (cacheValue && 'error' in cacheValue && cacheValue.error === 404)
     ) {
       // If not found in cache, look it up and save
       try {
-        const identity = await getBAPIdByAddress(address)
+        identity = await getBAPIdByAddress(address)
         if (identity) {
-          cacheValue = { type: 'signer', value: identity }
-          await saveToRedis(cacheKey, cacheValue)
+          cacheValue = { type: 'signer', value: identity } as CacheSigner
+          await saveToRedis('signer', cacheValue)
           console.log('BAP saved to cache:', identity)
         } else {
           console.log('No BAP found for address:', address)

@@ -496,7 +496,7 @@ const start = async function () {
               range
             )
         // cache.set(chartKey, { type: 'chart', value: chart })
-        await saveToRedis(chartKey, { type: 'chart', value: chart })
+        await saveToRedis('chart', { type: 'chart', value: chart })
       }
 
       // if (collectionName) {
