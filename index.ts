@@ -801,22 +801,22 @@ const resolveSigners = async (txs: BmapTx[]) => {
   let signers = []
 
   // Helper function to resolve signer from cache or fetch if not present
-  const resolveSigner = async (type, address) => {
+  const resolveSigner = async (type: string, address: string) => {
     const cacheKey = `signer-${type}-${address}`
-    let value = await readFromRedis(cacheKey)
-    if (!value) {
+    let cacheValue = await readFromRedis(cacheKey)
+    if (!cacheValue) {
       // If not found in cache, look it up and save
       try {
         const identity = await getBAPIdByAddress(address)
         if (identity) {
-          await saveToRedis(cacheKey, { type: 'signer', value: identity })
-          value = { type: 'signer', value: identity }
+          cacheValue = { type: 'signer', value: identity }
+          await saveToRedis(cacheKey, cacheValue)
         }
       } catch (e) {
         console.log(`Failed to get BAP ID by Address for ${type}`, e)
       }
     }
-    return value
+    return cacheValue
   }
 
   // Iterate through transactions and resolve signers for AIP and SIGMA
