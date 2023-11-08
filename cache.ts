@@ -68,6 +68,12 @@ export type CacheValue =
   | CacheTimeSeriesData
   | CacheIngest
   | CacheSigner
+  | CacheError
+
+interface CacheError {
+  type: 'error'
+  value: Error
+}
 
 // Function to serialize and save to Redis
 async function saveToRedis<T extends CacheValue>(
@@ -82,7 +88,9 @@ async function readFromRedis<T extends CacheValue>(
   key: string
 ): Promise<T | null> {
   const value = await getAsync(key)
-  return value ? (JSON.parse(value) as T) : null
+  return value
+    ? (JSON.parse(value) as T)
+    : ({ type: 'error', value: new Error('Not Found') } as T)
 }
 
 // Shared utility function to get block height
