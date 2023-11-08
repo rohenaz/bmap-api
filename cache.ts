@@ -92,7 +92,7 @@ async function readFromRedis<T extends CacheValue | CacheError>(
 // Shared utility function to get block height
 async function getBlockHeightFromCache(): Promise<number> {
   let cachedValue = await readFromRedis<CacheBlockHeight>('currentBlockHeight')
-  if (!cachedValue) {
+  if (!cachedValue.value) {
     const currentBlockHeight = await getCurrentBlockHeight()
     const currentBlockHeightKey = `currentBlockHeight-${currentBlockHeight}`
     await saveToRedis(currentBlockHeightKey, {
