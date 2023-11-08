@@ -82,15 +82,15 @@ export async function processTransaction(ctx: Partial<Transaction>) {
   // }]
 
   // TODO when new blocks come in look for signers and update cache
-  // signers get retrieved from cachem at query time now
   if (result.AIP && result.AIP.length) {
-    // Create a promise for each AIP entry to handle it asynchronously
+    // Map over each AIP entry to handle asynchronously
     const bapPromises = result.AIP.map(async (aip) => {
-      // Try to get the BAP ID from the cache
+      // Try to get the BAP ID from cache first
       const cachedBap = await readFromRedis(`signer-${aip.address}`)
-      if (!cachedBap) {
-        // Cache miss, fetch the BAP ID
-        console.log('BAP not found in cache', aip.address)
+      // Check if the cached value is an error with 404 status
+      if (cachedBap && 'error' in cachedBap && cachedBap.error === 404) {
+        console.log('BAP not found in cache, fetching:', aip.address)
+        // Fetch the BAP ID as it's not in the cache
         const bap = await getBAPIdByAddress(aip.address)
         if (bap) {
           // Cache the newly fetched BAP ID
@@ -98,16 +98,15 @@ export async function processTransaction(ctx: Partial<Transaction>) {
             type: 'signer',
             value: bap,
           })
-          console.log('BAP saved to cache', bap)
+          console.log('BAP saved to cache:', bap)
         } else {
-          // Log if no BAP ID was found for the address
-          console.log('No BAP found for address', aip.address)
+          console.log('No BAP found for address:', aip.address)
         }
-      } else {
-        // BAP ID was found in the cache, no action needed
-        console.log('BAP found in cache for address', aip.address)
+      } else if (cachedBap) {
+        // BAP ID was found in cache, no need to fetch
+        console.log('BAP already in cache for address:', aip.address)
       }
-      // No need to return anything
+      // No need to return anything as this is just for side-effects (caching)
     })
 
     // Execute all promises in parallel
