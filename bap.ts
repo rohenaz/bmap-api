@@ -15,6 +15,7 @@
 //       "valid": false
 //   }
 
+import { BmapTx } from 'bmapjs/types/common'
 import { readFromRedis, saveToRedis } from './cache'
 
 export type BapIdentity = {
@@ -71,11 +72,11 @@ export const getBAPIdByAddress = async (
 }
 
 // This function takes an array of transactions and resolves their signers from AIP and SIGMA
-export const resolveSigners = async (txs) => {
+export const resolveSigners = async (txs: BmapTx[]) => {
   let signers = []
 
   // Helper function to resolve a signer from cache or fetch if not present
-  const resolveSigner = async (address) => {
+  const resolveSigner = async (address: string) => {
     const cacheKey = `signer-${address}`
     let cacheValue = await readFromRedis(cacheKey)
 
@@ -103,7 +104,7 @@ export const resolveSigners = async (txs) => {
   }
 
   // Function to process signers for a single transaction
-  const processSigners = async (tx) => {
+  const processSigners = async (tx: BmapTx) => {
     const signerAddresses = [...(tx.AIP || []), ...(tx.SIGMA || [])].map(
       (signer) => signer.address
     )
