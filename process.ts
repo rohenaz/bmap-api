@@ -79,7 +79,11 @@ export async function processTransaction(ctx: Partial<Transaction>) {
   // TODO when new blocks come in look for signers and update cache
   if (result.AIP && result.AIP.length) {
     // Map over each AIP entry to handle asynchronously
-    await resolveSigners([result as BmapTx])
+    try {
+      await resolveSigners([result as BmapTx])
+    } catch (e) {
+      console.error('Failed to resolve signers', e)
+    }
   }
 
   try {
