@@ -2,13 +2,8 @@ import { Transaction } from '@gorillapool/js-junglebus'
 import { BmapTx, BobTx } from 'bmapjs/types/common'
 import { parse } from 'bpu-ts'
 import { saveTx } from './actions.js'
-import { getBAPIdByAddress } from './bap.js'
-import {
-  cacheIngestedTxid,
-  readFromRedis,
-  saveToRedis,
-  wasIngested,
-} from './cache.js'
+import { resolveSigners } from './bap.js'
+import { cacheIngestedTxid, wasIngested } from './cache.js'
 
 const bobFromRawTx = async (rawtx: string) => {
   return await parse({
@@ -84,33 +79,7 @@ export async function processTransaction(ctx: Partial<Transaction>) {
   // TODO when new blocks come in look for signers and update cache
   if (result.AIP && result.AIP.length) {
     // Map over each AIP entry to handle asynchronously
-    const bapPromises = result.AIP.map(async (aip) => {
-      // Try to get the BAP ID from cache first
-      const cachedBap = await readFromRedis(`signer-${aip.address}`)
-      // Check if the cached value is an error with 404 status
-      if (cachedBap && 'error' in cachedBap && cachedBap.error === 404) {
-        console.log('BAP not found in cache, fetching:', aip.address)
-        // Fetch the BAP ID as it's not in the cache
-        const bap = await getBAPIdByAddress(aip.address)
-        if (bap) {
-          // Cache the newly fetched BAP ID
-          await saveToRedis(`signer-${aip.address}`, {
-            type: 'signer',
-            value: bap,
-          })
-          console.log('BAP saved to cache:', bap)
-        } else {
-          console.log('No BAP found for address:', aip.address)
-        }
-      } else if (cachedBap) {
-        // BAP ID was found in cache, no need to fetch
-        console.log('BAP already in cache for address:', aip.address)
-      }
-      // No need to return anything as this is just for side-effects (caching)
-    })
-
-    // Execute all promises in parallel
-    await Promise.all(bapPromises)
+    await resolveSigners([result as BmapTx])
   }
 
   try {

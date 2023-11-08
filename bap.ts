@@ -15,6 +15,8 @@
 //       "valid": false
 //   }
 
+import { readFromRedis, saveToRedis } from './cache'
+
 export type BapIdentity = {
   rootAddress: string
   currentAddress: string
@@ -66,4 +68,56 @@ export const getBAPIdByAddress = async (
     console.log(e)
     throw e
   }
+}
+
+// This function takes an array of transactions and resolves their signers from AIP and SIGMA
+export const resolveSigners = async (txs) => {
+  let signers = []
+
+  // Helper function to resolve a signer from cache or fetch if not present
+  const resolveSigner = async (address) => {
+    const cacheKey = `signer-${address}`
+    let cacheValue = await readFromRedis(cacheKey)
+
+    if (
+      !cacheValue ||
+      (cacheValue && 'error' in cacheValue && cacheValue.error === 404)
+    ) {
+      // If not found in cache, look it up and save
+      try {
+        const identity = await getBAPIdByAddress(address)
+        if (identity) {
+          cacheValue = { type: 'signer', value: identity }
+          await saveToRedis(cacheKey, cacheValue)
+          console.log('BAP saved to cache:', identity)
+        } else {
+          console.log('No BAP found for address:', address)
+        }
+      } catch (e) {
+        console.log('Failed to get BAP ID by Address:', e)
+      }
+    } else {
+      console.log('BAP already in cache for address:', address)
+    }
+    return cacheValue ? cacheValue.value : null
+  }
+
+  // Function to process signers for a single transaction
+  const processSigners = async (tx) => {
+    const signerAddresses = [...(tx.AIP || []), ...(tx.SIGMA || [])].map(
+      (signer) => signer.address
+    )
+    const uniqueAddresses = [...new Set(signerAddresses)] // Remove duplicates
+    const signerPromises = uniqueAddresses.map((address) =>
+      resolveSigner(address)
+    )
+    const resolvedSigners = await Promise.all(signerPromises)
+    return resolvedSigners.filter((signer) => signer !== null)
+  }
+
+  // Process all transactions and flatten the list of signers
+  const signerLists = await Promise.all(txs.map((tx) => processSigners(tx)))
+  signers = signerLists.flat()
+
+  return signers
 }

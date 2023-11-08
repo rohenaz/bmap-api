@@ -12,7 +12,7 @@ import { ChangeStreamDocument } from 'mongodb'
 import { dirname } from 'path'
 import QuickChart from 'quickchart-js'
 import { fileURLToPath } from 'url'
-import { BapIdentity, getBAPIdByAddress } from './bap.js'
+import { BapIdentity, getBAPIdByAddress, resolveSigners } from './bap.js'
 import {
   CacheCount,
   client,
@@ -825,27 +825,6 @@ const rawTxFromTxid = async (txid: string) => {
   const res = await fetch(url)
   return await res.text()
 }
-const resolveSigners = async (txs: BmapTx[]) => {
-  let signers = []
-
-  // Helper function to resolve signer from cache or fetch if not present
-  const resolve = async (type: string, address: string) => {
-    const cacheKey = `signer-${type}-${address}`
-    let cacheValue = await readFromRedis(cacheKey)
-    if (!cacheValue) {
-      // If not found in cache, look it up and save
-      try {
-        const identity = await getBAPIdByAddress(address)
-        if (identity) {
-          cacheValue = { type: 'signer', value: identity }
-          await saveToRedis(cacheKey, cacheValue)
-        }
-      } catch (e) {
-        console.log(`Failed to get BAP ID by Address for ${type}`, e)
-      }
-    }
-    return cacheValue
-  }
 
   // Iterate through transactions and resolve signers for AIP and SIGMA
   for (let tx of txs) {
