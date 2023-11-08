@@ -132,5 +132,5 @@ export const resolveSigners = async (txs: BmapTx[]) => {
       .map((tx) => processSigners(normalize(tx)))
   )
 
-  return signerLists.flat()
+  return uniq(signerLists.flat())
 }
