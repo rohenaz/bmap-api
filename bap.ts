@@ -47,6 +47,7 @@ export const getBAPIdByAddress = async (
     if (timestamp) {
       payload['timestamp'] = timestamp
     }
+    console.log('payload', payload)
     const result = await fetch(`${bapApiUrl}/identity/validByAddress`, {
       method: 'POST',
       headers: {
