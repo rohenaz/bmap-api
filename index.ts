@@ -797,38 +797,45 @@ const rawTxFromTxid = async (txid: string) => {
   const res = await fetch(url)
   return await res.text()
 }
-
 const resolveSigners = async (txs: BmapTx[]) => {
   let signers = []
-  for (let tx of txs) {
-    for (let aip of tx.AIP || []) {
-      // read id profile from cache
-      const { value } = await readFromRedis(`signer-aip-${aip.address}`)
-      signers.push(value)
-    }
-    for (let sigma of tx.SIGMA || []) {
-      // read id profile from cache
-      const { value } = await readFromRedis(`signer-sigma-${sigma.address}`)
-      if (value) {
-        signers.push(value)
-      } else {
-        // look it up
-        try {
-          const identity = await getBAPIdByAddress(sigma.address)
-          if (identity) {
-            // save to cache
-            await saveToRedis(`signer-sigma-${sigma.address}`, {
-              type: 'signer',
-              value: identity,
-            })
-          }
-          signers.push(identity)
-        } catch (e) {
-          console.log('Failed to get BAP ID by Address', e)
+
+  // Helper function to resolve signer from cache or fetch if not present
+  const resolveSigner = async (type, address) => {
+    const cacheKey = `signer-${type}-${address}`
+    let value = await readFromRedis(cacheKey)
+    if (!value) {
+      // If not found in cache, look it up and save
+      try {
+        const identity = await getBAPIdByAddress(address)
+        if (identity) {
+          await saveToRedis(cacheKey, { type: 'signer', value: identity })
+          value = identity
         }
+      } catch (e) {
+        console.log(`Failed to get BAP ID by Address for ${type}`, e)
       }
     }
+    return value
   }
+
+  // Iterate through transactions and resolve signers for AIP and SIGMA
+  for (let tx of txs) {
+    const signerPromises = []
+
+    ;(tx.AIP || []).forEach((aip) => {
+      signerPromises.push(resolveSigner('aip', aip.address))
+    })
+
+    ;(tx.SIGMA || []).forEach((sigma) => {
+      signerPromises.push(resolveSigner('sigma', sigma.address))
+    })
+
+    // Wait for all signer identities to be resolved
+    const resolvedSigners = await Promise.all(signerPromises)
+    signers.push(...resolvedSigners.filter((identity) => identity))
+  }
+
   return signers
 }
 
