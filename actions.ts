@@ -35,9 +35,9 @@ export const saveTx = async (tx: BobTx) => {
         const { address } = t.AIP[i]
         try {
           bap = await getBAPIdByAddress(
-            address,
-            t.blk.i || undefined,
-            t.timestamp
+            address
+            // t.blk.i || undefined,
+            // t.timestamp
           )
           //TODO: add && bap.valid === true when BAP API returns this correctly
           if (bap) {
@@ -116,9 +116,9 @@ export const saveSigners = async (tx: BmapTx) => {
       const { address } = aip
       try {
         bap = await getBAPIdByAddress(
-          address,
-          tx.blk.i || undefined,
-          tx.timestamp
+          address
+          // tx.blk.i || undefined,
+          // tx.timestamp
         )
         if (bap) {
           await saveToRedis('signer', bap)
