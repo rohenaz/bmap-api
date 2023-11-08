@@ -831,8 +831,12 @@ const resolveSigners = async (txs: BmapTx[]) => {
     })
 
     // Wait for all signer identities to be resolved
-    const resolvedSigners = await Promise.all(signerPromises)
-    signers.push(...resolvedSigners.filter((identity) => identity))
+    try {
+      const resolvedSigners = await Promise.all(signerPromises)
+      signers.push(...resolvedSigners.filter((identity) => identity))
+    } catch (e) {
+      console.log('Failed to resolve signers', e)
+    }
   }
 
   return signers
