@@ -16,7 +16,7 @@
 //   }
 
 import { BmapTx } from 'bmapjs/types/common'
-import _ from 'lodash'
+import _, { uniqBy } from 'lodash'
 import { normalize } from './bmap.js'
 import { CacheSigner, readFromRedis, saveToRedis } from './cache.js'
 const { uniq } = _
@@ -132,5 +132,5 @@ export const resolveSigners = async (txs: BmapTx[]) => {
       .map((tx) => processSigners(normalize(tx)))
   )
 
-  return uniq(signerLists.flat())
+  return uniqBy(signerLists.flat(), (b) => b.idKey)
 }
