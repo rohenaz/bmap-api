@@ -107,7 +107,7 @@ export const resolveSigners = async (txs: BmapTx[]) => {
     } else {
       console.log('BAP already in cache for address:', address)
     }
-    return cacheValue ? cacheValue.value : null
+    return cacheValue ? (cacheValue.value as BapIdentity | undefined) : null
   }
 
   // Function to process signers for a single transaction
