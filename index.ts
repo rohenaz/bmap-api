@@ -575,7 +575,7 @@ const start = async function () {
       const format = req.params.format
 
       if (!tx) {
-        res.status(400).send('Missing txid')
+        res.status(400).send({ error: 'Missing txid' })
         return
       }
 
