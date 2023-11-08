@@ -33,11 +33,12 @@ export async function processTransaction(
       t: ctx.block_time || Math.round(new Date().getTime() / 1000),
     }
 
-    if (wasIngested(ctx.id)) {
+    const ingested = await wasIngested(ctx.id)
+    if (ingested) {
       console.log('Already ingested', ctx.id)
       return
     }
-    cacheIngestedTxid(result.tx.h)
+    await cacheIngestedTxid(result.tx.h)
     // TODO: We should enable this field in BmapTx
     // and publish field extensions in docs
     // result.tx = {
