@@ -195,11 +195,10 @@ const start = async function () {
     })
   )
 
-  app.get('/identity/:algo/:address', async (req, res) => {
+  app.get('/identity/:address', async (req, res) => {
     // check the cache for the identity profile, otherwise get it from the api
     const address = req.params.address
-    const algo: 'aip' | 'sigma' = req.params.algo as 'aip' | 'sigma'
-    const key = `signer-${algo}-${address}`
+    const key = `signer-${address}`
     console.log('Reading from redis', key)
     const { value, error } = (await readFromRedis(key)) as {
       value: BapIdentity | undefined
