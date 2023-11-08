@@ -124,8 +124,12 @@ export const resolveSigners = async (txs: BmapTx[]) => {
   }
 
   // Process all transactions and flatten the list of signers
+
   const signerLists = await Promise.all(
-    txs.map((tx) => processSigners(normalize(tx)))
+    txs
+      .sort((a, b) => (a.timestamp > b.timestamp ? -1 : 1))
+      .map((tx) => processSigners(normalize(tx)))
   )
+
   return signerLists.flat()
 }
