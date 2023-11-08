@@ -61,7 +61,7 @@ export const getBAPIdByAddress = async (
       body: JSON.stringify(payload),
     })
     const data = await result.json()
-
+    console.log('identity data', { data })
     if (data && data.status === 'OK' && data.result) {
       return data.result
     }
