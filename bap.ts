@@ -111,7 +111,7 @@ export const resolveSigners = async (txs: BmapTx[]) => {
     const signerAddresses = [...(tx.AIP || []), ...(tx.SIGMA || [])].map(
       (signer) => signer.address
     )
-    const uniqueAddresses = [...new Set(signerAddresses)] // Remove duplicates
+    const uniqueAddresses = uniqBy(signerAddresses, (address) => address)
     const signerPromises = uniqueAddresses.map((address) =>
       resolveSigner(address)
     )
@@ -123,5 +123,5 @@ export const resolveSigners = async (txs: BmapTx[]) => {
   const signerLists = await Promise.all(
     txs.map((tx) => processSigners(normalize(tx)))
   )
-  return uniqBy(signerLists.flat(), (s: BapIdentity) => s.idKey)
+  return signerLists.flat()
 }
