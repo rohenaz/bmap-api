@@ -6,25 +6,30 @@ import { TimeSeriesData } from './chart.js'
 import { getCurrentBlockHeight } from './db.js'
 
 // Redis client setup
-const redisClient = redis.createClient({
+const client = redis.createClient({
   url: process.env.REDIS_PRIVATE_URL,
 })
 
 process.on('SIGINT', () => {
-  redisClient.quit().then(() => {
+  client.quit().then(() => {
     console.log('Redis client disconnected')
     process.exit(0)
   })
 })
 
+client.on('connect', async () => {
+  console.log('Redis: Client connected')
+  // await loadCache()
+})
+
 // Listen to error events on the Redis client
-redisClient.on('error', (err) => {
+client.on('error', (err) => {
   console.error('Redis error:', err)
 })
 
 // Promisify Redis client methods
-const getAsync = promisify(redisClient.get).bind(redisClient)
-const setAsync = promisify(redisClient.set).bind(redisClient)
+const getAsync = promisify(client.get).bind(client)
+const setAsync = promisify(client.set).bind(client)
 
 interface CacheBlockHeight {
   type: 'blockHeight'
@@ -136,8 +141,12 @@ async function countCachedItems(): Promise<number> {
 
 // Additional helper function to delete a key from Redis
 async function deleteFromCache(key: string): Promise<void> {
-  await redisClient.del(key)
+  await client.del(key)
 }
+
+;(async () => {
+  await client.connect()
+})()
 
 export {
   addToCache,
