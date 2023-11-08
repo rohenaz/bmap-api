@@ -581,11 +581,10 @@ const start = async function () {
     console.log('ingest', req.body.rawTx)
 
     if (req.body.rawTx) {
-      // TODO
       processTransaction({
         transaction: req.body.rawTx,
       } as Partial<Transaction>)
-        .then((tx) => res.status(201).send(tx))
+        .then((tx) => (tx ? res.status(201).send(tx) : res.status(403).send()))
         .catch((e) => res.status(500).send(e))
 
       return
