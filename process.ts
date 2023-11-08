@@ -3,7 +3,12 @@ import { BmapTx, BobTx } from 'bmapjs/types/common'
 import { parse } from 'bpu-ts'
 import { saveTx } from './actions.js'
 import { getBAPIdByAddress } from './bap.js'
-import { cacheIngestedTxid, saveToRedis, wasIngested } from './cache.js'
+import {
+  cacheIngestedTxid,
+  readFromRedis,
+  saveToRedis,
+  wasIngested,
+} from './cache.js'
 
 const bobFromRawTx = async (rawtx: string) => {
   return await parse({
@@ -21,7 +26,7 @@ const bobFromRawTx = async (rawtx: string) => {
 }
 
 export async function processTransaction(ctx: Partial<Transaction>) {
-  let result: Partial<BobTx>
+  let result: Partial<BmapTx>
   if (wasIngested(ctx.id)) {
     console.log('Already ingested', ctx.id)
     return null
@@ -76,23 +81,36 @@ export async function processTransaction(ctx: Partial<Transaction>) {
   //   }
   // }]
 
+  // TODO when new blocks come in look for signers and update cache
   // signers get retrieved from cachem at query time now
   if (result.AIP && result.AIP.length) {
+    // Create a promise for each AIP entry to handle it asynchronously
     const bapPromises = result.AIP.map(async (aip) => {
-      const bap = await getBAPIdByAddress(aip.address)
-      if (bap) {
-        await saveToRedis(`signer-${aip.address}`, {
-          type: 'signer',
-          value: bap,
-        })
-        console.log('BAP', bap)
+      // Try to get the BAP ID from the cache
+      const cachedBap = await readFromRedis(`signer-${aip.address}`)
+      if (!cachedBap) {
+        // Cache miss, fetch the BAP ID
+        console.log('BAP not found in cache', aip.address)
+        const bap = await getBAPIdByAddress(aip.address)
+        if (bap) {
+          // Cache the newly fetched BAP ID
+          await saveToRedis(`signer-${aip.address}`, {
+            type: 'signer',
+            value: bap,
+          })
+          console.log('BAP saved to cache', bap)
+        } else {
+          // Log if no BAP ID was found for the address
+          console.log('No BAP found for address', aip.address)
+        }
       } else {
-        console.log('No BAP found for address', aip.address)
+        // BAP ID was found in the cache, no action needed
+        console.log('BAP found in cache for address', aip.address)
       }
-      return bap // return the result so it's included in the array from Promise.all
+      // No need to return anything
     })
 
-    // Wait for all BAP IDs to be fetched and cached
+    // Execute all promises in parallel
     await Promise.all(bapPromises)
   }
 
