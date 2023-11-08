@@ -115,7 +115,7 @@ async function wasIngested(txid: string): Promise<boolean> {
 async function cacheIngestedTxid(txid: string): Promise<void> {
   const cachedValue = await readFromRedis<CacheIngest>('ingest')
   let ingestCache = cachedValue ? cachedValue.value : []
-  if (!ingestCache.includes(txid)) {
+  if (!ingestCache?.includes(txid)) {
     ingestCache = [...ingestCache, txid]
     await saveToRedis('ingest', { type: 'ingest', value: ingestCache })
   }

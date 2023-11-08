@@ -574,6 +574,11 @@ const start = async function () {
       const tx = req.params.tx
       const format = req.params.format
 
+      if (!tx) {
+        res.status(400).send('Missing txid')
+        return
+      }
+
       console.log({ tx, format })
       // fetch the tx
       try {
