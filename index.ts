@@ -12,7 +12,7 @@ import { ChangeStreamDocument } from 'mongodb'
 import { dirname } from 'path'
 import QuickChart from 'quickchart-js'
 import { fileURLToPath } from 'url'
-import { getBAPIdByAddress } from './bap.js'
+import { BapIdentity, getBAPIdByAddress } from './bap.js'
 import {
   CacheCount,
   client,
@@ -200,9 +200,10 @@ const start = async function () {
     const address = req.params.address
     const algo: 'aip' | 'sigma' = req.params.algo as 'aip' | 'sigma'
     const key = `signer-${algo}-${address}`
-
+    console.log('Reading from redis', key)
     const { value } = await readFromRedis(key)
-    let identity = value
+    let identity = value as BapIdentity | undefined
+    console.log('Got identity from redis', identity)
     if (!identity) {
       // example response
       //   {
