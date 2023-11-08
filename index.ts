@@ -583,13 +583,16 @@ const start = async function () {
       console.log('ingest', req.body.rawTx)
 
       if (req.body.rawTx) {
-        await processTransaction({
-          transaction: req.body.rawTx,
-        } as Partial<Transaction>)
-          .then((tx) =>
-            tx ? res.status(201).send(tx) : res.status(403).send()
-          )
-          .catch((e) => res.status(500).send(e))
+        try {
+          const tx = await processTransaction({
+            transaction: req.body.rawTx,
+          } as Partial<Transaction>)
+
+          tx ? res.status(201).send(tx) : res.status(403).send()
+        } catch (e) {
+          console.log(e)
+          res.status(500).send()
+        }
 
         return
       } else {
