@@ -127,7 +127,7 @@ export const resolveSigners = async (txs: BmapTx[]) => {
 
   const signerLists = await Promise.all(
     txs
-      .sort((a, b) => (a.timestamp > b.timestamp ? -1 : 1))
+      .sort((a, b) => (a.blk.t > b.blk.t ? -1 : 1))
       .map((tx) => processSigners(normalize(tx)))
   )
 
