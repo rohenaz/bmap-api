@@ -72,7 +72,8 @@ export type CacheValue =
 
 interface CacheError {
   type: 'error'
-  value: Error
+  error: Error
+  value: null
 }
 
 // Function to serialize and save to Redis
@@ -84,13 +85,13 @@ async function saveToRedis<T extends CacheValue>(
 }
 
 // Function to read and deserialize from Redis
-async function readFromRedis<T extends CacheValue>(
+async function readFromRedis<T extends CacheValue | CacheError>(
   key: string
 ): Promise<T | null> {
   const value = await getAsync(key)
   return value
     ? (JSON.parse(value) as T)
-    : ({ type: 'error', value: new Error('Not Found') } as T)
+    : ({ type: 'error', value: null, error: new Error('Not Found') } as T)
 }
 
 // Shared utility function to get block height

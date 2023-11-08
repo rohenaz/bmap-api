@@ -201,7 +201,15 @@ const start = async function () {
     const algo: 'aip' | 'sigma' = req.params.algo as 'aip' | 'sigma'
     const key = `signer-${algo}-${address}`
     console.log('Reading from redis', key)
-    const { value } = await readFromRedis(key)
+    const { value, error } = (await readFromRedis(key)) as {
+      value: BapIdentity | undefined
+      error: Error | undefined
+    }
+    if (error) {
+      console.error('Failed to get identity from redis', error)
+      res.status(500).send()
+      return
+    }
     let identity = value as BapIdentity | undefined
     console.log('Got identity from redis', identity)
     if (!identity) {
