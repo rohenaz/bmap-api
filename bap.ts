@@ -38,17 +38,22 @@ export const getBAPIdByAddress = async (
   timestamp?: number
 ): Promise<BapIdentity | undefined> => {
   try {
+    let payload = {
+      address,
+    }
+    if (block) {
+      payload['block'] = block
+    }
+    if (timestamp) {
+      payload['timestamp'] = timestamp
+    }
     const result = await fetch(`${bapApiUrl}/identity/validByAddress`, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        address,
-        block,
-        timestamp,
-      }),
+      body: JSON.stringify(payload),
     })
     const data = await result.json()
 
