@@ -38,9 +38,11 @@
   "devDependencies": {
     "@types/better-queue": "^3.8.3",
     "@types/cors": "^2.8.13",
+    "@types/dns-packet": "^5.6.3",
     "@types/eslint": "^8.37.0",
     "@types/event-stream": "^4.0.0",
     "@types/express": "^4.17.17",
+    "@types/minimatch": "^5.1.2",
     "@types/node": "^18.15.11",
     "@types/node-fetch": "^2.6.3",
     "@types/node-persist": "^3.1.3",
