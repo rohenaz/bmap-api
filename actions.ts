@@ -16,7 +16,6 @@ export const saveTx = async (tx: BobTx) => {
   try {
     dbo = await getDbo()
   } catch (e) {
-    // await closeDb()
     let txid = tx && tx.tx ? tx.tx.h : undefined
     throw new Error('Failed to get dbo ' + txid + ' : ' + e)
   }

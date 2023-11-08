@@ -576,22 +576,28 @@ const start = async function () {
     })
   )
 
-  app.post('/ingest', function (req, res) {
-    // ingest a raw tx
-    console.log('ingest', req.body.rawTx)
+  app.post(
+    '/ingest',
+    asyncHandler(async (req, res) => {
+      // ingest a raw tx
+      console.log('ingest', req.body.rawTx)
 
-    if (req.body.rawTx) {
-      processTransaction({
-        transaction: req.body.rawTx,
-      } as Partial<Transaction>)
-        .then((tx) => (tx ? res.status(201).send(tx) : res.status(403).send()))
-        .catch((e) => res.status(500).send(e))
+      if (req.body.rawTx) {
+        await processTransaction({
+          transaction: req.body.rawTx,
+        } as Partial<Transaction>)
+          .then((tx) =>
+            tx ? res.status(201).send(tx) : res.status(403).send()
+          )
+          .catch((e) => res.status(500).send(e))
 
-      return
-    } else {
-      return res.status(400).send()
-    }
-  })
+        return
+      } else {
+        res.status(400).send()
+        return
+      }
+    })
+  )
 
   app.get(
     '/tx/:tx/:format?',
