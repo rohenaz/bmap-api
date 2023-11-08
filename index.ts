@@ -164,14 +164,11 @@ const start = async function () {
 
           // find signers and load signer profiles from cache
           let signers = await resolveSigners(c as BmapTx[])
-          res.send({ [collectionName]: c, signers })
+          return res.send({ [collectionName]: c, signers })
         } catch (e) {
           res.status(500).send(e)
           return
         }
-        let signers = await resolveSigners(c as BmapTx[])
-        res.send({ [collectionName]: c, signers })
-        return
       }
 
       try {
