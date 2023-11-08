@@ -12,6 +12,7 @@ export const normalize = (tx: BmapTx) => {
 
       if (!a.address) {
         a.address = a.algorithm_signing_component
+        delete a.algorithm_signing_component
       }
       tx.AIP[i] = a as AIP
     }
@@ -20,6 +21,7 @@ export const normalize = (tx: BmapTx) => {
       let b = tx.B[i] as any
       if (!b.content) {
         b.content = b.Data?.utf8
+        // TODO: delete the Data field
       }
       tx.B[i] = b as B
     }
