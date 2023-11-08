@@ -120,7 +120,7 @@ export const saveSigners = async (tx: BmapTx) => {
           tx.blk.i || undefined,
           tx.timestamp
         )
-        saveToRedis('signer', bap)
+        await saveToRedis('signer', bap)
       } catch (e) {
         console.log(chalk.redBright('Failed to get BAP ID by Address', e))
       }

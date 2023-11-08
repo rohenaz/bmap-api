@@ -1,6 +1,5 @@
 import QuickChart from 'quickchart-js'
 import redis from 'redis'
-import { promisify } from 'util'
 import { BapIdentity } from './bap.js'
 import { TimeSeriesData } from './chart.js'
 import { getCurrentBlockHeight } from './db.js'
@@ -26,10 +25,6 @@ client.on('connect', async () => {
 client.on('error', (err) => {
   console.error('Redis error:', err)
 })
-
-// Promisify Redis client methods
-const getAsync = promisify(client.get).bind(client)
-const setAsync = promisify(client.set).bind(client)
 
 interface CacheBlockHeight {
   type: 'blockHeight'
@@ -81,14 +76,14 @@ async function saveToRedis<T extends CacheValue>(
   key: string,
   value: T
 ): Promise<void> {
-  await setAsync(key, JSON.stringify(value))
+  await client.set(key, JSON.stringify(value))
 }
 
 // Function to read and deserialize from Redis
 async function readFromRedis<T extends CacheValue | CacheError>(
   key: string
 ): Promise<T | null> {
-  const value = await getAsync(key)
+  const value = await client.get(key)
   return value
     ? (JSON.parse(value) as T)
     : ({ type: 'error', value: null, error: new Error('Not Found') } as T)
