@@ -39,16 +39,16 @@ const closeDb = async () => {
 }
 
 async function getCollectionCounts(
-  timestamp: number
-): Promise<Record<string, number>> {
+  fromTimestamp: number
+): Promise<Record<string, number>[]> {
   const dbo = await getDbo()
   const collections = await dbo.listCollections().toArray()
 
   const countPromises = collections.map(async (c) => {
     let count = 0
 
-    if (timestamp) {
-      const query = { timestamp: { $gt: timestamp } }
+    if (fromTimestamp) {
+      const query = { timestamp: { $gt: fromTimestamp } }
       count = await dbo.collection(c.name).countDocuments(query)
     } else {
       count = await dbo.collection(c.name).estimatedDocumentCount()
@@ -57,9 +57,7 @@ async function getCollectionCounts(
   })
 
   const countsArray = await Promise.all(countPromises)
-  const countsObject = Object.fromEntries(countsArray)
-
-  return countsObject as Record<string, number>
+  return Object.fromEntries(countsArray) as Record<string, number>[]
 }
 
 async function getCurrentBlockHeight(): Promise<number> {

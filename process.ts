@@ -50,6 +50,43 @@ export async function processTransaction(ctx: Partial<Transaction>) {
     return null
   }
 
+  // If this has an AIP or Sigma signature, look it up on the BAP API
+  // and add a record to the "_signers" collection
+  // _signers: [{
+  //   address: "1a...",
+  //   bapID: "1a...",
+  //   lastMessage: {
+  //     content: "Hello world",
+  //     context: "channel",
+  //     contextValue: "test",
+  //     timestamp: 1234567890,
+  //     context: undefined,
+  //     txid: "a1...",
+  //   },
+  //   lastPost: {
+  //     content: "Hello world",
+  //     context: "url",
+  //     contextValue: "http://google.com",
+  //     timestamp: 1234567890,
+  //     txid: "a1...",
+  //   },
+  //   profile: {
+  //     ...
+  //   }
+  // }]
+
+  if (!!result.AIP.length) {
+    for (const aip of result.AIP) {
+      const bapResp = await fetch(
+        `https://bap-api.com/v1/addresses/${aip.address}`
+      )
+      const bap = await bapResp.json()
+
+      // save to _signers collection in db
+
+      console.log('BAP', bap)
+    }
+  }
   try {
     return await saveTx(result as BobTx)
   } catch (e) {

@@ -1,21 +1,24 @@
+import { Transaction } from '@gorillapool/js-junglebus'
 import bmapjs from 'bmapjs'
 import { BmapTx } from 'bmapjs/types/common.js'
 import bodyParser from 'body-parser'
 import { parse } from 'bpu-ts'
 import chalk from 'chalk'
 import cors from 'cors'
+import dotenv from 'dotenv'
 import express from 'express'
 import asyncHandler from 'express-async-handler'
 import { ChangeStreamDocument } from 'mongodb'
 import { dirname } from 'path'
-import { fileURLToPath } from 'url'
-import { getCollectionCounts, getDbo, getState } from './db.js'
-
-import dotenv from 'dotenv'
 import QuickChart from 'quickchart-js'
-
-import { Transaction } from '@gorillapool/js-junglebus'
-import { cache, getBlockHeightFromCache } from './cache.js'
+import { fileURLToPath } from 'url'
+import {
+  CacheCount,
+  deleteFromCache,
+  getBlockHeightFromCache,
+  readFromRedis,
+  saveToRedis,
+} from './cache.js'
 import {
   TimeSeriesData,
   generateChart,
@@ -25,6 +28,7 @@ import {
   getTimeSeriesData,
 } from './chart.js'
 import { bitcoinSchemaTypes, defaultQuery, getGridItemsHtml } from './dash.js'
+import { getCollectionCounts, getDbo, getState } from './db.js'
 import './p2p.js'
 import { processTransaction } from './process.js'
 import { Timeframe } from './types.js'
@@ -226,10 +230,10 @@ const start = async function () {
       const json = await resp.json()
       const latestHeight = json.blocks
 
-      // TODO: If this is a new block, bust the cache
-      // This isnt right yet
-      if (latestHeight > (cache.get('currentBlockHeight')?.value as number)) {
-        cache.delete('currentBlockHeight')
+      // If this is a new block, bust the cache
+      const currentBlockHeight = await getBlockHeightFromCache()
+      if (latestHeight > currentBlockHeight) {
+        await deleteFromCache('currentBlockHeight')
       }
 
       // calculate pct complete based on starting crawl height, current crawl height, and the latest blockheight of the BSV blockchain
@@ -267,10 +271,15 @@ const start = async function () {
         const timestamp = Math.floor(Date.now() / 1000) - 86400
         // Cache counts
         const countsKey = `counts-${timestamp}`
-        let counts = cache.get(countsKey)?.value as Record<string, number>
-        if (!counts) {
+        let { value } = await readFromRedis(countsKey)
+        let counts = [] as Record<string, number>[]
+        if (!value) {
           counts = await getCollectionCounts(timestamp)
-          cache.set(countsKey, { type: 'count', value: counts })
+
+          await saveToRedis('countsKey', {
+            type: 'count',
+            value: counts,
+          } as CacheCount)
         }
         console.timeEnd('getCollectionCounts') // End timer for getCollectionCounts
         console.time('getBlockHeightFromCache')
@@ -301,16 +310,19 @@ const start = async function () {
           const timeSeriesKey = `${collection}-${startBlock}-${endBlock}`
 
           // Cache time series data
-          let timeSeriesData = cache.get(timeSeriesKey)?.value as
-            | TimeSeriesData
-            | undefined
+          let { value } = await readFromRedis(timeSeriesKey)
+          let timeSeriesData = value as TimeSeriesData | undefined
           if (!timeSeriesData) {
             timeSeriesData = await getTimeSeriesData(
               collection,
               startBlock,
               endBlock
             )
-            cache.set(timeSeriesKey, {
+            // cache.set(timeSeriesKey, {
+            //   type: 'timeSeriesData',
+            //   value: timeSeriesData,
+            // })
+            await saveToRedis(timeSeriesKey, {
               type: 'timeSeriesData',
               value: timeSeriesData,
             })
@@ -388,7 +400,9 @@ const start = async function () {
 
       // Fetch and store chart with type
       const chartKey = `${collectionName}-${startBlock}-${endBlock}-${range}`
-      let chart = cache.get(chartKey)?.value as QuickChart | undefined
+      let { value } = await readFromRedis(chartKey)
+      let chart = value as QuickChart | undefined
+      //let chart = cache.get(chartKey)?.value as QuickChart | undefined
       if (!chart) {
         console.log('Fetching chart without cache', { collectionName })
         chart = collectionName
@@ -404,7 +418,8 @@ const start = async function () {
               endBlock,
               range
             )
-        cache.set(chartKey, { type: 'chart', value: chart })
+        // cache.set(chartKey, { type: 'chart', value: chart })
+        await saveToRedis(chartKey, { type: 'chart', value: chart })
       }
 
       // if (collectionName) {

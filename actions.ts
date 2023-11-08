@@ -7,6 +7,7 @@ import { getDbo } from './db.js'
 const { TransformTx } = bmapjs
 const { head } = _
 const bapCache = new Map<string, Object>()
+const bapApiUrl = `https://bap-api.com/v1/`
 
 export const saveTx = async (tx: BobTx) => {
   let t: any
@@ -106,9 +107,12 @@ export const saveTx = async (tx: BobTx) => {
   }
 }
 
-const bapApiUrl = `https://bap-api.com/v1`
-const getBAPIdByAddress = async (address, block, timestamp) => {
-  if (bapApiUrl) {
+const getBAPIdByAddress = async (
+  address: string,
+  block?: number,
+  timestamp?: number
+) => {
+  try {
     if (bapCache.has(address)) {
       // return BAP ID from cache
       // TODO: This should be a seprate collection
@@ -137,7 +141,34 @@ const getBAPIdByAddress = async (address, block, timestamp) => {
       console.log(chalk.redBright(e))
       throw e
     }
+
+    return false
+  } catch (e) {
+    console.log(chalk.redBright(e))
+    throw e
+  }
+}
+
+export const saveSigners = async (tx: BobTx) => {
+  // save AIP signers
+  if (tx.AIP) {
+    let bap
+    // multiple AIP outputs
+    for (let aip of tx.AIP) {
+      const { address } = aip
+      try {
+        bap = await getBAPIdByAddress(
+          address,
+          tx.blk.i || undefined,
+          tx.timestamp
+        )
+      } catch (e) {
+        console.log(chalk.redBright('Failed to get BAP ID by Address', e))
+      }
+    }
   }
 
-  return false
+  // save Sigma signers
+  if (tx.SIGMA) {
+  }
 }
