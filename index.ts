@@ -810,7 +810,7 @@ const resolveSigners = async (txs: BmapTx[]) => {
         const identity = await getBAPIdByAddress(address)
         if (identity) {
           await saveToRedis(cacheKey, { type: 'signer', value: identity })
-          value = identity
+          value = { type: 'signer', value: identity }
         }
       } catch (e) {
         console.log(`Failed to get BAP ID by Address for ${type}`, e)
@@ -826,7 +826,6 @@ const resolveSigners = async (txs: BmapTx[]) => {
     ;(tx.AIP || []).forEach((aip) => {
       signerPromises.push(resolveSigner('aip', aip.address))
     })
-
     ;(tx.SIGMA || []).forEach((sigma) => {
       signerPromises.push(resolveSigner('sigma', sigma.address))
     })
