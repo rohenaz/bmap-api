@@ -36,7 +36,7 @@ export const getBAPIdByAddress = async (
   address: string,
   block?: number,
   timestamp?: number
-): Promise<BapIdentity> => {
+): Promise<BapIdentity | undefined> => {
   try {
     const result = await fetch(`${bapApiUrl}/identity/validByAddress`, {
       method: 'POST',
@@ -55,6 +55,7 @@ export const getBAPIdByAddress = async (
     if (data && data.status === 'OK' && data.result) {
       return data.result
     }
+    return undefined
   } catch (e) {
     console.log(e)
     throw e

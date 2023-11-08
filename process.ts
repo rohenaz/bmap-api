@@ -83,9 +83,15 @@ export async function processTransaction(ctx: Partial<Transaction>) {
       const bap = await getBAPIdByAddress(aip.address)
 
       // save to cache
-      await saveToRedis('signer', { type: 'signer', value: bap as BapIdentity })
-
-      console.log('BAP', bap)
+      if (bap) {
+        await saveToRedis('signer', {
+          type: 'signer',
+          value: bap as BapIdentity,
+        })
+        console.log('BAP', bap)
+      } else {
+        console.log('No BAP found for address', aip.address)
+      }
     }
   }
 

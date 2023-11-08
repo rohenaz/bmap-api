@@ -212,7 +212,7 @@ const start = async function () {
       try {
         identity = await getBAPIdByAddress(address)
 
-        await saveToRedis(key, {
+        await saveToRedis('signer', {
           type: 'signer',
           value: identity,
         })
