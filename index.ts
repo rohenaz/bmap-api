@@ -224,12 +224,18 @@ const start = async function () {
       //         "valid": false
       //     }
       // }
-      const identity = await getBAPIdByAddress(address)
+      try {
+        const identity = await getBAPIdByAddress(address)
 
-      await saveToRedis(key, {
-        type: 'signer',
-        value: identity,
-      })
+        await saveToRedis(key, {
+          type: 'signer',
+          value: identity,
+        })
+      } catch (e) {
+        console.error('Failed to get identity', e)
+        res.status(500).send()
+        return
+      }
     }
   })
 
@@ -807,23 +813,16 @@ const resolveSigners = async (txs: BmapTx[]) => {
         signers.push(value)
       } else {
         // look it up
-        const resp = await fetch(`${bapApiUrl}/identity/validByAddress`, {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            address: sigma.address,
-          }),
-        })
-        const data = await resp.json()
-        if (data && data.status === 'OK' && data.result) {
+        const identity = await getBAPIdByAddress(sigma.address)
+        if (identity) {
           // save to cache
-          await saveToRedis(`signer-sigma-${sigma.address}`, data.result)
-
-          signers.push(data.result)
+          await saveToRedis(`signer-sigma-${sigma.address}`, {
+            type: 'signer',
+            value: identity,
+          })
         }
+
+        signers.push(identity)
       }
     }
   }

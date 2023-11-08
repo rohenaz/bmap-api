@@ -3,6 +3,7 @@ import { BmapTx, BobTx } from 'bmapjs/types/common'
 import chalk from 'chalk'
 import _ from 'lodash'
 import { Db } from 'mongodb'
+import { getBAPIdByAddress } from './bap.js'
 import { saveToRedis } from './cache.js'
 import { getDbo } from './db.js'
 const { TransformTx } = bmapjs

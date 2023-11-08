@@ -56,7 +56,7 @@ export const getBAPIdByAddress = async (
       return data.result
     }
   } catch (e) {
-    console.log(chalk.redBright(e))
+    console.log(e)
     throw e
   }
 }

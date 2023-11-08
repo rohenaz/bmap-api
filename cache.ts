@@ -56,7 +56,7 @@ interface CacheIngest {
   value: string[]
 }
 
-interface CacheSigner {
+export interface CacheSigner {
   type: 'signer'
   value: BapIdentity
 }
