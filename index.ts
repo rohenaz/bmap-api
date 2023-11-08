@@ -205,17 +205,18 @@ const start = async function () {
       value: BapIdentity | undefined
       error: number | undefined
     }
+    let identity = value as BapIdentity | undefined
     if (error === 404) {
       console.error('No identity found in cache for this address', error)
 
       try {
-        const identity = await getBAPIdByAddress(address)
+        identity = await getBAPIdByAddress(address)
 
         await saveToRedis(key, {
           type: 'signer',
           value: identity,
         })
-        console.log('Resolved identity from indexer')
+        console.log('Resolved identity from indexer', identity)
         res.status(200).send(identity)
       } catch (e) {
         console.error('No identity exists for this address', e)
@@ -252,11 +253,11 @@ const start = async function () {
     //     }
     // }
 
-    let identity = value as BapIdentity | undefined
-    console.log('Got identity from redis', identity)
     if (!identity) {
       res.status(404).send()
     } else {
+      console.log('Got identity from redis', identity)
+
       res.status(200).send(identity)
       return
     }
