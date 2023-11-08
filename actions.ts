@@ -32,6 +32,7 @@ export const saveTx = async (tx: BobTx) => {
     // multiple AIP outputs
     if (Array.isArray(t.AIP)) {
       for (let i = 0; i < t.AIP.length; i++) {
+        console.log({ aip: t.AIP[i] })
         const address = t.AIP[i].algorithm_signing_component || t.AIP[i].address
         try {
           bap = await getBAPIdByAddress(
