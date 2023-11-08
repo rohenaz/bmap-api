@@ -826,27 +826,4 @@ const rawTxFromTxid = async (txid: string) => {
   return await res.text()
 }
 
-  // Iterate through transactions and resolve signers for AIP and SIGMA
-  for (let tx of txs) {
-    const signerPromises = []
-
-    ;(tx.AIP || []).forEach((aip) => {
-      signerPromises.push(resolve('aip', aip.address))
-    })
-    ;(tx.SIGMA || []).forEach((sigma: { address: string }) => {
-      signerPromises.push(resolve('sigma', sigma.address))
-    })
-
-    // Wait for all signer identities to be resolved
-    try {
-      const resolvedSigners = await Promise.all(signerPromises)
-      signers.push(...resolvedSigners.filter((identity) => identity))
-    } catch (e) {
-      console.log('Failed to resolve signers', e)
-    }
-  }
-
-  return signers
-}
-
 start()
