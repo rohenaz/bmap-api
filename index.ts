@@ -211,13 +211,18 @@ const start = async function () {
 
       try {
         identity = await getBAPIdByAddress(address)
-
-        await saveToRedis('signer', {
-          type: 'signer',
-          value: identity,
-        })
-        console.log('Resolved identity from indexer', identity)
-        res.status(200).send(identity)
+        if (identity) {
+          await saveToRedis('signer', {
+            type: 'signer',
+            value: identity,
+          })
+          console.log('Resolved identity from indexer', identity)
+          res.status(200).send(identity)
+        } else {
+          console.error('No identity exists for this address')
+          res.status(404).send()
+          return
+        }
       } catch (e) {
         console.error('No identity exists for this address', e)
         res.status(404).send({ error: e })
