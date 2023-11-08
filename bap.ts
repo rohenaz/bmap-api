@@ -16,7 +16,7 @@
 //   }
 
 import { BmapTx } from 'bmapjs/types/common'
-import { readFromRedis, saveToRedis } from './cache'
+import { readFromRedis, saveToRedis } from './cache.js'
 
 export type BapIdentity = {
   rootAddress: string
