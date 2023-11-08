@@ -121,7 +121,8 @@ export const saveSigners = async (tx: BmapTx) => {
           // tx.timestamp
         )
         if (bap) {
-          await saveToRedis('signer', bap)
+          let signerCacheKey = `signer-${address}`
+          await saveToRedis(signerCacheKey, bap)
         } else {
           console.log(chalk.redBright('Failed to save BAP ID by Address'))
         }

@@ -94,7 +94,8 @@ async function getBlockHeightFromCache(): Promise<number> {
   let cachedValue = await readFromRedis<CacheBlockHeight>('currentBlockHeight')
   if (!cachedValue) {
     const currentBlockHeight = await getCurrentBlockHeight()
-    await saveToRedis('currentBlockHeight', {
+    const currentBlockHeightKey = `currentBlockHeight-${currentBlockHeight}`
+    await saveToRedis(currentBlockHeightKey, {
       type: 'blockHeight',
       value: currentBlockHeight,
     })
@@ -116,8 +117,9 @@ async function cacheIngestedTxid(txid: string): Promise<void> {
   const cachedValue = await readFromRedis<CacheIngest>('ingest')
   let ingestCache = cachedValue ? cachedValue.value : []
   if (!ingestCache || !ingestCache.includes(txid)) {
+    const ingestKey = `ingest-${txid}`
     ingestCache = ingestCache ? [...ingestCache, txid] : [txid]
-    await saveToRedis('ingest', { type: 'ingest', value: ingestCache })
+    await saveToRedis(ingestKey, { type: 'ingest', value: ingestCache })
   }
 }
 

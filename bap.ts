@@ -99,7 +99,7 @@ export const resolveSigners = async (txs: BmapTx[]) => {
         identity = await getBAPIdByAddress(address)
         if (identity) {
           cacheValue = { type: 'signer', value: identity } as CacheSigner
-          await saveToRedis('signer', cacheValue)
+          await saveToRedis(cacheKey, cacheValue)
           console.log('BAP saved to cache:', identity)
         } else {
           console.log('No BAP found for address:', address)

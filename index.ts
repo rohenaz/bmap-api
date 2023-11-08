@@ -211,7 +211,7 @@ const start = async function () {
       try {
         identity = await getBAPIdByAddress(address)
         if (identity) {
-          await saveToRedis('signer', {
+          await saveToRedis(key, {
             type: 'signer',
             value: identity,
           })
@@ -381,7 +381,7 @@ const start = async function () {
         if (!value) {
           counts = await getCollectionCounts(timestamp)
 
-          await saveToRedis('countsKey', {
+          await saveToRedis(countsKey, {
             type: 'count',
             value: counts,
           } as CacheCount)
@@ -524,7 +524,7 @@ const start = async function () {
               range
             )
         // cache.set(chartKey, { type: 'chart', value: chart })
-        await saveToRedis('chart', { type: 'chart', value: chart })
+        await saveToRedis(chartKey, { type: 'chart', value: chart })
       }
 
       // if (collectionName) {
