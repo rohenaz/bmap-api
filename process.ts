@@ -2,7 +2,7 @@ import { Transaction } from '@gorillapool/js-junglebus'
 import { BmapTx, BobTx } from 'bmapjs/types/common'
 import { parse } from 'bpu-ts'
 import { saveTx } from './actions.js'
-import { BapIdentity, getBAPIdByAddress } from './bap.js'
+import { getBAPIdByAddress } from './bap.js'
 import { cacheIngestedTxid, saveToRedis, wasIngested } from './cache.js'
 
 const bobFromRawTx = async (rawtx: string) => {
@@ -77,22 +77,23 @@ export async function processTransaction(ctx: Partial<Transaction>) {
   // }]
 
   // signers get retrieved from cachem at query time now
-
-  if (!!result.AIP.length) {
-    for (const aip of result.AIP) {
+  if (result.AIP && result.AIP.length) {
+    const bapPromises = result.AIP.map(async (aip) => {
       const bap = await getBAPIdByAddress(aip.address)
-
-      // save to cache
       if (bap) {
-        await saveToRedis('signer', {
+        await saveToRedis(`signer-${aip.address}`, {
           type: 'signer',
-          value: bap as BapIdentity,
+          value: bap,
         })
         console.log('BAP', bap)
       } else {
         console.log('No BAP found for address', aip.address)
       }
-    }
+      return bap // return the result so it's included in the array from Promise.all
+    })
+
+    // Wait for all BAP IDs to be fetched and cached
+    await Promise.all(bapPromises)
   }
 
   try {
