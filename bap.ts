@@ -80,8 +80,6 @@ export const getBAPIdByAddress = async (
 
 // This function takes an array of transactions and resolves their signers from AIP and SIGMA
 export const resolveSigners = async (txs: BmapTx[]) => {
-  let signers = []
-
   // Helper function to resolve a signer from cache or fetch if not present
   const resolveSigner = async (address: string) => {
     const cacheKey = `signer-${address}`
@@ -127,7 +125,8 @@ export const resolveSigners = async (txs: BmapTx[]) => {
 
   const signerLists = await Promise.all(
     txs
-      .sort((a, b) => (a.blk.t > b.blk.t ? -1 : 1))
+      .filter((t) => !!t.AIP || !!t.SIGMA)
+      .sort((a, b) => (a.blk?.t > b.blk?.t ? -1 : 1))
       .map((tx) => processSigners(normalize(tx)))
   )
 
