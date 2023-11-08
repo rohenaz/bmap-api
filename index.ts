@@ -801,28 +801,30 @@ const rawTxFromTxid = async (txid: string) => {
 const resolveSigners = async (txs: BmapTx[]) => {
   let signers = []
   for (let tx of txs) {
-    for (let aip of tx.AIP) {
-      // read id profile from cache
-      const { value } = await readFromRedis(`signer-aip-${aip.address}`)
-      signers.push(value)
-    }
-    for (let sigma of tx.SIGMA) {
-      // read id profile from cache
-      const { value } = await readFromRedis(`signer-sigma-${sigma.address}`)
-      if (value) {
+    if (tx.AIP) {
+      for (let aip of tx.AIP) {
+        // read id profile from cache
+        const { value } = await readFromRedis(`signer-aip-${aip.address}`)
         signers.push(value)
-      } else {
-        // look it up
-        const identity = await getBAPIdByAddress(sigma.address)
-        if (identity) {
-          // save to cache
-          await saveToRedis(`signer-sigma-${sigma.address}`, {
-            type: 'signer',
-            value: identity,
-          })
-        }
+      }
+      for (let sigma of tx.SIGMA) {
+        // read id profile from cache
+        const { value } = await readFromRedis(`signer-sigma-${sigma.address}`)
+        if (value) {
+          signers.push(value)
+        } else {
+          // look it up
+          const identity = await getBAPIdByAddress(sigma.address)
+          if (identity) {
+            // save to cache
+            await saveToRedis(`signer-sigma-${sigma.address}`, {
+              type: 'signer',
+              value: identity,
+            })
+          }
 
-        signers.push(identity)
+          signers.push(identity)
+        }
       }
     }
   }
