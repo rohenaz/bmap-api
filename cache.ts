@@ -1,6 +1,7 @@
 import QuickChart from 'quickchart-js'
 import redis from 'redis'
 import { promisify } from 'util'
+import { BapIdentity } from './bap.js'
 import { TimeSeriesData } from './chart.js'
 import { getCurrentBlockHeight } from './db.js'
 
@@ -38,12 +39,18 @@ interface CacheIngest {
   value: string[]
 }
 
+interface CacheSigner {
+  type: 'signer'
+  value: BapIdentity
+}
+
 export type CacheValue =
   | CacheBlockHeight
   | CacheChart
   | CacheCount
   | CacheTimeSeriesData
   | CacheIngest
+  | CacheSigner
 
 // Function to serialize and save to Redis
 async function saveToRedis<T extends CacheValue>(

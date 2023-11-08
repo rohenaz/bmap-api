@@ -12,6 +12,7 @@ import { ChangeStreamDocument } from 'mongodb'
 import { dirname } from 'path'
 import QuickChart from 'quickchart-js'
 import { fileURLToPath } from 'url'
+import { BapIdentity } from './bap.js'
 import {
   CacheCount,
   deleteFromCache,
@@ -164,7 +165,8 @@ const start = async function () {
 
           // find signers and load signer profiles from cache
           let signers = await resolveSigners(c as BmapTx[])
-          return res.send({ [collectionName]: c, signers })
+          res.send({ [collectionName]: c, signers })
+          return
         } catch (e) {
           res.status(500).send(e)
           return
@@ -190,6 +192,46 @@ const start = async function () {
       }
     })
   )
+
+  app.get('/identity/:algo/:address', async (req, res) => {
+    // check the cache for the identity profile, otherwise get it from the api
+    const address = req.params.address
+    const algo: 'aip' | 'sigma' = req.params.algo as 'aip' | 'sigma'
+    const key = `signer-${algo}-${address}`
+
+    const { value } = await readFromRedis(key)
+    let identity = value
+    if (!identity) {
+      // example response
+      //   {
+      //     "status": "OK",
+      //     "result": {
+      //         "rootAddress": "13ZNtS7f3Yb5QiYsJgNpXq7S994hcPLaKv",
+      //         "currentAddress": "1HjTer9VgkfeNaFibPB8EWUGJLEg8yAHfY",
+      //         "addresses": [
+      //             {
+      //                 "address": "1HjTer9VgkfeNaFibPB8EWUGJLEg8yAHfY",
+      //                 "txId": "f39575e7ac17f8590f42aa2d9f17b743d816985e85632303281fe7c84c3186b3"
+      //             }
+      //         ],
+      //         "identity": "{\"@context\":\"https://schema.org\",\"@type\":\"Person\",\"alternateName\":\"WildSatchmo\",\"logo\":\"bitfs://a53276421d2063a330ebbf003ab5b8d453d81781c6c8440e2df83368862082c5.out.1.1\",\"image\":\"\",\"homeLocation\":{\"@type\":\"Place\",\"name\":\"Bitcoin\"},\"url\":\"https://tonicpow.com\",\"paymail\":\"satchmo@moneybutton.com\"}",
+      //         "identityTxId": "e7becb2968a6afe0f690cbe345fba94b8e4a7da6a014a5d52b080a7d6913c281",
+      //         "idKey": "Go8vCHAa4S6AhXKTABGpANiz35J",
+      //         "block": 594320,
+      //         "timestamp": 1699391776,
+      //         "valid": false
+      //     }
+      // }
+      const url = `${bapApiUrl}/identity/validByAddress/${address}`
+      const resp = await fetch(url)
+      const json = await resp.json()
+      identity = json.result as BapIdentity
+      await saveToRedis(key, {
+        type: 'signer',
+        value: identity,
+      })
+    }
+  })
 
   app.get('/ping', async (req, res) => {
     if (req.get('Referrer')) {
