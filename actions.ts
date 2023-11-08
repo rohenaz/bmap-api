@@ -1,13 +1,12 @@
 import bmapjs from 'bmapjs'
-import { BobTx } from 'bmapjs/types/common'
+import { BmapTx, BobTx } from 'bmapjs/types/common'
 import chalk from 'chalk'
 import _ from 'lodash'
 import { Db } from 'mongodb'
+import { saveToRedis } from './cache.js'
 import { getDbo } from './db.js'
 const { TransformTx } = bmapjs
 const { head } = _
-const bapCache = new Map<string, Object>()
-const bapApiUrl = `https://bap-api.com/v1/`
 
 export const saveTx = async (tx: BobTx) => {
   let t: any
@@ -107,49 +106,7 @@ export const saveTx = async (tx: BobTx) => {
   }
 }
 
-const getBAPIdByAddress = async (
-  address: string,
-  block?: number,
-  timestamp?: number
-) => {
-  try {
-    if (bapCache.has(address)) {
-      // return BAP ID from cache
-      // TODO: This should be a seprate collection
-      return bapCache.get(address)
-    }
-    try {
-      const result = await fetch(`${bapApiUrl}/identity/validByAddress`, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          address,
-          block,
-          timestamp,
-        }),
-      })
-      const data = await result.json()
-
-      bapCache.set(address, data)
-      if (data && data.status === 'OK' && data.result) {
-        return data.result
-      }
-    } catch (e) {
-      console.log(chalk.redBright(e))
-      throw e
-    }
-
-    return false
-  } catch (e) {
-    console.log(chalk.redBright(e))
-    throw e
-  }
-}
-
-export const saveSigners = async (tx: BobTx) => {
+export const saveSigners = async (tx: BmapTx) => {
   // save AIP signers
   if (tx.AIP) {
     let bap
@@ -162,6 +119,7 @@ export const saveSigners = async (tx: BobTx) => {
           tx.blk.i || undefined,
           tx.timestamp
         )
+        saveToRedis('signer', bap)
       } catch (e) {
         console.log(chalk.redBright('Failed to get BAP ID by Address', e))
       }

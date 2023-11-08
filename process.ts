@@ -75,18 +75,22 @@ export async function processTransaction(ctx: Partial<Transaction>) {
   //   }
   // }]
 
-  if (!!result.AIP.length) {
-    for (const aip of result.AIP) {
-      const bapResp = await fetch(
-        `https://bap-api.com/v1/addresses/${aip.address}`
-      )
-      const bap = await bapResp.json()
+  // signers get retrieved from cachem at query time now
 
-      // save to _signers collection in db
+  // if (!!result.AIP.length) {
+  //   for (const aip of result.AIP) {
+  //     const bap = await getBapIdByAddress(aip.address)
 
-      console.log('BAP', bap)
-    }
-  }
+  //     const bapResp = await fetch(
+  //       `https://bap-api.com/v1/addresses/${aip.address}`
+  //     )
+  //     const bap = await bapResp.json()
+
+  //     // save to _signers collection in db
+
+  //     console.log('BAP', bap)
+  //   }
+  // }
   try {
     return await saveTx(result as BobTx)
   } catch (e) {

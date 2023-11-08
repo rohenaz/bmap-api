@@ -12,7 +12,7 @@ import { ChangeStreamDocument } from 'mongodb'
 import { dirname } from 'path'
 import QuickChart from 'quickchart-js'
 import { fileURLToPath } from 'url'
-import { BapIdentity } from './bap.js'
+import { getBAPIdByAddress } from './bap.js'
 import {
   CacheCount,
   client,
@@ -37,7 +37,6 @@ import { Timeframe } from './types.js'
 
 dotenv.config()
 
-const bapApiUrl = `https://bap-api.com/v1/`
 const { allProtocols, TransformTx } = bmapjs
 
 const __filename = fileURLToPath(import.meta.url)
@@ -225,10 +224,8 @@ const start = async function () {
       //         "valid": false
       //     }
       // }
-      const url = `${bapApiUrl}/identity/validByAddress/${address}`
-      const resp = await fetch(url)
-      const json = await resp.json()
-      identity = json.result as BapIdentity
+      const identity = await getBAPIdByAddress(address)
+
       await saveToRedis(key, {
         type: 'signer',
         value: identity,

@@ -29,3 +29,34 @@ export type BapIdentity = {
   timestamp: number
   valid: boolean
 }
+
+const bapApiUrl = `https://bap-api.com/v1/`
+
+export const getBAPIdByAddress = async (
+  address: string,
+  block?: number,
+  timestamp?: number
+): Promise<BapIdentity> => {
+  try {
+    const result = await fetch(`${bapApiUrl}/identity/validByAddress`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        address,
+        block,
+        timestamp,
+      }),
+    })
+    const data = await result.json()
+
+    if (data && data.status === 'OK' && data.result) {
+      return data.result
+    }
+  } catch (e) {
+    console.log(chalk.redBright(e))
+    throw e
+  }
+}
