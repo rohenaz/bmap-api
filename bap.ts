@@ -16,10 +16,10 @@
 //   }
 
 import { BmapTx } from 'bmapjs/types/common'
-import _, { uniqBy } from 'lodash'
+import _ from 'lodash'
 import { normalize } from './bmap.js'
 import { CacheSigner, readFromRedis, saveToRedis } from './cache.js'
-const { uniq } = _
+const { uniq, uniqBy } = _
 
 export type BapIdentity = {
   rootAddress: string
