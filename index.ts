@@ -163,48 +163,7 @@ const start = async function () {
             .toArray()
 
           // find signers and load signer profiles from cache
-          let signers = []
-          for (let tx of c) {
-            for (let aip of tx.AIP) {
-              // read id profile from cache
-              const { value } = await readFromRedis(`signer-aip-${aip.address}`)
-              signers.push(value)
-            }
-            for (let sigma of tx.SIGMA) {
-              // read id profile from cache
-              const { value } = await readFromRedis(
-                `signer-sigma-${sigma.address}`
-              )
-              if (value) {
-                signers.push(value)
-              } else {
-                // look it up
-                const resp = await fetch(
-                  `${bapApiUrl}/identity/validByAddress`,
-                  {
-                    method: 'POST',
-                    headers: {
-                      Accept: 'application/json',
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                      address: sigma.address,
-                    }),
-                  }
-                )
-                const data = await resp.json()
-                if (data && data.status === 'OK' && data.result) {
-                  // save to cache
-                  await saveToRedis(
-                    `signer-sigma-${sigma.address}`,
-                    data.result
-                  )
-
-                  signers.push(data.result)
-                }
-              }
-            }
-          }
+          let signers = await resolveSigners(c as BmapTx[])
           res.send({ [collectionName]: c, signers })
         } catch (e) {
           res.status(500).send(e)
@@ -791,6 +750,44 @@ const rawTxFromTxid = async (txid: string) => {
   // let res = await fetch(url, header)
   const res = await fetch(url)
   return await res.text()
+}
+
+const resolveSigners = async (txs: BmapTx[]) => {
+  let signers = []
+  for (let tx of txs) {
+    for (let aip of tx.AIP) {
+      // read id profile from cache
+      const { value } = await readFromRedis(`signer-aip-${aip.address}`)
+      signers.push(value)
+    }
+    for (let sigma of tx.SIGMA) {
+      // read id profile from cache
+      const { value } = await readFromRedis(`signer-sigma-${sigma.address}`)
+      if (value) {
+        signers.push(value)
+      } else {
+        // look it up
+        const resp = await fetch(`${bapApiUrl}/identity/validByAddress`, {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            address: sigma.address,
+          }),
+        })
+        const data = await resp.json()
+        if (data && data.status === 'OK' && data.result) {
+          // save to cache
+          await saveToRedis(`signer-sigma-${sigma.address}`, data.result)
+
+          signers.push(data.result)
+        }
+      }
+    }
+  }
+  return signers
 }
 
 start()
