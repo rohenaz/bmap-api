@@ -10,6 +10,18 @@ const redisClient = redis.createClient({
   url: process.env.REDIS_PRIVATE_URL,
 })
 
+process.on('SIGINT', () => {
+  redisClient.quit().then(() => {
+    console.log('Redis client disconnected')
+    process.exit(0)
+  })
+})
+
+// Listen to error events on the Redis client
+redisClient.on('error', (err) => {
+  console.error('Redis error:', err)
+})
+
 // Promisify Redis client methods
 const getAsync = promisify(redisClient.get).bind(redisClient)
 const setAsync = promisify(redisClient.set).bind(redisClient)
