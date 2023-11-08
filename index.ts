@@ -801,7 +801,7 @@ const resolveSigners = async (txs: BmapTx[]) => {
   let signers = []
 
   // Helper function to resolve signer from cache or fetch if not present
-  const resolveSigner = async (type: string, address: string) => {
+  const resolve = async (type: string, address: string) => {
     const cacheKey = `signer-${type}-${address}`
     let cacheValue = await readFromRedis(cacheKey)
     if (!cacheValue) {
@@ -824,10 +824,10 @@ const resolveSigners = async (txs: BmapTx[]) => {
     const signerPromises = []
 
     ;(tx.AIP || []).forEach((aip) => {
-      signerPromises.push(resolveSigner('aip', aip.address))
+      signerPromises.push(resolve('aip', aip.address))
     })
-    ;(tx.SIGMA || []).forEach((sigma) => {
-      signerPromises.push(resolveSigner('sigma', sigma.address))
+    ;(tx.SIGMA || []).forEach((sigma: { address: string }) => {
+      signerPromises.push(resolve('sigma', sigma.address))
     })
 
     // Wait for all signer identities to be resolved
