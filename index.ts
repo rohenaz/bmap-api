@@ -115,7 +115,10 @@ const start = async function () {
           )
           res.write(
             'data: ' +
-              JSON.stringify({ type: 'push', data: [next.fullDocument] }) +
+              JSON.stringify({
+                type: collectionName,
+                data: [next.fullDocument],
+              }) +
               '\n\n'
           )
         }
@@ -126,7 +129,14 @@ const start = async function () {
         changeStream.close()
       })
 
+      const HEARTBEAT_INTERVAL = 30000 // 30 seconds, adjust as needed
+
+      const heartbeat = setInterval(() => {
+        res.write(':heartbeat\n\n')
+      }, HEARTBEAT_INTERVAL)
+
       req.on('close', () => {
+        clearInterval(heartbeat)
         changeStream.close()
       })
     })
@@ -230,6 +240,7 @@ const start = async function () {
       res.status(404).send()
       return
     }
+
     if (error) {
       console.error('Failed to get identity from redis', error)
       res.status(error).send()
