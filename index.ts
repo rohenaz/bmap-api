@@ -459,7 +459,8 @@ const start = async function () {
           )
           const chart = generateChart(timeSeriesData, false)
           // TODO: Investigate how 0 count collections are being created
-          if (collection !== '_state' && count > 0) {
+          // TODO: Investigate why chart.getUrl is not a function
+          if (collection !== '_state' && count > 0 && chart) {
             gridItemsHtml2 += getGridItemsHtml(collection, count, chart)
           }
         }
