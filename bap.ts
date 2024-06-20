@@ -15,10 +15,10 @@
 //       "valid": false
 //   }
 
-import { BmapTx } from 'bmapjs/types/common'
+import type { BmapTx } from 'bmapjs/types/common'
 import _ from 'lodash'
 import { normalize } from './bmap.js'
-import { CacheSigner, readFromRedis, saveToRedis } from './cache.js'
+import { type CacheSigner, readFromRedis, saveToRedis } from './cache.js'
 const { uniq, uniqBy } = _
 
 export type BapIdentity = {
@@ -36,7 +36,13 @@ export type BapIdentity = {
   valid: boolean
 }
 
-const bapApiUrl = `https://bap-api.com/v1/`
+const bapApiUrl = "https://bap-api-production.up.railway.app/v1/"
+
+type Payload = {
+  address: string
+  block?: number
+  timestamp?: number
+}
 
 export const getBAPIdByAddress = async (
   address: string,
@@ -44,14 +50,14 @@ export const getBAPIdByAddress = async (
   timestamp?: number
 ): Promise<BapIdentity | undefined> => {
   try {
-    let payload = {
+    const payload: Payload = {
       address,
     }
     if (block) {
-      payload['block'] = block
+      payload.block = block
     }
     if (timestamp) {
-      payload['timestamp'] = timestamp
+      payload.timestamp = timestamp
     }
     console.log('payload', payload)
     const result = await fetch(`${bapApiUrl}identity/validByAddress`, {
