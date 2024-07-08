@@ -72,9 +72,10 @@ export const getBAPIdByAddress = async (
     console.log('identity data', { data })
     if (data && data.status === 'OK' && data.result) {
       try {
-        if (data.result.identity) {
-          data.result.identity = JSON.parse(data.result.identity)
-        }
+        // already parsed now
+        // if (data.result.identity) {
+        //   data.result.identity = data.result.identity
+        // }
         return data.result
       } catch (e) {
         console.log('Failed to parse BAP identity', e, data.result)
