@@ -36,7 +36,7 @@ export type BapIdentity = {
   valid: boolean
 }
 
-const bapApiUrl = "https://bap-api-production.up.railway.app/v1/"
+const bapApiUrl = "https://api.sigmaidentity.com/v1/"
 
 type Payload = {
   address: string
