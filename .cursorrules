@@ -1,0 +1,94 @@
+# Project Overview
+
+This project is a **BMAP API** server that processes and serves Bitcoin transactions using various Bitcoin SV protocols. It leverages technologies such as:
+
+- **Node.js** and **TypeScript** for server-side development.
+- **Express.js** for building the API server.
+- **MongoDB** for data storage and retrieval.
+- **Redis** for caching.
+- **bmapjs**, **bpu-ts**, and other Bitcoin protocol libraries for parsing and processing Bitcoin transactions.
+- **QuickChart** for generating dynamic charts.
+- **JungleBus** for streaming Bitcoin transactions.
+
+# Project Structure
+
+- **`index.ts`**: The main entry point of the application, initializing the server and setting up routes.
+- **`cache.ts`**: Handles caching mechanisms using Redis. Provides functions to save, read, and manage cache data.
+- **`db.ts`**: Manages MongoDB database connections and operations.
+- **`chart.ts`**: Generates charts using QuickChart based on transaction data.
+- **`process.ts`**: Processes incoming Bitcoin transactions and integrates with the system.
+- **`bap.ts`**: Handles BAP (Bitcoin Attestation Protocol) identities and related operations.
+- **`actions.ts`**: Contains actions related to saving transactions and interacting with the database.
+- **`types.ts`**: Defines custom TypeScript types used throughout the project.
+- **Other files**: Configuration files like `.eslintrc`, `tsconfig.json`, and scripts in `package.json`.
+
+# Key Dependencies
+
+- **bmapjs**: For parsing and transforming Bitcoin transactions.
+- **bpu-ts**: Library for parsing Bitcoin scripts.
+- **express**: Web framework for building the API.
+- **mongodb**: MongoDB driver for database operations.
+- **redis**: Redis client for caching.
+- **quickchart-js**: Library for generating chart images.
+- **chalk**: For terminal string styling.
+- **dotenv**: For loading environment variables.
+- **TypeScript**: For static typing and improved developer experience.
+
+# Development Notes
+
+- **TypeScript Configuration**:
+  - The `tsconfig.json` is set up to compile TypeScript code targeting `ESNext`.
+  - Module resolution is set to `node`, and the output directory is `./build`.
+  - The `include` property includes all `.ts` and `.d.ts` files in all directories.
+  - `"skipLibCheck"` is set to `true` to skip type checking of declaration files.
+- **ESLint and Prettier**:
+  - ESLint is configured to enforce code quality and consistency.
+  - Prettier is used for code formatting, with rules specified in `package.json`.
+- **Node.js Version**:
+  - The project specifies Node.js version `22` in `package.json`.
+  - However, the `.nvmrc` file specifies `v18`.
+  - Ensure you are using the correct Node.js version to avoid compatibility issues.
+
+# Instructions for Cursor AI Agent
+
+- **Coding Conventions**:
+  - Follow the existing code style enforced by ESLint and Prettier configurations.
+  - Use `async`/`await` for handling asynchronous operations.
+  - Prefer `type` over `interface` where applicable, following the rule in `.eslintrc`.
+- **Module Imports**:
+  - Use ES Module syntax (`import ... from '...'`) for all imports.
+  - Ensure correct path resolutions, especially when importing local modules.
+- **Error Handling**:
+  - Handle errors gracefully using `try...catch` blocks.
+  - Use `express-async-handler` for handling asynchronous routes in Express.
+- **No Line Numbers in Code**:
+  - When writing or modifying code, do not include line numbers before each line.
+  - Code snippets and files should be clean and free of extraneous annotations.
+
+# Known Issues
+
+- **Deprecation Warning**:  ```
+  (node:97564) [DEP0040] DeprecationWarning: The 'punycode' module is deprecated. Please use a userland alternative instead.  ```
+  - This warning occurs due to a dependency using the deprecated `punycode` module.
+  - While the application still functions, consider updating dependencies to eliminate this warning.
+  - Use `npm ls punycode` or `yarn why punycode` to identify which package depends on `punycode`.
+  - Update or replace the affected package if possible.
+
+# Additional Notes
+
+- **Environment Variables**:
+  - Ensure that all required environment variables are set, such as database connection strings and Redis URLs.
+  - Use `.env` files for local development and configure `dotenv` accordingly.
+- **Scripts**:
+  - Use the scripts defined in `package.json` for common tasks:
+    - `build`: Compiles TypeScript code.
+    - `dev`: Runs the application in development mode using `ts-node`.
+    - `start`: Runs the compiled code using Node.js.
+    - `prod`: Builds and starts the application using `bun`.
+    - `debug`: Builds and runs the application with `nodemon` for debugging.
+- **Caching**:
+  - The application uses Redis to cache transaction IDs and other data for improved performance.
+  - `cache.ts` contains functions for interacting with Redis, such as `saveToRedis` and `readFromRedis`.
+- **Database**:
+  - MongoDB is used for storing transaction data and other relevant information.
+  - Connection pooling is configured with minimum and maximum pool sizes in `db.ts`.

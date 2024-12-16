@@ -2,7 +2,6 @@
   "type": "module",
   "dependencies": {
     "@constl/orbit-db-types": "^1.2.9",
-    "@firaenix/synapse-core": "^1.0.0-alpha.9",
     "@gorillapool/js-junglebus": "^0.4.1",
     "@orbitdb/core": "^1.0.0",
     "@types/chart.js": "^2.9.38",
