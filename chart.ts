@@ -1,4 +1,4 @@
-import { ChartConfiguration } from 'chart.js'
+import type { ChartConfiguration } from 'chart.js'
 import QuickChart from 'quickchart-js'
 const getGradientFillHelper = QuickChart.getGradientFillHelper
 
@@ -113,7 +113,7 @@ const generateTotalsChart = async (
   collectionName: string,
   startBlock: number,
   endBlock: number,
-  blockRange: number = 10 // Default grouping range of 10 blocks
+  blockRange = 10 // Default grouping range of 10 blocks
 ) => {
   // Generate a chart for the specific collection based on timePeriod
   // Fetch time series data for this block range
@@ -142,11 +142,11 @@ const generateCollectionChart = async (
 
   // Sum up counts for each block height across all collections
   const globalData: Record<number, number> = {}
-  allTimeSeriesData.forEach((collectionData) => {
-    collectionData.forEach(({ _id, count }) => {
+  for (const collectionData of allTimeSeriesData) {
+    for (const { _id, count } of collectionData) {
       globalData[_id] = (globalData[_id] || 0) + count
-    })
-  })
+    }
+  }
 
   const aggregatedData = Object.keys(globalData).map((blockHeight) => ({
     _id: Number(blockHeight),
@@ -160,7 +160,7 @@ async function getTimeSeriesData(
   collectionName: string,
   startBlock: number,
   endBlock: number,
-  blockRange: number = 10 // Default grouping range of 10 blocks
+  blockRange = 10 // Default grouping range of 10 blocks
 ): Promise<TimeSeriesData> {
   const dbo = await getDbo()
   const pipeline = [

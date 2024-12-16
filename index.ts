@@ -161,29 +161,38 @@ const start = async () => {
 				code = Buffer.from(JSON.stringify(defaultQuery)).toString();
 			}
 			const j = JSON.parse(code);
-			if (j.q.aggregate) {
-				try {
-					const c = await dbo
-						.collection(collectionName)
-						.aggregate(j.q.aggregate, {
-							allowDiskUse: true,
-							cursor: { batchSize: 1000 },
-						})
-						.sort(j.q.sort || { _id: -1 })
-						.limit(j.q.limit ? j.q.limit : 10)
-						.toArray();
-
-					// find signers and load signer profiles from cache
-					const signers = await resolveSigners(c as BmapTx[]);
-					console.log({ signers });
-					res.send({ [collectionName]: c, signers });
-					return;
-				} catch (e) {
-					console.log(e);
-					res.status(500).send(e);
-					return;
-				}
-			}
+			
+      if (j.q.aggregate) {
+        try {
+          const pipeline = j.q.aggregate;
+  
+          // Optionally inject $sort and $limit if provided
+          if (j.q.sort) {
+            pipeline.push({ $sort: j.q.sort });
+          }
+          if (j.q.limit) {
+            pipeline.push({ $limit: j.q.limit });
+          }
+  
+          const c = await dbo
+            .collection(collectionName)
+            .aggregate(pipeline, {
+              allowDiskUse: true,
+              cursor: { batchSize: 1000 },
+            })
+            .toArray();
+  
+          const signers = await resolveSigners(c as BmapTx[]);
+          
+          // Process results
+          res.send({ [collectionName]: c, signers });
+          return;
+        } catch (e) {
+          console.log(e);
+          res.status(500).send(e);
+          return;
+        }
+      }
 
 			try {
 				const c = await dbo
@@ -861,7 +870,7 @@ const bobFromTxid = async (txid: string) => {
 		return await bobFromRawTx(rawtx);
 	} catch (e) {
 		console.log(
-			"Failed to ger rawtx from whatsonchain for.",
+			"Failed to get rawtx from whatsonchain for.",
 			txid,
 			"Failing back to BOB planaria.",
 			e,

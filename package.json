@@ -33,7 +33,7 @@
     "redis": "^4.6.10"
   },
   "engines": {
-    "node": "18"
+    "node": "22"
   },
   "devDependencies": {
     "@types/better-queue": "^3.8.3",
