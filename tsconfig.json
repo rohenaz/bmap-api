@@ -10,8 +10,11 @@
     "resolveJsonModule": true,
     "outDir": "./build",
     "types": ["node"],
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "jsx": "react",
+    "jsxFactory": "React.createElement",
+    "jsxFragmentFactory": "React.Fragment"
   },
-  "include": ["./**/*.ts", "./**/*.d.ts"],
+  "include": ["./**/*.ts", "./**/*.tsx", "./**/*.d.ts"],
   "exclude": ["node_modules"]
 }

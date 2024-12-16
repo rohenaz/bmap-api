@@ -10,212 +10,251 @@ export type TimeSeriesData = {
   count: number
 }[]
 
-const generateChart = (
-  timeSeriesData: TimeSeriesData,
-  globalChart: boolean
-): QuickChart => {
-  const chartConfig = {
-    type: 'line',
-    data: {
-      labels: timeSeriesData.map((d) => d._id),
-      datasets: [
-        {
-          data: timeSeriesData.map((d) => d.count),
-          fill: true,
-          borderColor: 'rgb(213, 99, 255, 0.5)',
-          borderWidth: 3,
-          pointBackgroundColor: 'rgba(255, 99, 255, 0.5)',
-          pointRadius: 3,
-          lineTension: 0.4,
-          backgroundColor: getGradientFillHelper('vertical', [
-            'rgba(255, 99, 255, 1)',
-            'rgba(255, 99, 255, 0)',
-          ]),
-        },
-      ],
-    },
-  } as ChartConfiguration
-
-  if (globalChart) {
-    chartConfig.options = {
-      legend: {
-        display: false,
-      },
-      scales: {
-        x: {
-          title: {
-            display: true,
-            text: 'Block Height',
-            color: '#333333',
-          },
-          grid: {
-            color: '#111111',
-          },
-          ticks: {
-            color: '#ffffff', // Ticks text color
-          },
-        },
-        y: {
-          title: {
-            display: true,
-            text: 'Count',
-            color: '#333333',
-          },
-          grid: {
-            color: '#111111',
-          },
-          ticks: {
-            color: '#ffffff', // Ticks text color
-          },
-        },
-      },
-    } as ChartConfiguration['options']
-  } else {
-    chartConfig.options = {
-      scales: {
-        display: false,
-        scaleLabel: {
-          display: false,
-        },
-        xAxes: [
-          {
-            display: false,
-          },
-        ],
-        yAxes: [
-          {
-            display: false,
-          },
-        ],
-        x: {
-          display: false,
-        },
-        y: {
-          display: false,
-        },
-      },
-      legend: {
-        display: false,
-      },
-    } as ChartConfiguration['options']
-  }
-  const qc = new QuickChart()
-  qc.setConfig(chartConfig)
-  qc.setBackgroundColor('transparent')
-  qc.setWidth(1280 / (globalChart ? 1 : 4)).setHeight(
-    300 / (globalChart ? 1 : 4)
-  )
-
-  return qc
+export type ChartData = {
+  config: ChartConfiguration;
+  width: number;
+  height: number;
 }
 
-const generateTotalsChart = async (
+export const defaultConfig: ChartConfiguration = {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [{
+      data: [],
+      fill: true,
+      borderColor: 'rgb(213, 99, 255, 0.5)',
+      borderWidth: 3,
+    }]
+  },
+  // For Chart.js v2 types:
+  options: {
+    legend: { display: false },
+    scales: {
+      xAxes: [{ display: false }],
+      yAxes: [{ display: false }]
+    }
+  }
+}
+
+export const generateChart = (
+  timeSeriesData: TimeSeriesData,
+  globalChart: boolean
+): { chart: QuickChart, chartData: ChartData } => {
+  const width = 1280 / (globalChart ? 1 : 4);
+  const height = 300 / (globalChart ? 1 : 4);
+
+  let chartConfig: ChartConfiguration;
+
+  if (!timeSeriesData || timeSeriesData.length === 0) {
+    chartConfig = defaultConfig;
+  } else {
+    chartConfig = {
+      type: 'line',
+      data: {
+        labels: timeSeriesData.map((d) => d._id),
+        datasets: [
+          {
+            data: timeSeriesData.map((d) => d.count),
+            fill: true,
+            borderColor: 'rgb(213, 99, 255, 0.5)',
+            borderWidth: 3,
+            pointBackgroundColor: 'rgba(255, 99, 255, 0.5)',
+            pointRadius: 3,
+            lineTension: 0.4,
+            backgroundColor: getGradientFillHelper('vertical', [
+              'rgba(255, 99, 255, 1)',
+              'rgba(255, 99, 255, 0)',
+            ]),
+          },
+        ],
+      },
+      options: globalChart
+        ? {
+            legend: {
+              display: false,
+            },
+            scales: {
+              // Chart.js v2 style scales
+              xAxes: [
+                {
+                  scaleLabel: {
+                    display: true,
+                    labelString: 'Block Height'
+                  },
+                  gridLines: {
+                    color: '#111111',
+                  },
+                  ticks: {
+                    fontColor: '#ffffff',
+                  },
+                }
+              ],
+              yAxes: [
+                {
+                  scaleLabel: {
+                    display: true,
+                    labelString: 'Count'
+                  },
+                  gridLines: {
+                    color: '#111111',
+                  },
+                  ticks: {
+                    fontColor: '#ffffff',
+                  },
+                }
+              ],
+            },
+          }
+        : {
+            scales: {
+              display: false,
+              xAxes: [{ display: false }],
+              yAxes: [{ display: false }],
+            },
+            legend: {
+              display: false,
+            },
+          },
+    }
+  }
+
+  const qc = new QuickChart();
+  qc.setConfig(chartConfig);
+  qc.setBackgroundColor('transparent');
+  qc.setWidth(width);
+  qc.setHeight(height);
+
+  const chartData: ChartData = {
+    config: chartConfig,
+    width,
+    height
+  }
+
+  return { chart: qc, chartData };
+}
+
+export const generateTotalsChart = async (
   collectionName: string,
   startBlock: number,
   endBlock: number,
-  blockRange = 10 // Default grouping range of 10 blocks
-) => {
-  // Generate a chart for the specific collection based on timePeriod
-  // Fetch time series data for this block range
+  blockRange = 10
+): Promise<{ chart: QuickChart, chartData: ChartData }> => {
   const timeSeriesData = await getTimeSeriesData(
     collectionName,
     startBlock,
     endBlock,
     blockRange
-  )
-
-  return generateChart(timeSeriesData, false) // Replace with your chart generation function
+  );
+  return generateChart(timeSeriesData, false);
 }
 
-const generateCollectionChart = async (
+export const generateCollectionChart = async (
   collectionName: string,
   startBlock: number,
   endBlock: number,
   range: number
-) => {
-  const dbo = await getDbo()
-  const allCollections = await dbo.listCollections().toArray()
+): Promise<{ chart: QuickChart, chartData: ChartData }> => {
+  const dbo = await getDbo();
+  const allCollections = await dbo.listCollections().toArray();
   const allDataPromises = allCollections.map((c) =>
     getTimeSeriesData(c.name, startBlock, endBlock, range)
-  )
-  const allTimeSeriesData = await Promise.all(allDataPromises)
+  );
+  const allTimeSeriesData = await Promise.all(allDataPromises);
 
-  // Sum up counts for each block height across all collections
-  const globalData: Record<number, number> = {}
+  const globalData: Record<number, number> = {};
   for (const collectionData of allTimeSeriesData) {
     for (const { _id, count } of collectionData) {
-      globalData[_id] = (globalData[_id] || 0) + count
+      globalData[_id] = (globalData[_id] || 0) + count;
     }
   }
 
   const aggregatedData = Object.keys(globalData).map((blockHeight) => ({
     _id: Number(blockHeight),
     count: globalData[blockHeight],
-  }))
+  }));
 
-  return generateChart(aggregatedData, true)
+  return generateChart(aggregatedData, true);
 }
 
-async function getTimeSeriesData(
+export async function getTimeSeriesData(
   collectionName: string,
   startBlock: number,
   endBlock: number,
-  blockRange = 10 // Default grouping range of 10 blocks
+  blockRange = 10
 ): Promise<TimeSeriesData> {
   const dbo = await getDbo()
-  const pipeline = [
-    {
-      $match: {
-        'blk.i': {
-          $gte: startBlock,
-          $lte: endBlock,
+
+  try {
+    const count = await dbo.collection(collectionName).countDocuments({
+      'blk.i': { $gte: startBlock, $lte: endBlock }
+    });
+
+    if (count === 0) {
+      return [];
+    }
+
+    const pipeline = [
+      {
+        $match: {
+          'blk.i': {
+            $gte: startBlock,
+            $lte: endBlock,
+          },
         },
       },
-    },
-    {
-      $project: {
-        // Calculate the block group identifier
-        blockGroup: {
-          $subtract: ['$blk.i', { $mod: ['$blk.i', blockRange] }],
+      {
+        $project: {
+          blockGroup: {
+            $subtract: ['$blk.i', { $mod: ['$blk.i', blockRange] }],
+          },
         },
       },
-    },
-    {
-      $group: {
-        _id: '$blockGroup', // Group by block group identifier
-        count: { $sum: 1 },
+      {
+        $group: {
+          _id: '$blockGroup',
+          count: { $sum: 1 },
+        },
       },
-    },
-    {
-      $sort: { _id: 1 },
-    },
-  ]
-  return (await dbo
-    .collection(collectionName)
-    .aggregate(pipeline)
-    .toArray()) as TimeSeriesData
+      {
+        $sort: { _id: 1 },
+      },
+      { $limit: 1000 }
+    ]
+
+    const result = await dbo
+      .collection(collectionName)
+      .aggregate(pipeline, {
+        allowDiskUse: true,
+        maxTimeMS: 5000
+      })
+      .toArray();
+
+    return result as TimeSeriesData;
+  } catch (error) {
+    console.error(`Error getting time series data for ${collectionName}:`, error);
+    return [];
+  }
 }
 
 const timeframeToBlocks = (period: string) => {
-  // Example mapping from time period to number of blocks
   switch (period) {
     case Timeframe.Day:
-      return 144 // Approximate number of blocks in 24 hours
+      return 144
     case Timeframe.Week:
-      return 1008 // Approximate number of blocks in 7 days
+      return 1008
     case Timeframe.Month:
-      return 4320 // Approximate number of blocks in a month
+      return 4320
     case Timeframe.Year:
-      return 52560 // Approximate number of blocks in a year
+      return 52560
     case Timeframe.All:
-      return 0 // All blocks
+      return 0
     default:
       return 0
   }
 }
 
-// Shared utility function to get blocks range
-function getBlocksRange(
+export function getBlocksRange(
   currentBlockHeight: number,
   timeframe: string
 ): [number, number] {
@@ -223,12 +262,4 @@ function getBlocksRange(
   const startBlock = currentBlockHeight - blocks
   const endBlock = currentBlockHeight
   return [startBlock, endBlock]
-}
-
-export {
-  generateChart,
-  generateCollectionChart,
-  generateTotalsChart,
-  getBlocksRange,
-  getTimeSeriesData,
 }
