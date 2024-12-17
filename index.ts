@@ -558,23 +558,56 @@ const start = async () => {
     }
   });
 
+  function tryParseJSON(str: string): unknown {
+    if (typeof str !== 'string') return str;
+    try {
+      return JSON.parse(str);
+    } catch (e) {
+      return str; // fallback to original string if not valid JSON
+    }
+  }
 
+  function ensureJSONString(value: unknown): string {
+    if (typeof value === 'string') {
+      try {
+        // Check if it's already a valid JSON string
+        JSON.parse(value);
+        return value;
+      } catch {
+        // If not valid JSON, stringify it
+        return JSON.stringify(value);
+      }
+    }
+    // If not a string, stringify it
+    return JSON.stringify(value);
+  }
 
+  function ensureIdentityString(identity: unknown): string {
+    if (typeof identity === 'string') {
+      try {
+        // Check if it's already a valid JSON string
+        JSON.parse(identity);
+        return identity;
+      } catch {
+        // If not valid JSON, stringify it
+        return JSON.stringify({ alternateName: identity });
+      }
+    }
+    // If it's an object or anything else, stringify it
+    return JSON.stringify(identity);
+  }
+
+  
   app.get("/identities", async () => {
     try {
-      // First, check if Redis is connected
       if (!client.isReady) {
         console.error("Redis client is not ready");
-        return new Response(JSON.stringify({ 
-          error: "Redis connection not ready",
-          details: "The cache service is currently unavailable"
-        }), {
+        return new Response(JSON.stringify([]), {
           status: 503,
           headers: { "Content-Type": "application/json" }
         });
       }
 
-      // Get all keys matching the pattern
       const idCacheKey = "signer-*";
       console.log("Searching for Redis keys with pattern:", idCacheKey);
       const keys = await client.keys(idCacheKey);
@@ -582,10 +615,7 @@ const start = async () => {
 
       if (!keys.length) {
         console.log("No identity keys found in Redis");
-        return new Response(JSON.stringify({ 
-          data: [],
-          message: "No cached identities found" 
-        }), {
+        return new Response(JSON.stringify([]), {
           headers: {
             "Content-Type": "application/json",
             "Cache-Control": "no-cache"
@@ -593,29 +623,50 @@ const start = async () => {
         });
       }
 
-      // Fetch all values
       const identities = await Promise.all(
         keys.map(async (k) => {
-          console.log("Fetching key:", k);
-          const cachedValue = await readFromRedis(k);
-          console.log("Cached value for", k, ":", cachedValue);
-          
-          if (cachedValue && cachedValue.type === 'signer' && cachedValue.value) {
-            return cachedValue.value;
+          try {
+            console.log("Fetching key:", k);
+            const cachedValue = await readFromRedis(k);
+            console.log("Cached value type:", cachedValue?.type);
+            console.log("Cached value exists:", !!cachedValue?.value);
+            
+            if (cachedValue && cachedValue.type === 'signer' && cachedValue.value) {
+              const identity = cachedValue.value;
+
+              // Parse the identity into an object
+              const identityObj = parseIdentity(identity.identity);
+
+              return {
+                idKey: identity.idKey,
+                rootAddress: identity.rootAddress,
+                currentAddress: identity.currentAddress,
+                addresses: identity.addresses?.map((addr: any) => ({
+                  address: addr.address,
+                  txId: addr.txId,
+                  block: addr.block
+                })) || [],
+                identity: identityObj,
+                identityTxId: identity.identityTxId,
+                block: identity.block || 0,
+                timestamp: typeof identity.timestamp === 'number' ? identity.timestamp : Math.floor(identity.timestamp / 1000),
+                valid: identity.valid ?? true
+              };
+            }
+            console.log("Invalid or missing value for key:", k);
+            return null;
+          } catch (error) {
+            console.error(`Error fetching key ${k}:`, error);
+            return null;
           }
-          console.log("Invalid or missing value for key:", k);
-          return null;
         })
       );
 
       const filteredIdentities = identities.filter((id) => id !== null);
-      console.log("Filtered identities count:", filteredIdentities.length);
+      console.log("Total identities found:", keys.length);
+      console.log("Valid identities after filtering:", filteredIdentities.length);
 
-      return new Response(JSON.stringify({
-        data: filteredIdentities,
-        count: filteredIdentities.length,
-        totalKeys: keys.length
-      }), {
+      return new Response(JSON.stringify(filteredIdentities), {
         headers: {
           "Content-Type": "application/json",
           "Cache-Control": "no-cache"
@@ -623,15 +674,13 @@ const start = async () => {
       });
     } catch (e) {
       console.error("Failed to get identities:", e);
-      return new Response(JSON.stringify({ 
-        error: String(e),
-        details: "Failed to retrieve identities from cache"
-      }), {
+      return new Response(JSON.stringify([]), {
         status: 500,
         headers: { "Content-Type": "application/json" }
       });
     }
   });
+  
   app.listen({ port, hostname: host }, () => {
     console.log(
       chalk.magenta("BMAP API"),
@@ -643,3 +692,37 @@ const start = async () => {
 
 
 start();
+
+
+
+function parseIdentity(identityValue: unknown): Record<string, unknown> {
+  // If identity is already an object, return it as is
+  if (typeof identityValue === 'object' && identityValue !== null) {
+    return identityValue as Record<string, unknown>;
+  }
+  
+  // If it's a string, try to parse as JSON
+  if (typeof identityValue === 'string') {
+    // Strip leading/trailing quotes if present
+    let trimmed = identityValue.trim();
+    if (trimmed.startsWith("\"") && trimmed.endsWith("\"")) {
+      trimmed = trimmed.slice(1, -1);
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (typeof parsed === 'object' && parsed !== null) {
+        return parsed;
+      } else {
+        // It's valid JSON but not an object, wrap it in an object
+        return { alternateName: parsed };
+      }
+    } catch {
+      // Not valid JSON, just treat it as a plain string in an object
+      return { alternateName: trimmed };
+    }
+  }
+
+  // Fallback: wrap whatever it is in an object
+  return { alternateName: String(identityValue) };
+}

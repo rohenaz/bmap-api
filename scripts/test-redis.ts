@@ -25,24 +25,63 @@ async function testRedisConnection() {
     const testIdentities: BapIdentity[] = [
       {
         idKey: "test1",
-        rootAddress: "test1root",
-        currentAddress: "test1current",
-        addresses: [{ address: "test1addr", txId: "test1tx" }],
-        identity: "Test User 1",
+        rootAddress: "13ZNtS7f3Yb5QiYsJgNpXq7S994hcPLaKv",
+        currentAddress: "1HjTer9VgkfeNaFibPB8EWUGJLEg8yAHfY",
+        addresses: [{
+          address: "1HjTer9VgkfeNaFibPB8EWUGJLEg8yAHfY",
+          txId: "f39575e7ac17f8590f42aa2d9f17b743d816985e85632303281fe7c84c3186b3",
+          block: 697159
+        }],
+        // Test with a JSON string identity
+        identity: JSON.stringify({
+          "@type": "Person",
+          "alternateName": "TestUser1",
+          "description": "Test user description",
+          "homeLocation": { "name": "Bitcoin" },
+          "image": "/test-image-hash-1",
+          "paymail": "test1@handcash.io",
+          "url": "https://1sat.market"
+        }),
         identityTxId: "test1identitytx",
-        block: 1000,
-        timestamp: Date.now(),
+        block: 697159,
+        timestamp: Math.floor(Date.now() / 1000),
         valid: true
       },
       {
         idKey: "test2",
-        rootAddress: "test2root",
-        currentAddress: "test2current",
-        addresses: [{ address: "test2addr", txId: "test2tx" }],
-        identity: "Test User 2",
+        rootAddress: "15ZNtS7f3Yb5QiYsJgNpXq7S994hcPLaKv",
+        currentAddress: "2HjTer9VgkfeNaFibPB8EWUGJLEg8yAHfY",
+        addresses: [{
+          address: "2HjTer9VgkfeNaFibPB8EWUGJLEg8yAHfY",
+          txId: "g39575e7ac17f8590f42aa2d9f17b743d816985e85632303281fe7c84c3186b3",
+          block: 697160
+        }],
+        // Test with a simple string identity
+        identity: "TestUser2",
         identityTxId: "test2identitytx",
-        block: 1001,
-        timestamp: Date.now(),
+        block: 697160,
+        timestamp: Math.floor(Date.now() / 1000),
+        valid: true
+      },
+      {
+        idKey: "test3",
+        rootAddress: "16ZNtS7f3Yb5QiYsJgNpXq7S994hcPLaKv",
+        currentAddress: "3HjTer9VgkfeNaFibPB8EWUGJLEg8yAHfY",
+        addresses: [{
+          address: "3HjTer9VgkfeNaFibPB8EWUGJLEg8yAHfY",
+          txId: "h39575e7ac17f8590f42aa2d9f17b743d816985e85632303281fe7c84c3186b3",
+          block: 697161
+        }],
+        // Test with an object identity
+        identity: {
+          "@type": "Person",
+          "alternateName": "TestUser3",
+          "description": "Test user with object identity",
+          "homeLocation": { "name": "Bitcoin" }
+        },
+        identityTxId: "test3identitytx",
+        block: 697161,
+        timestamp: Math.floor(Date.now() / 1000),
         valid: true
       }
     ];

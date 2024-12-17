@@ -1,40 +1,37 @@
-// {
-//       "rootAddress": "13ZNtS7f3Yb5QiYsJgNpXq7S994hcPLaKv",
-//       "currentAddress": "1HjTer9VgkfeNaFibPB8EWUGJLEg8yAHfY",
-//       "addresses": [
-//           {
-//               "address": "1HjTer9VgkfeNaFibPB8EWUGJLEg8yAHfY",
-//               "txId": "f39575e7ac17f8590f42aa2d9f17b743d816985e85632303281fe7c84c3186b3"
-//           }
-//       ],
-//       "identity": "{\"@context\":\"https://schema.org\",\"@type\":\"Person\",\"alternateName\":\"WildSatchmo\",\"logo\":\"bitfs://a53276421d2063a330ebbf003ab5b8d453d81781c6c8440e2df83368862082c5.out.1.1\",\"image\":\"\",\"homeLocation\":{\"@type\":\"Place\",\"name\":\"Bitcoin\"},\"url\":\"https://tonicpow.com\",\"paymail\":\"satchmo@moneybutton.com\"}",
-//       "identityTxId": "e7becb2968a6afe0f690cbe345fba94b8e4a7da6a014a5d52b080a7d6913c281",
-//       "idKey": "Go8vCHAa4S6AhXKTABGpANiz35J",
-//       "block": 594320,
-//       "timestamp": 1699391776,
-//       "valid": false
-//   }
-
 import type { BmapTx } from 'bmapjs'
 import _ from 'lodash'
 import { normalize } from './bmap.js'
 import { type CacheSigner, readFromRedis, saveToRedis } from './cache.js'
 const { uniq, uniqBy } = _
 
-export type BapIdentity = {
-  rootAddress: string
-  currentAddress: string
-  addresses: {
-    address: string
-    txId: string
-  }[]
-  identity: string
-  identityTxId: string
-  idKey: string
-  block: number
-  timestamp: number
-  valid: boolean
+interface BapAddress {
+  address: string;
+  txId: string;
+  block?: number;
 }
+
+interface BapIdentityObject {
+  "@type": string;
+  alternateName?: string;
+  description?: string;
+  homeLocation?: { name: string };
+  image?: string;
+  paymail?: string;
+  url?: string;
+  [key: string]: any; // Allow additional fields
+}
+
+export type BapIdentity = {
+  rootAddress: string;
+  currentAddress: string;
+  addresses: BapAddress[];
+  identity: string | BapIdentityObject;
+  identityTxId: string;
+  idKey: string;
+  block: number;
+  timestamp: number;
+  valid: boolean;
+};
 
 const bapApiUrl = "https://api.sigmaidentity.com/v1/"
 
