@@ -7,6 +7,7 @@ import type { BmapTx } from "bmapjs";
 import { parse } from "bpu-ts";
 import chalk from "chalk";
 import dotenv from "dotenv";
+import { writeFileSync } from 'node:fs';
 import type { ChangeStreamDocument } from "mongodb";
 import { dirname } from "node:path";
 import QuickChart from "quickchart-js";
@@ -14,6 +15,8 @@ import { fileURLToPath } from "node:url";
 import { type BapIdentity, getBAPIdByAddress, resolveSigners } from "./bap.js";
 import {
   type CacheCount,
+  type CacheChart,
+  type CacheTimeSeriesData,
   client,
   deleteFromCache,
   getBlockHeightFromCache,
@@ -252,16 +255,15 @@ const start = async () => {
         } else {
           console.log("Fetching time series data for", collection);
           timeSeriesData = await getTimeSeriesData(collection, startBlock, endBlock);
-          await saveToRedis(timeSeriesKey, { type: "timeSeriesData", value: timeSeriesData });
+          await saveToRedis(timeSeriesKey, { type: "timeSeriesData", value: timeSeriesData } as CacheTimeSeriesData);
         }
 
-        const { chart } = generateChart(timeSeriesData, false);
-        const chartUrl = chart.getUrl();
-        console.log(`Chart for ${collection}: ${chartUrl}`);
+        const { chartBuffer } = generateChart(timeSeriesData, false);
+        const chartBase64 = chartBuffer.toString('base64');
 
         gridItemsHtml += `<div class="p-4 bg-zinc-800 rounded shadow-md">
           <div class="font-semibold mb-2">${collection}</div>
-          <img src="${chartUrl}" class="mb-2" alt="Chart for ${collection}" width="300" />
+          <img src="data:image/png;base64,${chartBase64}" class="mb-2" alt="Chart for ${collection}" width="300" />
           <div class="text-sm text-gray-200">Count: ${count}</div>
         </div>`;
       }
@@ -314,34 +316,31 @@ const start = async () => {
       const stored = await readFromRedis(chartKey);
       console.log("Cache result:", JSON.stringify(stored, null, 2));
 
-      let chartData: ChartData;
+      let chartBuffer: Buffer;
 
-      if (stored && stored.type === 'chart' && stored.value?.config) {
-        console.log("Using cached chart data:", JSON.stringify(stored.value, null, 2));
-        chartData = stored.value;
+      if (stored && stored.type === 'chart' && stored.value.chartBuffer) {
+        console.log("Using cached chart buffer");
+        chartBuffer = Buffer.from(stored.value.chartBuffer, 'base64');
       } else {
         console.log("Generating new chart for", { collectionName });
         const result = collectionName
           ? await generateTotalsChart(collectionName, startBlock, endBlock, range)
           : await generateCollectionChart(undefined, startBlock, endBlock, range);
 
-        chartData = result.chartData;
-        console.log("New chart data before cache:", JSON.stringify(chartData, null, 2));
-        await saveToRedis(chartKey, { type: "chart", value: chartData });
+        chartBuffer = result.chartBuffer;
+        console.log("New chart buffer generated");
+        await saveToRedis(chartKey, { 
+          type: "chart", 
+          value: { 
+            chartBuffer: chartBuffer.toString('base64'),
+            config: result.chartData.config
+          } 
+        } as CacheChart);
       }
 
-      console.log("Chart data before QuickChart creation:", JSON.stringify(chartData, null, 2));
-      const chart = new QuickChart()
-        .setConfig(chartData.config)
-        .setBackgroundColor('transparent')
-        .setWidth(chartData.width)
-        .setHeight(chartData.height);
-
-      const chartUrl = chart.getUrl();
-      console.log("Generated chart URL:", chartUrl);
-
+      const chartBase64 = chartBuffer.toString('base64');
       return new Response(
-        `<img src='${chartUrl}' alt='Transaction${collectionName ? `s for ${collectionName}` : " totals"}' class='mt-2 mb-2' width="1280" height="300" />`,
+        `<img src='data:image/png;base64,${chartBase64}' alt='Transaction${collectionName ? `s for ${collectionName}` : " totals"}' class='mt-2 mb-2' width="1280" height="300" />`,
         {
           headers: {
             'Content-Type': 'text/html',

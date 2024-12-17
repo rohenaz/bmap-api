@@ -1,9 +1,25 @@
 import type { ChartConfiguration } from 'chart.js'
-import QuickChart from 'quickchart-js'
-const getGradientFillHelper = QuickChart.getGradientFillHelper
+import { Chart, registerables } from 'chart.js'
+import { createCanvas } from '@napi-rs/canvas'
+import type { SKRSContext2D } from '@napi-rs/canvas'
 
 import { getDbo } from './db.js'
 import { Timeframe } from './types.js'
+
+// Register Chart.js components
+Chart.register(...registerables)
+
+// Create a compatibility layer for the canvas context
+const createCompatibleContext = (ctx: SKRSContext2D) => {
+  return new Proxy(ctx, {
+    get: (target, prop) => {
+      if (prop === 'drawFocusIfNeeded') {
+        return () => {}; // Noop implementation
+      }
+      return target[prop as keyof SKRSContext2D];
+    },
+  }) as unknown as CanvasRenderingContext2D;
+}
 
 export type TimeSeriesData = {
   _id: number // Block height
@@ -19,9 +35,10 @@ export type ChartData = {
 const generateChart = (
   timeSeriesData: TimeSeriesData,
   globalChart: boolean
-): { chart: QuickChart; chartConfig: ChartConfiguration } => {
+): { chartBuffer: Buffer; chartConfig: ChartConfiguration } => {
   console.log('Generating chart with data:', { timeSeriesData, globalChart });
   
+  const dpi = 2
   const width = 1280 / (globalChart ? 1 : 4)
   const height = 300 / (globalChart ? 1 : 4)
 
@@ -29,12 +46,16 @@ const generateChart = (
   const dataValues = timeSeriesData.map((d) => d.count)
   console.log('Chart data points:', { labels, dataValues });
 
+  const minBlock = Math.min(...labels)
+  const maxBlock = Math.max(...labels)
+
   const chartConfig: ChartConfiguration = {
     type: 'line',
     data: {
       labels,
       datasets: [
         {
+          label: 'Count',
           data: dataValues,
           fill: true,
           borderColor: 'rgba(213, 99, 255, 0.5)',
@@ -47,6 +68,9 @@ const generateChart = (
       ],
     },
     options: {
+      responsive: false,
+      animation: false,
+      devicePixelRatio: dpi,
       plugins: {
         legend: {
           display: false,
@@ -55,32 +79,80 @@ const generateChart = (
       scales: globalChart
         ? {
             x: {
-              title: { display: true, text: 'Block Height', color: '#333' },
-              grid: { color: '#111' },
-              ticks: { color: '#fff' },
+              type: 'linear',
+              min: minBlock,
+              max: maxBlock,
+              title: { display: true, text: 'Block Height', color: '#fff' },
+              grid: { color: '#333' },
+              ticks: { 
+                color: '#fff',
+                callback: (value) => value.toString(),
+                maxTicksLimit: 10,
+                autoSkip: true
+              },
             },
             y: {
-              title: { display: true, text: 'Count', color: '#333' },
-              grid: { color: '#111' },
-              ticks: { color: '#fff' },
+              type: 'linear',
+              title: { display: true, text: 'Count', color: '#fff' },
+              grid: { color: '#333' },
+              ticks: { 
+                color: '#fff',
+                callback: (value) => value.toString()
+              },
             },
           }
         : {
-            x: { display: false },
-            y: { display: false },
+            x: { 
+              type: 'linear',
+              min: minBlock,
+              max: maxBlock,
+              display: true,
+              ticks: {
+                display: false
+              },
+              grid: {
+                display: false
+              }
+            },
+            y: { 
+              type: 'linear',
+              display: true,
+              ticks: {
+                display: false
+              },
+              grid: {
+                display: false
+              }
+            },
           },
     },
   }
   console.log('Chart config:', JSON.stringify(chartConfig, null, 2));
 
-  const qc = new QuickChart()
-  qc.setConfig(chartConfig)
-  qc.setBackgroundColor('transparent')
-  qc.setWidth(width)
-  qc.setHeight(height)
+  // Create canvas and render chart
+  const canvas = createCanvas(width * dpi, height * dpi)
+  const ctx = canvas.getContext('2d')
   
-  console.log('QuickChart URL:', qc.getUrl());
-  return { chart: qc, chartConfig }
+  // Scale context for high DPI
+  ctx.scale(dpi, dpi)
+  
+  // Set background color
+  ctx.fillStyle = 'transparent'
+  ctx.fillRect(0, 0, width, height)
+  
+  // Create chart with compatible context
+  const compatibleCtx = createCompatibleContext(ctx)
+  new Chart(compatibleCtx, chartConfig)
+  
+  // Get buffer
+  const chartBuffer = canvas.toBuffer('image/png')
+  
+  return { chartBuffer, chartConfig }
+}
+
+export type ChartResult = {
+  chartBuffer: Buffer;
+  chartData: ChartData;
 }
 
 const generateTotalsChart = async (
@@ -88,7 +160,7 @@ const generateTotalsChart = async (
   startBlock: number,
   endBlock: number,
   blockRange = 10
-) => {
+): Promise<ChartResult> => {
   console.log('Generating totals chart:', { collectionName, startBlock, endBlock, blockRange });
   
   const timeSeriesData = await getTimeSeriesData(
@@ -99,7 +171,7 @@ const generateTotalsChart = async (
   )
   console.log('Time series data:', timeSeriesData);
   
-  const { chart, chartConfig } = generateChart(timeSeriesData, false)
+  const { chartBuffer, chartConfig } = generateChart(timeSeriesData, false)
   const chartData = {
     config: chartConfig,
     width: 1280 / 4,
@@ -107,7 +179,7 @@ const generateTotalsChart = async (
   };
   console.log('Generated chart data:', chartData);
   
-  return { chart, chartData }
+  return { chartBuffer, chartData }
 }
 
 const generateCollectionChart = async (
@@ -115,7 +187,7 @@ const generateCollectionChart = async (
   startBlock: number,
   endBlock: number,
   range: number
-) => {
+): Promise<ChartResult> => {
   console.log('Generating collection chart:', { collectionName, startBlock, endBlock, range });
   
   const dbo = await getDbo()
@@ -139,7 +211,7 @@ const generateCollectionChart = async (
   }))
   console.log('Aggregated data:', aggregatedData);
 
-  const { chart, chartConfig } = generateChart(aggregatedData, true)
+  const { chartBuffer, chartConfig } = generateChart(aggregatedData, true)
   const chartData = {
     config: chartConfig,
     width: 1280,
@@ -147,7 +219,7 @@ const generateCollectionChart = async (
   };
   console.log('Final chart data:', JSON.stringify(chartData, null, 2));
   
-  return { chart, chartData }
+  return { chartBuffer, chartData }
 }
 
 async function getTimeSeriesData(

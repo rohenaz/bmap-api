@@ -5,6 +5,7 @@
     "@elysiajs/cors": "^1.1.1",
     "@elysiajs/static": "^1.1.1",
     "@gorillapool/js-junglebus": "^0.4.1",
+    "@napi-rs/canvas": "^0.1.65",
     "@orbitdb/core": "^1.0.0",
     "bmapjs": "^0.4.0-beta.59",
     "bpu-ts": "^0.0.26",
@@ -35,6 +36,7 @@
     "build": "rimraf build && tsc",
     "dev": "bun run index.ts",
     "start": "bun run build/index.js",
-    "prod": "bun run build && bun run start"
+    "prod": "bun run build && bun run start",
+    "flush-cache": "redis-cli -u $REDIS_PRIVATE_URL FLUSHALL"
   }
 }
