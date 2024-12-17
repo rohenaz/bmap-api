@@ -294,14 +294,12 @@ const start = async () => {
       const code = Buffer.from(base64Query, "base64").toString();
       console.log("Decoded query:", code);
       
-      interface QuerySort {
-        [key: string]: SortDirection;
-      }
+      type SortObject = { [key: string]: SortDirection };
       
       let q: { q: { 
         find: Record<string, unknown>; 
         limit?: number; 
-        sort?: QuerySort;
+        sort?: SortObject;
         skip?: number; 
         project?: Document 
       }};
@@ -335,8 +333,13 @@ const start = async () => {
       // Extract query parameters with defaults
       const query = q.q.find || {};
       const limit = q.q.limit || 100;
-      const defaultSort: QuerySort = { "blk.i": -1 };
-      const sort = q.q.sort || defaultSort;
+      const defaultSort: SortObject = { "blk.i": -1 };
+      const sortParam = q.q.sort || defaultSort;
+      
+      // Convert sort object to MongoDB sort format
+      const sortEntries = Object.entries(sortParam);
+      const sort: Sort = sortEntries.length === 1 ? [sortEntries[0][0], sortEntries[0][1]] : sortEntries;
+      
       const skip = q.q.skip || 0;
       const projection = q.q.project || null;
 
@@ -352,7 +355,7 @@ const start = async () => {
       // Execute query with all parameters
       const results = await db.collection(collectionName)
         .find(query)
-        .sort(sort as Sort)
+        .sort(sort)
         .skip(skip)
         .limit(limit)
         .project(projection)
