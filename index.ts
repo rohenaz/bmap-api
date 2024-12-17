@@ -7,7 +7,7 @@ import type { BmapTx } from "bmapjs";
 import { parse } from "bpu-ts";
 import chalk from "chalk";
 import dotenv from "dotenv";
-import type { ChangeStreamDocument } from "mongodb";
+import type { ChangeStreamDocument, Sort, Document, SortDirection } from "mongodb";
 import { fileURLToPath } from "node:url";
 import { type BapIdentity, getBAPIdByAddress, resolveSigners } from "./bap.js";
 import { registerSocialRoutes } from './social.js';
@@ -93,7 +93,11 @@ const bobFromTxid = async (txid: string) => {
 };
 
 const app = new Elysia()
-  .use(cors())
+  .use(cors({
+    origin: process.env.CORS_ORIGIN || '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    credentials: true
+  }))
   .use(staticPlugin({ assets: './public', prefix: '/' }))
   .onError(({ error }) => {
     console.error("Application error:", error);
@@ -290,7 +294,18 @@ const start = async () => {
       const code = Buffer.from(base64Query, "base64").toString();
       console.log("Decoded query:", code);
       
-      let q;
+      interface QuerySort {
+        [key: string]: SortDirection;
+      }
+      
+      let q: { q: { 
+        find: Record<string, unknown>; 
+        limit?: number; 
+        sort?: QuerySort;
+        skip?: number; 
+        project?: Document 
+      }};
+
       try {
         q = JSON.parse(code);
       } catch (e) {
@@ -320,7 +335,8 @@ const start = async () => {
       // Extract query parameters with defaults
       const query = q.q.find || {};
       const limit = q.q.limit || 100;
-      const sort = q.q.sort || { "blk.i": -1 };
+      const defaultSort: QuerySort = { "blk.i": -1 };
+      const sort = q.q.sort || defaultSort;
       const skip = q.q.skip || 0;
       const projection = q.q.project || null;
 
@@ -336,7 +352,7 @@ const start = async () => {
       // Execute query with all parameters
       const results = await db.collection(collectionName)
         .find(query)
-        .sort(sort)
+        .sort(sort as Sort)
         .skip(skip)
         .limit(limit)
         .project(projection)
@@ -344,12 +360,11 @@ const start = async () => {
 
       console.log(`Query returned ${results.length} results`);
 
-      // Return results with CORS and caching headers
+      // Return results with caching headers only
       return new Response(JSON.stringify({ [collectionName]: results }), {
         headers: { 
           "Content-Type": "application/json",
-          "Cache-Control": "public, max-age=60",
-          "Access-Control-Allow-Origin": "*"
+          "Cache-Control": "public, max-age=60"
         }
       });
     } catch (error: unknown) {
@@ -552,7 +567,6 @@ const start = async () => {
       const identities = await Promise.all(
         keys.map(async (k) => {
           const cachedValue = await readFromRedis(k);
-          // Check if we got a valid CacheSigner value
           if (cachedValue.type === 'signer' && cachedValue.value) {
             return cachedValue.value;
           }
@@ -560,14 +574,12 @@ const start = async () => {
         })
       );
   
-      // Filter out null values (if any)
       const filteredIdentities = identities.filter((id) => id !== null);
   
       return new Response(JSON.stringify(filteredIdentities), {
         headers: {
           "Content-Type": "application/json",
-          "Cache-Control": "no-cache",
-          "Access-Control-Allow-Origin": "*"
+          "Cache-Control": "no-cache"
         }
       });
     } catch (e) {
