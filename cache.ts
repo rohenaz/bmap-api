@@ -54,6 +54,16 @@ export type CacheSigner = {
   value: BapIdentity;
 }
 
+export type CacheReactions = {
+  type: 'reactions';
+  value: {
+    channel: string;
+    page: number;
+    limit: number;
+    results: any[];
+  };
+}
+
 export type CacheError = {
   type: 'error';
   error: number;
@@ -71,7 +81,8 @@ export type CacheValue =
   | CacheCount 
   | CacheTimeSeriesData 
   | CacheIngest 
-  | CacheSigner;
+  | CacheSigner
+  | CacheReactions;
 
 async function saveToRedis<T extends CacheValue>(
   key: string,

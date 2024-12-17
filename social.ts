@@ -3,7 +3,7 @@ import { getDbo } from './db.js';
 import { readFromRedis, saveToRedis } from './cache.js';
 import { getBAPIdByAddress } from './bap.js';
 import type { BapIdentity } from './bap.js';
-import type { CacheSigner } from './cache.js';
+import type { CacheSigner, CacheValue } from './cache.js';
 
 interface SigmaIdentityAPIResponse {
   status: string;
@@ -36,6 +36,18 @@ interface FriendshipResponse {
   friends: string[];
   incoming: string[];
   outgoing: string[];
+}
+
+interface ReactionResponse {
+  channel: string;
+  page: number;
+  limit: number;
+  results: any[];
+}
+
+type CacheReactions = {
+  type: 'reactions';
+  value: ReactionResponse;
 }
 
 function sigmaIdentityToBapIdentity(result: SigmaIdentityResult): BapIdentity {
@@ -229,6 +241,90 @@ export function registerSocialRoutes(app: Elysia) {
 
       return new Response(JSON.stringify({
         error: "Failed to fetch friendship data",
+        details: message
+      }), {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache"
+        }
+      });
+    }
+  });
+
+  app.get("/reactions", async ({ query }) => {
+    const channel = query.channel as string;
+    if (!channel) {
+      return new Response(JSON.stringify({ 
+        error: "Missing channel param",
+        details: "The channel parameter is required"
+      }), {
+        status: 400,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      });
+    }
+
+    const page = query.page ? parseInt(query.page as string, 10) : 1;
+    const limit = query.limit ? parseInt(query.limit as string, 10) : 100;
+    const skip = (page - 1) * limit;
+
+    try {
+      const cacheKey = `reactions:${channel}:${page}:${limit}`;
+      const cached = await readFromRedis<CacheReactions>(cacheKey);
+
+      if (cached.type === 'reactions') {
+        console.log('Cache hit for reactions:', cacheKey);
+        return new Response(JSON.stringify(cached.value), {
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "public, max-age=60"
+          }
+        });
+      }
+
+      console.log('Cache miss for reactions:', cacheKey);
+      const db = await getDbo();
+      
+      const queryObj = {
+        "MAP.type": "like",
+        "MAP.channel": channel
+      };
+
+      const results = await db.collection("like")
+        .find(queryObj)
+        .sort({ "blk.i": -1 })
+        .skip(skip)
+        .limit(limit)
+        .toArray();
+
+      const response: ReactionResponse = { 
+        channel, 
+        page, 
+        limit, 
+        results 
+      };
+
+      // Cache for 60 seconds
+      await saveToRedis<CacheReactions>(cacheKey, {
+        type: 'reactions',
+        value: response
+      });
+
+      return new Response(JSON.stringify(response), {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "public, max-age=60"
+        }
+      });
+    } catch (error: unknown) {
+      console.error('Error processing reactions request:', error);
+      const message = error instanceof Error ? error.message : String(error);
+
+      return new Response(JSON.stringify({
+        error: "Failed to fetch reactions",
         details: message
       }), {
         status: 500,
