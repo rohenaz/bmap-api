@@ -64,6 +64,17 @@ export type CacheReactions = {
   };
 }
 
+export type CacheChannels = {
+  type: 'channels';
+  value: {
+    channel: string;
+    creator: string;
+    last_message: string;
+    last_message_time: number;
+    messages: number;
+  }[];
+}
+
 export type CacheError = {
   type: 'error';
   error: number;
@@ -82,7 +93,8 @@ export type CacheValue =
   | CacheTimeSeriesData 
   | CacheIngest 
   | CacheSigner
-  | CacheReactions;
+  | CacheReactions
+  | CacheChannels;
 
 async function saveToRedis<T extends CacheValue>(
   key: string,

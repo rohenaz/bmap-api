@@ -42,12 +42,26 @@ interface ReactionResponse {
   channel: string;
   page: number;
   limit: number;
+  count: number;
   results: any[];
 }
 
 type CacheReactions = {
   type: 'reactions';
   value: ReactionResponse;
+}
+
+interface ChannelInfo {
+  channel: string;
+  creator: string;
+  last_message: string;
+  last_message_time: number;
+  messages: number;
+}
+
+type CacheChannels = {
+  type: 'channels';
+  value: ChannelInfo[];
 }
 
 function sigmaIdentityToBapIdentity(result: SigmaIdentityResult): BapIdentity {
@@ -253,25 +267,46 @@ export function registerSocialRoutes(app: Elysia) {
   });
 
   app.get("/reactions", async ({ query }) => {
-    const channel = query.channel as string;
-    if (!channel) {
-      return new Response(JSON.stringify({ 
-        error: "Missing channel param",
-        details: "The channel parameter is required"
-      }), {
-        status: 400,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache'
-        }
-      });
-    }
-
-    const page = query.page ? parseInt(query.page as string, 10) : 1;
-    const limit = query.limit ? parseInt(query.limit as string, 10) : 100;
-    const skip = (page - 1) * limit;
-
     try {
+      const channel = query.channel as string;
+      if (!channel) {
+        return new Response(JSON.stringify({ 
+          error: "Missing 'channel' parameter",
+          details: "The channel parameter is required for fetching reactions"
+        }), {
+          status: 400,
+          headers: { 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
+          }
+        });
+      }
+
+      const page = query.page ? parseInt(query.page as string, 10) : 1;
+      const limit = query.limit ? parseInt(query.limit as string, 10) : 100;
+      
+      if (isNaN(page) || page < 1) {
+        return new Response(JSON.stringify({
+          error: "Invalid page parameter",
+          details: "Page must be a positive integer"
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      if (isNaN(limit) || limit < 1 || limit > 1000) {
+        return new Response(JSON.stringify({
+          error: "Invalid limit parameter",
+          details: "Limit must be between 1 and 1000"
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      const skip = (page - 1) * limit;
+
       const cacheKey = `reactions:${channel}:${page}:${limit}`;
       const cached = await readFromRedis<CacheReactions>(cacheKey);
 
@@ -293,17 +328,25 @@ export function registerSocialRoutes(app: Elysia) {
         "MAP.channel": channel
       };
 
-      const results = await db.collection("like")
+      const col = db.collection("like");
+      
+      // Get total count first
+      const count = await col.countDocuments(queryObj);
+      
+      // Then get paginated results
+      const results = await col
         .find(queryObj)
         .sort({ "blk.i": -1 })
         .skip(skip)
         .limit(limit)
+        .project({ _id: 0 })  // Exclude _id field
         .toArray();
 
       const response: ReactionResponse = { 
         channel, 
         page, 
-        limit, 
+        limit,
+        count,
         results 
       };
 
@@ -323,9 +366,98 @@ export function registerSocialRoutes(app: Elysia) {
       console.error('Error processing reactions request:', error);
       const message = error instanceof Error ? error.message : String(error);
 
+      // Log additional error details if available
+      if (error instanceof Error && error.stack) {
+        console.error('Error stack:', error.stack);
+      }
+
       return new Response(JSON.stringify({
         error: "Failed to fetch reactions",
-        details: message
+        details: message,
+        timestamp: new Date().toISOString()
+      }), {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache"
+        }
+      });
+    }
+  });
+
+  app.get("/channels", async () => {
+    try {
+      const cacheKey = 'channels';
+      const cached = await readFromRedis<CacheChannels>(cacheKey);
+
+      if (cached.type === 'channels') {
+        console.log('Cache hit for channels');
+        return new Response(JSON.stringify(cached.value), {
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "public, max-age=60"
+          }
+        });
+      }
+
+      console.log('Cache miss for channels');
+      const db = await getDbo();
+
+      const pipeline = [
+        {
+          $match: {
+            "MAP.channel": { $exists: true, $ne: "" }
+          }
+        },
+        {
+          $unwind: "$MAP"
+        },
+        {
+          $unwind: "$B"
+        },
+        {
+          $sort: { "blk.t": 1 }
+        },
+        {
+          $group: {
+            _id: "$MAP.channel",
+            channel: { $first: "$MAP.channel" },
+            creator: { $first: "$MAP.paymail" },
+            last_message: { $last: "$B.Data.utf8" },
+            last_message_time: { $last: "$blk.t" },
+            messages: { $sum: 1 }
+          }
+        },
+        {
+          $sort: { last_message_time: -1 }
+        },
+        {
+          $limit: 100
+        }
+      ];
+
+      const results = await db.collection("message").aggregate(pipeline).toArray() as ChannelInfo[];
+
+      // Cache for 60 seconds
+      await saveToRedis<CacheChannels>(cacheKey, {
+        type: 'channels',
+        value: results
+      });
+
+      return new Response(JSON.stringify(results), {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "public, max-age=60"
+        }
+      });
+    } catch (error: unknown) {
+      console.error('Error processing channels request:', error);
+      const message = error instanceof Error ? error.message : String(error);
+
+      return new Response(JSON.stringify({
+        error: "Failed to fetch channels",
+        details: message,
+        timestamp: new Date().toISOString()
       }), {
         status: 500,
         headers: {
