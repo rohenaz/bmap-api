@@ -15,7 +15,7 @@
 //       "valid": false
 //   }
 
-import type { BmapTx } from 'bmapjs/types/common'
+import type { BmapTx } from 'bmapjs'
 import _ from 'lodash'
 import { normalize } from './bmap.js'
 import { type CacheSigner, readFromRedis, saveToRedis } from './cache.js'

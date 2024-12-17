@@ -1,6 +1,6 @@
-import { BmapTx } from 'bmapjs/types/common'
-import { AIP } from 'bmapjs/types/protocols/aip'
-import { B } from 'bmapjs/types/protocols/b'
+import type { B, BmapTx } from 'bmapjs'
+import type { AIP } from 'bmapjs'
+// import type { B } from 'bmapjs/dist/src/protocols/b'
 
 export const normalize = (tx: BmapTx) => {
   // The go implementation has some weird data structures we want to match the js version
@@ -8,7 +8,7 @@ export const normalize = (tx: BmapTx) => {
     // multiple AIP outputs
 
     for (let i = 0; i < tx.AIP?.length; i++) {
-      let a = tx.AIP[i] as any
+      const a = tx.AIP[i] as any
 
       if (!a.address) {
         a.address = a.algorithm_signing_component

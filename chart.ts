@@ -16,181 +16,146 @@ export type ChartData = {
   height: number;
 }
 
-export const defaultConfig: ChartConfiguration = {
-  type: 'line',
-  data: {
-    labels: [],
-    datasets: [{
-      data: [],
-      fill: true,
-      borderColor: 'rgb(213, 99, 255, 0.5)',
-      borderWidth: 3,
-    }]
-  },
-  // For Chart.js v2 types:
-  options: {
-    legend: { display: false },
-    scales: {
-      xAxes: [{ display: false }],
-      yAxes: [{ display: false }]
-    }
-  }
-}
-
-export const generateChart = (
+const generateChart = (
   timeSeriesData: TimeSeriesData,
   globalChart: boolean
-): { chart: QuickChart, chartData: ChartData } => {
-  const width = 1280 / (globalChart ? 1 : 4);
-  const height = 300 / (globalChart ? 1 : 4);
+): QuickChart => {
+  const width = 1280 / (globalChart ? 1 : 4)
+  const height = 300 / (globalChart ? 1 : 4)
 
-  let chartConfig: ChartConfiguration;
+  const labels = timeSeriesData.map((d) => d._id)
+  const dataValues = timeSeriesData.map((d) => d.count)
 
-  if (!timeSeriesData || timeSeriesData.length === 0) {
-    chartConfig = defaultConfig;
-  } else {
-    chartConfig = {
-      type: 'line',
-      data: {
-        labels: timeSeriesData.map((d) => d._id),
-        datasets: [
-          {
-            data: timeSeriesData.map((d) => d.count),
-            fill: true,
-            borderColor: 'rgb(213, 99, 255, 0.5)',
-            borderWidth: 3,
-            pointBackgroundColor: 'rgba(255, 99, 255, 0.5)',
-            pointRadius: 3,
-            lineTension: 0.4,
-            backgroundColor: getGradientFillHelper('vertical', [
-              'rgba(255, 99, 255, 1)',
-              'rgba(255, 99, 255, 0)',
-            ]),
-          },
-        ],
+  const chartConfig: ChartConfiguration = {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          data: dataValues,
+          fill: true,
+          borderColor: 'rgba(213, 99, 255, 0.5)',
+          borderWidth: 3,
+          pointBackgroundColor: 'rgba(255, 99, 255, 0.5)',
+          pointRadius: 3,
+          tension: 0.4,
+          backgroundColor: getGradientFillHelper('vertical', [
+            'rgba(255, 99, 255, 1)',
+            'rgba(255, 99, 255, 0)',
+          ]),
+        },
+      ],
+    },
+    options: {
+      plugins: {
+        legend: {
+          display: false,
+        },
       },
-      options: globalChart
+      scales: globalChart
         ? {
-            legend: {
-              display: false,
+            x: {
+              title: { display: true, text: 'Block Height', color: '#333' },
+              grid: { color: '#111' },
+              ticks: { color: '#fff' },
             },
-            scales: {
-              // Chart.js v2 style scales
-              xAxes: [
-                {
-                  scaleLabel: {
-                    display: true,
-                    labelString: 'Block Height'
-                  },
-                  gridLines: {
-                    color: '#111111',
-                  },
-                  ticks: {
-                    fontColor: '#ffffff',
-                  },
-                }
-              ],
-              yAxes: [
-                {
-                  scaleLabel: {
-                    display: true,
-                    labelString: 'Count'
-                  },
-                  gridLines: {
-                    color: '#111111',
-                  },
-                  ticks: {
-                    fontColor: '#ffffff',
-                  },
-                }
-              ],
+            y: {
+              title: { display: true, text: 'Count', color: '#333' },
+              grid: { color: '#111' },
+              ticks: { color: '#fff' },
             },
           }
         : {
-            scales: {
-              display: false,
-              xAxes: [{ display: false }],
-              yAxes: [{ display: false }],
-            },
-            legend: {
-              display: false,
-            },
+            x: { display: false },
+            y: { display: false },
           },
-    }
+    },
   }
 
-  const qc = new QuickChart();
-  qc.setConfig(chartConfig);
-  qc.setBackgroundColor('transparent');
-  qc.setWidth(width);
-  qc.setHeight(height);
+  const qc = new QuickChart()
+  qc.setConfig(chartConfig)
+  qc.setBackgroundColor('transparent')
+  qc.setWidth(width)
+  qc.setHeight(height)
 
-  const chartData: ChartData = {
-    config: chartConfig,
-    width,
-    height
-  }
-
-  return { chart: qc, chartData };
+  return qc
 }
 
-export const generateTotalsChart = async (
+const generateTotalsChart = async (
   collectionName: string,
   startBlock: number,
   endBlock: number,
   blockRange = 10
-): Promise<{ chart: QuickChart, chartData: ChartData }> => {
+) => {
   const timeSeriesData = await getTimeSeriesData(
     collectionName,
     startBlock,
     endBlock,
     blockRange
-  );
-  return generateChart(timeSeriesData, false);
+  )
+  const chart = generateChart(timeSeriesData, false)
+  return {
+    chart,
+    chartData: {
+      config: (chart as any)._config,
+      width: 1280 / 4,
+      height: 300 / 4
+    }
+  }
 }
 
-export const generateCollectionChart = async (
-  collectionName: string,
+const generateCollectionChart = async (
+  collectionName: string | undefined,
   startBlock: number,
   endBlock: number,
   range: number
-): Promise<{ chart: QuickChart, chartData: ChartData }> => {
-  const dbo = await getDbo();
-  const allCollections = await dbo.listCollections().toArray();
+) => {
+  const dbo = await getDbo()
+  const allCollections = await dbo.listCollections().toArray()
   const allDataPromises = allCollections.map((c) =>
     getTimeSeriesData(c.name, startBlock, endBlock, range)
-  );
-  const allTimeSeriesData = await Promise.all(allDataPromises);
+  )
+  const allTimeSeriesData = await Promise.all(allDataPromises)
 
-  const globalData: Record<number, number> = {};
+  const globalData: Record<number, number> = {}
   for (const collectionData of allTimeSeriesData) {
     for (const { _id, count } of collectionData) {
-      globalData[_id] = (globalData[_id] || 0) + count;
+      globalData[_id] = (globalData[_id] || 0) + count
     }
   }
 
   const aggregatedData = Object.keys(globalData).map((blockHeight) => ({
     _id: Number(blockHeight),
     count: globalData[blockHeight],
-  }));
+  }))
 
-  return generateChart(aggregatedData, true);
+  const chart = generateChart(aggregatedData, true)
+  return {
+    chart,
+    chartData: {
+      config: (chart as any)._config,
+      width: 1280,
+      height: 300
+    }
+  }
 }
 
-export async function getTimeSeriesData(
+async function getTimeSeriesData(
   collectionName: string,
   startBlock: number,
   endBlock: number,
   blockRange = 10
 ): Promise<TimeSeriesData> {
   const dbo = await getDbo()
-
+  
   try {
+    // First check if collection exists and has any documents
     const count = await dbo.collection(collectionName).countDocuments({
       'blk.i': { $gte: startBlock, $lte: endBlock }
     });
 
     if (count === 0) {
+      console.log(`No data found for ${collectionName} between blocks ${startBlock}-${endBlock}`);
       return [];
     }
 
@@ -219,17 +184,10 @@ export async function getTimeSeriesData(
       {
         $sort: { _id: 1 },
       },
-      { $limit: 1000 }
     ]
 
-    const result = await dbo
-      .collection(collectionName)
-      .aggregate(pipeline, {
-        allowDiskUse: true,
-        maxTimeMS: 5000
-      })
-      .toArray();
-
+    const result = await dbo.collection(collectionName).aggregate(pipeline).toArray()
+    console.log(`Found ${result.length} data points for ${collectionName}`);
     return result as TimeSeriesData;
   } catch (error) {
     console.error(`Error getting time series data for ${collectionName}:`, error);
@@ -237,7 +195,7 @@ export async function getTimeSeriesData(
   }
 }
 
-const timeframeToBlocks = (period: string) => {
+function timeframeToBlocks(period: string) {
   switch (period) {
     case Timeframe.Day:
       return 144
@@ -254,7 +212,7 @@ const timeframeToBlocks = (period: string) => {
   }
 }
 
-export function getBlocksRange(
+function getBlocksRange(
   currentBlockHeight: number,
   timeframe: string
 ): [number, number] {
@@ -262,4 +220,12 @@ export function getBlocksRange(
   const startBlock = currentBlockHeight - blocks
   const endBlock = currentBlockHeight
   return [startBlock, endBlock]
+}
+
+export {
+  generateChart,
+  generateCollectionChart,
+  generateTotalsChart,
+  getBlocksRange,
+  getTimeSeriesData,
 }

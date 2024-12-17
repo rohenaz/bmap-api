@@ -1,6 +1,6 @@
 import redis from 'redis'
-import { BapIdentity } from './bap.js'
-import { TimeSeriesData } from './chart.js'
+import type { BapIdentity } from './bap.js'
+import type { TimeSeriesData } from './chart.js'
 import { getCurrentBlockHeight } from './db.js'
 import type { ChartData } from './chart.js'
 
@@ -85,7 +85,7 @@ async function readFromRedis<T extends CacheValue | CacheError>(
 }
 
 async function getBlockHeightFromCache(): Promise<number> {
-  let cachedValue = await readFromRedis<CacheBlockHeight>('currentBlockHeight')
+  const cachedValue = await readFromRedis<CacheBlockHeight>('currentBlockHeight')
   if (!cachedValue.value) {
     const currentBlockHeight = await getCurrentBlockHeight()
     const currentBlockHeightKey = `currentBlockHeight-${currentBlockHeight}`

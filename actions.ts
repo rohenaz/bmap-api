@@ -1,8 +1,8 @@
 import bmapjs from 'bmapjs'
-import { BmapTx, BobTx } from 'bmapjs/types/common'
+import type { BmapTx, BobTx } from 'bmapjs'
 import chalk from 'chalk'
 import _ from 'lodash'
-import { Db } from 'mongodb'
+import type { Db } from 'mongodb'
 import { getBAPIdByAddress } from './bap.js'
 import { saveToRedis } from './cache.js'
 import { getDbo } from './db.js'
@@ -16,13 +16,13 @@ export const saveTx = async (tx: BobTx) => {
   try {
     dbo = await getDbo()
   } catch (e) {
-    let txid = tx && tx.tx ? tx.tx.h : undefined
-    throw new Error('Failed to get dbo ' + txid + ' : ' + e)
+    let txid = tx?.tx ? tx.tx.h : undefined
+    throw new Error(`Failed to get dbo ${txid} : ${e}`)
   }
   try {
     t = await TransformTx(tx)
   } catch (e) {
-    throw new Error('Failed to transform tx ' + tx)
+    throw new Error(`Failed to transform tx ${tx}`)
   }
 
   // get BAP IDs for given social op
@@ -99,7 +99,7 @@ export const saveTx = async (tx: BobTx) => {
         (chalk.cyan('saved'), chalk.green(t.tx.h))
       )
 
-      throw new Error('Failed to insert tx ' + txId + ' : ' + e)
+      throw new Error(`Failed to insert tx ${txId} : ${e}`)
     }
   } else {
     throw new Error('Invalid tx')

@@ -1,5 +1,5 @@
-import { Transaction } from '@gorillapool/js-junglebus'
-import { BmapTx, BobTx } from 'bmapjs/types/common'
+import type { Transaction } from '@gorillapool/js-junglebus'
+import type { BmapTx, BobTx } from 'bmapjs'
 import { parse } from 'bpu-ts'
 import { saveTx } from './actions.js'
 import { resolveSigners } from './bap.js'
@@ -81,7 +81,7 @@ export async function processTransaction(
   // }]
 
   // TODO when new blocks come in look for signers and update cache
-  if (result.AIP && result.AIP.length) {
+  if (result?.AIP?.length > 0) {
     // Map over each AIP entry to handle asynchronously
     try {
       await resolveSigners([result as BmapTx])
