@@ -142,8 +142,15 @@ const start = async () => {
       pipeline[0].$match[`fullDocument.${k}`] = query.q.find[k];
     }
 
-    const target = collectionName === "$all" ? db : db.collection(collectionName);
-    const changeStream = target.watch(pipeline, { fullDocument: "updateLookup" });
+    let changeStream;
+    if (collectionName === "$all") {
+      // Watch the entire database
+      changeStream = db.watch(pipeline, { fullDocument: "updateLookup" });
+    } else {
+      // Watch a specific collection
+      const target = db.collection(collectionName);
+      changeStream = target.watch(pipeline, { fullDocument: "updateLookup" });
+    }
 
     return new ReadableStream({
       start(controller) {
@@ -152,8 +159,9 @@ const start = async () => {
         changeStream.on("change", (next: ChangeStreamDocument<BmapTx>) => {
           if (next.operationType === "insert") {
             console.log(chalk.blue("New insert event"), next.fullDocument.tx?.h);
+            const eventType = collectionName === "$all" ? next.ns.coll : collectionName;
             controller.enqueue(
-              `data: ${JSON.stringify({ type: collectionName, data: [next.fullDocument] })}\n\n`
+              `data: ${JSON.stringify({ type: eventType, data: [next.fullDocument] })}\n\n`
             );
           }
         });
