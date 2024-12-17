@@ -554,6 +554,44 @@ const start = async () => {
       chalk.green(`listening on ${host}:${port}!`),
     );
   });
+
+  app.get("/identities", async () => {
+    try {
+      const idCacheKey = "signer-*";
+      const keys = await client.keys(idCacheKey);
+      console.log("keys", keys);
+  
+      const identities = await Promise.all(
+        keys.map(async (k) => {
+          const cachedValue = await readFromRedis(k);
+          // Check if we got a valid CacheSigner value
+          if (cachedValue.type === 'signer' && cachedValue.value) {
+            return cachedValue.value;
+          }
+          return null;
+        })
+      );
+  
+      // Filter out null values (if any)
+      const filteredIdentities = identities.filter((id) => id !== null);
+  
+      return new Response(JSON.stringify(filteredIdentities), {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache",
+          "Access-Control-Allow-Origin": "*"
+        }
+      });
+    } catch (e) {
+      console.error("Failed to get identities", e);
+      return new Response(JSON.stringify({ error: String(e) }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+  });
 };
+
+
 
 start();
