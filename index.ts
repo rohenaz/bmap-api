@@ -7,17 +7,12 @@ import type { BmapTx } from "bmapjs";
 import { parse } from "bpu-ts";
 import chalk from "chalk";
 import dotenv from "dotenv";
-import { writeFileSync } from 'node:fs';
 import type { ChangeStreamDocument } from "mongodb";
-import { dirname } from "node:path";
-import QuickChart from "quickchart-js";
 import { fileURLToPath } from "node:url";
 import { type BapIdentity, getBAPIdByAddress, resolveSigners } from "./bap.js";
 import { registerSocialRoutes } from './social.js';
 import {
   type CacheCount,
-  type CacheChart,
-  type CacheTimeSeriesData,
   client,
   deleteFromCache,
   getBlockHeightFromCache,
@@ -25,14 +20,8 @@ import {
   saveToRedis,
 } from "./cache.js";
 import {
-  type TimeSeriesData,
-  generateChart,
-  generateCollectionChart,
-  generateTotalsChart,
   getBlocksRange,
   getTimeSeriesData,
-  // defaultConfig, // not required here, only used internally in chart
-  type ChartData
 } from "./chart.js";
 import { getCollectionCounts, getDbo, getState } from "./db.js";
 import "./p2p.js";
@@ -44,7 +33,6 @@ dotenv.config();
 
 const { allProtocols, TransformTx } = bmapjs;
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 // Focus on these Bitcoin schema collections for the dashboard
 const bitcoinSchemaCollections = ["follow", "unfollow", "unlike", "like", "message", "repost", "friend", "post", "ord"];
