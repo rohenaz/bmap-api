@@ -255,7 +255,7 @@ const start = async () => {
           await saveToRedis(timeSeriesKey, { type: "timeSeriesData", value: timeSeriesData });
         }
 
-        const chart = generateChart(timeSeriesData, false);
+        const { chart } = generateChart(timeSeriesData, false);
         const chartUrl = chart.getUrl();
         console.log(`Chart for ${collection}: ${chartUrl}`);
 
@@ -312,28 +312,33 @@ const start = async () => {
       console.log("Checking cache for chart:", chartKey);
 
       const stored = await readFromRedis(chartKey);
+      console.log("Cache result:", JSON.stringify(stored, null, 2));
 
       let chartData: ChartData;
 
       if (stored && stored.type === 'chart' && stored.value?.config) {
+        console.log("Using cached chart data:", JSON.stringify(stored.value, null, 2));
         chartData = stored.value;
       } else {
-        console.log("Fetching chart without cache", { collectionName });
-        const { chart, chartData: newChartData } = collectionName
+        console.log("Generating new chart for", { collectionName });
+        const result = collectionName
           ? await generateTotalsChart(collectionName, startBlock, endBlock, range)
           : await generateCollectionChart(undefined, startBlock, endBlock, range);
 
-        chartData = newChartData;
+        chartData = result.chartData;
+        console.log("New chart data before cache:", JSON.stringify(chartData, null, 2));
         await saveToRedis(chartKey, { type: "chart", value: chartData });
       }
 
+      console.log("Chart data before QuickChart creation:", JSON.stringify(chartData, null, 2));
       const chart = new QuickChart()
         .setConfig(chartData.config)
         .setBackgroundColor('transparent')
         .setWidth(chartData.width)
         .setHeight(chartData.height);
+
       const chartUrl = chart.getUrl();
-      console.log("htmx-chart generated URL:", chartUrl);
+      console.log("Generated chart URL:", chartUrl);
 
       return new Response(
         `<img src='${chartUrl}' alt='Transaction${collectionName ? `s for ${collectionName}` : " totals"}' class='mt-2 mb-2' width="1280" height="300" />`,
