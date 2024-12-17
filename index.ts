@@ -223,137 +223,50 @@ const start = async () => {
       }
 
       console.timeEnd("getCollectionCounts");
-      console.time("getBlockHeightFromCache");
-
-      const timeframe = (query.timeframe as string) || Timeframe.Day;
-      const currentBlockHeight = await getBlockHeightFromCache();
-      const [startBlock, endBlock] = getBlocksRange(currentBlockHeight, timeframe);
-
-      console.log("Block range:", startBlock, "-", endBlock);
-      console.timeEnd("getBlockHeightFromCache");
-
-      console.log("Bitcoin schema collections:", bitcoinSchemaCollections);
 
       let gridItemsHtml = "";
       for (const collection of bitcoinSchemaCollections) {
         const count = counts[collection] || 0;
+        const explorerUrl = `/query/${encodeURIComponent(collection)}`;
+        
         if (count === 0) {
-          // No data
-          gridItemsHtml += `<div class="p-4 bg-zinc-800 rounded shadow-md">
-            <div class="font-semibold mb-2">${collection}</div>
-            <div class="text-gray-400 text-sm">No data</div>
-          </div>`;
+          gridItemsHtml += `
+            <div class="chart-card">
+              <a href="${explorerUrl}" class="title hover:text-blue-400 transition-colors">${collection}</a>
+              <div class="text-gray-400 text-sm">No data</div>
+            </div>`;
           continue;
         }
 
-        const timeSeriesKey = `${collection}-${startBlock}-${endBlock}`;
-        const timeSeriesResult = await readFromRedis(timeSeriesKey);
-        let timeSeriesData: TimeSeriesData | undefined;
-
-        if (timeSeriesResult && timeSeriesResult.type === 'timeSeriesData') {
-          timeSeriesData = timeSeriesResult.value;
-        } else {
-          console.log("Fetching time series data for", collection);
-          timeSeriesData = await getTimeSeriesData(collection, startBlock, endBlock);
-          await saveToRedis(timeSeriesKey, { type: "timeSeriesData", value: timeSeriesData } as CacheTimeSeriesData);
-        }
-
-        const { chartBuffer } = generateChart(timeSeriesData, false);
-        const chartBase64 = chartBuffer.toString('base64');
-
-        gridItemsHtml += `<div class="p-4 bg-zinc-800 rounded shadow-md">
-          <div class="font-semibold mb-2">${collection}</div>
-          <img src="data:image/png;base64,${chartBase64}" class="mb-2" alt="Chart for ${collection}" width="300" />
-          <div class="text-sm text-gray-200">Count: ${count}</div>
-        </div>`;
+        gridItemsHtml += `
+          <div class="chart-card">
+            <a href="${explorerUrl}" class="title hover:text-blue-400 transition-colors">${collection}</a>
+            <div class="chart-wrapper">
+              <div class="small-chart-container">
+                <canvas id="chart-${collection}" 
+                       width="300" height="75"
+                       data-collection="${collection}"
+                       class="hover:opacity-80 transition-opacity"></canvas>
+              </div>
+            </div>
+            <div class="footer">Count: ${count}</div>
+          </div>`;
       }
 
-      const html = `<h3 class="mb-4">Bitcoin Schema Types</h3>
+      const html = `
+        <h3 class="mb-4">Bitcoin Schema Types</h3>
         <div class="grid grid-cols-4 gap-8 mb-8">
           ${gridItemsHtml}
         </div>`;
 
       console.timeEnd("Total Execution Time");
       return new Response(html, { headers: { 'Content-Type': 'text/html' } });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("An error occurred in htmx-collections:", error);
-      return new Response(`<div class="text-red-500">Error loading collections: ${error.message}</div>`, {
+      const message = error instanceof Error ? error.message : String(error);
+      return new Response(`<div class="text-red-500">Error loading collections: ${message}</div>`, {
         headers: { 'Content-Type': 'text/html' }
       });
-    }
-  });
-
-  app.get("/htmx-chart/:name?", async ({ params, query }) => {
-    console.log("Starting htmx-chart request");
-    try {
-      const timeframe = (query.timeframe as string) || Timeframe.Day;
-      const collectionName = params.name;
-      console.log("Chart request for:", { collectionName, timeframe });
-
-      const currentBlockHeight = await getBlockHeightFromCache();
-      const [startBlock, endBlock] = getBlocksRange(currentBlockHeight, timeframe);
-      console.log("Block range:", startBlock, "-", endBlock);
-
-      let range = 1;
-      switch (timeframe) {
-        case Timeframe.Day:
-          range = 1;
-          break;
-        case Timeframe.Week:
-          range = 7;
-          break;
-        case Timeframe.Month:
-          range = 30;
-          break;
-        case Timeframe.Year:
-          range = 365;
-          break;
-      }
-
-      const chartKey = `${collectionName}-${startBlock}-${endBlock}-${range}`;
-      console.log("Checking cache for chart:", chartKey);
-
-      const stored = await readFromRedis(chartKey);
-      console.log("Cache result:", JSON.stringify(stored, null, 2));
-
-      let chartBuffer: Buffer;
-
-      if (stored && stored.type === 'chart' && stored.value.chartBuffer) {
-        console.log("Using cached chart buffer");
-        chartBuffer = Buffer.from(stored.value.chartBuffer, 'base64');
-      } else {
-        console.log("Generating new chart for", { collectionName });
-        const result = collectionName
-          ? await generateTotalsChart(collectionName, startBlock, endBlock, range)
-          : await generateCollectionChart(undefined, startBlock, endBlock, range);
-
-        chartBuffer = result.chartBuffer;
-        console.log("New chart buffer generated");
-        await saveToRedis(chartKey, { 
-          type: "chart", 
-          value: { 
-            chartBuffer: chartBuffer.toString('base64'),
-            config: result.chartData.config
-          } 
-        } as CacheChart);
-      }
-
-      const chartBase64 = chartBuffer.toString('base64');
-      return new Response(
-        `<img src='data:image/png;base64,${chartBase64}' alt='Transaction${collectionName ? `s for ${collectionName}` : " totals"}' class='mt-2 mb-2' width="1280" height="300" />`,
-        {
-          headers: {
-            'Content-Type': 'text/html',
-            'Cache-Control': 'public, max-age=3600'
-          },
-        }
-      );
-    } catch (error: any) {
-      console.error("Error in htmx-chart:", error);
-      return new Response(
-        `<div class="text-red-500">Error generating chart: ${error.message}</div>`,
-        { headers: { 'Content-Type': 'text/html' } }
-      );
     }
   });
 
@@ -374,6 +287,93 @@ const start = async () => {
     return new Response(explorerTemplate("BMAP", code), {
       headers: { 'Content-Type': 'text/html' },
     });
+  });
+
+  app.get("/q/:collectionName/:base64Query", async ({ params }) => {
+    console.log("Starting query execution");
+    const { collectionName, base64Query } = params;
+    
+    try {
+      // Decode and parse query
+      const code = Buffer.from(base64Query, "base64").toString();
+      console.log("Decoded query:", code);
+      
+      let q;
+      try {
+        q = JSON.parse(code);
+      } catch (e) {
+        console.error("JSON parse error:", e);
+        return new Response(JSON.stringify({ error: "Invalid JSON query" }), {
+          status: 400,
+          headers: { 
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache"
+          }
+        });
+      }
+
+      // Validate query structure
+      if (!q.q || typeof q.q !== 'object') {
+        return new Response(JSON.stringify({ error: "Invalid query structure. Expected {q: {find: {...}}}" }), {
+          status: 400,
+          headers: { 
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache"
+          }
+        });
+      }
+
+      const db = await getDbo();
+      
+      // Extract query parameters with defaults
+      const query = q.q.find || {};
+      const limit = q.q.limit || 100;
+      const sort = q.q.sort || { "blk.i": -1 };
+      const skip = q.q.skip || 0;
+      const projection = q.q.project || null;
+
+      console.log("Executing query:", {
+        collection: collectionName,
+        query,
+        limit,
+        sort,
+        skip,
+        projection
+      });
+
+      // Execute query with all parameters
+      const results = await db.collection(collectionName)
+        .find(query)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .project(projection)
+        .toArray();
+
+      console.log(`Query returned ${results.length} results`);
+
+      // Return results with CORS and caching headers
+      return new Response(JSON.stringify({ [collectionName]: results }), {
+        headers: { 
+          "Content-Type": "application/json",
+          "Cache-Control": "public, max-age=60",
+          "Access-Control-Allow-Origin": "*"
+        }
+      });
+    } catch (error: unknown) {
+      console.error("Query execution error:", error);
+      const message = error instanceof Error ? error.message : String(error);
+      return new Response(JSON.stringify({ 
+        error: message,
+        details: "An error occurred while executing the query"
+      }), {
+        status: 500,
+        headers: { 
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache"
+        }
+      });
+    }
   });
 
   app.post("/ingest", async ({ body }) => {
@@ -454,13 +454,94 @@ const start = async () => {
             ? `Key ${format} not found in tx`
             : `<pre>${JSON.stringify(decoded, undefined, 2)}</pre>`;
       }
-    } catch (e: any) {
-      throw new Error(`Failed to process tx: ${e}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to process tx: ${message}`);
     }
   });
 
   app.get("/", () => {
     return new Response(Bun.file('./public/index.html'));
+  });
+
+  app.get("/chart-data/:name?", async ({ params, query }) => {
+    console.log("Starting chart-data request");
+    try {
+      const timeframe = (query.timeframe as string) || Timeframe.Day;
+      const collectionName = params.name;
+      console.log("Chart data request for:", { collectionName, timeframe });
+
+      const currentBlockHeight = await getBlockHeightFromCache();
+      const [startBlock, endBlock] = getBlocksRange(currentBlockHeight, timeframe);
+      console.log("Block range:", startBlock, "-", endBlock);
+
+      let range = 1;
+      switch (timeframe) {
+        case Timeframe.Day:
+          range = 1;
+          break;
+        case Timeframe.Week:
+          range = 7;
+          break;
+        case Timeframe.Month:
+          range = 30;
+          break;
+        case Timeframe.Year:
+          range = 365;
+          break;
+      }
+
+      if (!collectionName) {
+        const dbo = await getDbo();
+        const allCollections = await dbo.listCollections().toArray();
+        const allDataPromises = allCollections.map((c) =>
+          getTimeSeriesData(c.name, startBlock, endBlock, range)
+        );
+        const allTimeSeriesData = await Promise.all(allDataPromises);
+
+        const globalData: Record<number, number> = {};
+        for (const collectionData of allTimeSeriesData) {
+          for (const { _id, count } of collectionData) {
+            globalData[_id] = (globalData[_id] || 0) + count;
+          }
+        }
+
+        const aggregatedData = Object.keys(globalData).map((blockHeight) => ({
+          _id: Number(blockHeight),
+          count: globalData[blockHeight],
+        }));
+
+        return new Response(JSON.stringify({
+          labels: aggregatedData.map(d => d._id),
+          values: aggregatedData.map(d => d.count),
+          range: [startBlock, endBlock]
+        }), {
+          headers: { 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=3600'
+          }
+        });
+      }
+
+      const timeSeriesData = await getTimeSeriesData(collectionName, startBlock, endBlock, range);
+      return new Response(JSON.stringify({
+        labels: timeSeriesData.map(d => d._id),
+        values: timeSeriesData.map(d => d.count),
+        range: [startBlock, endBlock]
+      }), {
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=3600'
+        }
+      });
+    } catch (error: unknown) {
+      console.error("Error in chart-data:", error);
+      const message = error instanceof Error ? error.message : String(error);
+      return new Response(JSON.stringify({ error: message }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
   });
 
   app.listen({ port, hostname: host }, () => {

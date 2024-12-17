@@ -5,75 +5,122 @@
     <title>BMAP API</title>
 
     <link rel="stylesheet" href="style.css" />
+    
+    <!-- Load libraries first -->
     <script src="https://cdn.tailwindcss.com"></script>
-
     <script src="https://unpkg.com/htmx.org@1.9.2"></script>
     <script src="https://unpkg.com/htmx.org/dist/ext/debug.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <script type="application/javascript">
-      let timeframe = '24h' // Default value
+    <style>
+      .main-chart-container {
+        width: 1280px;
+        height: 300px;
+        margin: 0 auto;
+        padding: 0;
+        overflow: hidden;
+      }
+      .small-chart-container {
+        width: 300px;
+        height: 75px;
+        padding: 0;
+        overflow: hidden;
+      }
+      .chart-card {
+        width: 300px;
+        height: 150px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        background-color: rgb(39 39 42); /* zinc-800 */
+        border-radius: 0.375rem;
+        box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        padding: 0.75rem;
+      }
+      .chart-card .title {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .chart-card .chart-wrapper {
+        flex-grow: 1;
+        position: relative;
+        margin: -0.25rem 0;
+      }
+      .chart-card .footer {
+        font-size: 0.875rem;
+        color: #e5e7eb;
+        margin-top: 0.25rem;
+      }
+    </style>
 
+    <!-- Define global state and functions -->
+    <script>
+      // Global state
+      window.chartState = {
+        timeframe: '24h',
+        updateInterval: null
+      };
+      window.chartInstances = new Map();
+
+      // Global functions
       function getTimeframe() {
-        return timeframe
+        return window.chartState.timeframe;
       }
 
-      document.addEventListener('DOMContentLoaded', (event) => {
-        document.querySelectorAll('.timeframe-button').forEach((button) => {
-          button.addEventListener('click', function () {
-            timeframe = button.getAttribute('data-timeframe')
-            let updateEvent = new Event('update-charts')
-            console.log('update-charts', updateEvent)
-            document.dispatchEvent(updateEvent)
-          })
-        })
-      })
+      async function updateChartData(chartId, endpoint) {
+        try {
+          const response = await fetch(endpoint);
+          const data = await response.json();
+          
+          if (data.error) {
+            console.error('Error fetching chart data:', data.error);
+            return;
+          }
 
-      // Listen to the 'update-charts' event
-      document.addEventListener('update-charts', function () {
-        console.log('Trigger update charts event')
-        // Trigger HTMX AJAX request for the top chart
-        document
-          .querySelector('.chart-container')
-          .dispatchEvent(new Event('htmx:trigger'))
-        // Trigger HTMX AJAX request for collections
-        document
-          .querySelector('[hx-get="/htmx-collections"]')
-          .dispatchEvent(new Event('htmx:trigger'))
-      })
+          const chart = window.chartInstances.get(chartId);
+          if (chart && chart.data && chart.data.datasets) {
+            chart.data.labels = data.labels;
+            chart.data.datasets[0].data = data.values;
+            if (data.range && chart.options?.scales?.x) {
+              chart.options.scales.x.min = data.range[0];
+              chart.options.scales.x.max = data.range[1];
+            }
+            chart.update('none');
+          }
+        } catch (error) {
+          console.error('Error updating chart data:', error);
+        }
+      }
+
+      function startAutoUpdate(chartId, endpoint) {
+        // Clear any existing interval
+        if (window.chartState.updateInterval) {
+          clearInterval(window.chartState.updateInterval);
+        }
+        
+        // Set new interval
+        window.chartState.updateInterval = setInterval(() => {
+          updateChartData(chartId, endpoint);
+        }, 30000);
+      }
     </script>
   </head>
   <body class="dark bg-[#121212] text-white">
     <header class="bg-zinc-900">
-      <div
-        class="text-4xl bg-black bg-opacity-50 font-semibold mb-4 flex items-center font-semibold w-full px-2"
-      >
-        <div
-          class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex items-center"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="0.9em"
-            viewBox="0 0 512 512"
-            class="inline-block align-text-bottom mr-2"
-          >
-            <path
-              fill="#7387f5"
-              d="M64 416L168.6 180.7c15.3-34.4 40.3-63.5 72-83.7l146.9-94c3-1.9 6.5-2.9 10-2.9C407.7 0 416 8.3 416 18.6v1.6c0 2.6-.5 5.1-1.4 7.5L354.8 176.9c-1.9 4.7-2.8 9.7-2.8 14.7 0 5.5 1.2 11 3.4 16.1L448 416H240.9l11.8-35.4 40.4-13.5c6.5-2.2 10.9-8.3 10.9-15.2s-4.4-13-10.9-15.2l-40.4-13.5-13.5-40.4C237 276.4 230.9 272 224 272s-13 4.4-15.2 10.9l-13.5 40.4-40.4 13.5C148.4 339 144 345.1 144 352s4.4 13 10.9 15.2l40.4 13.5L207.1 416H64zM279.6 141.5c-1.1-3.3-4.1-5.5-7.6-5.5s-6.5 2.2-7.6 5.5l-6.7 20.2-20.2 6.7c-3.3 1.1-5.5 4.1-5.5 7.6s2.2 6.5 5.5 7.6l20.2 6.7 6.7 20.2c1.1 3.3 4.1 5.5 7.6 5.5s6.5-2.2 7.6-5.5l6.7-20.2 20.2-6.7c3.3-1.1 5.5-4.1 5.5-7.6s-2.2-6.5-5.5-7.6l-20.2-6.7-6.7-20.2zM32 448H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32z"
-            />
+      <div class="text-4xl bg-black bg-opacity-50 font-semibold mb-4 flex items-center font-semibold w-full px-2">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" height="0.9em" viewBox="0 0 512 512" class="inline-block align-text-bottom mr-2">
+            <path fill="#7387f5" d="M64 416L168.6 180.7c15.3-34.4 40.3-63.5 72-83.7l146.9-94c3-1.9 6.5-2.9 10-2.9C407.7 0 416 8.3 416 18.6v1.6c0 2.6-.5 5.1-1.4 7.5L354.8 176.9c-1.9 4.7-2.8 9.7-2.8 14.7 0 5.5 1.2 11 3.4 16.1L448 416H240.9l11.8-35.4 40.4-13.5c6.5-2.2 10.9-8.3 10.9-15.2s-4.4-13-10.9-15.2l-40.4-13.5-13.5-40.4C237 276.4 230.9 272 224 272s-13 4.4-15.2 10.9l-13.5 40.4-40.4 13.5C148.4 339 144 345.1 144 352s4.4 13 10.9 15.2l40.4 13.5L207.1 416H64zM279.6 141.5c-1.1-3.3-4.1-5.5-7.6-5.5s-6.5 2.2-7.6 5.5l-6.7 20.2-20.2 6.7c-3.3 1.1-5.5 4.1-5.5 7.6s2.2 6.5 5.5 7.6l20.2 6.7 6.7 20.2c1.1 3.3 4.1 5.5 7.6 5.5s6.5-2.2 7.6-5.5l6.7-20.2 20.2-6.7c3.3-1.1 5.5-4.1 5.5-7.6s-2.2-6.5-5.5-7.6l-20.2-6.7-6.7-20.2zM32 448H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32z"/>
           </svg>
           BMAP API
         </div>
       </div>
 
-      <div
-        hx-get="/htmx-chart"
-        hx-trigger="load, htmx:trigger"
-        hx-vals="js:{timeframe: getTimeframe()}"
-        hx-ext="debug"
-        class="chart-container flex justify-center py-10 max-w-7xl mx-auto"
-      >
-        <!-- Chart - Replaced by HTMX -->
-        <svg width="1280" height="300"></svg>
+      <div class="main-chart-container">
+        <canvas id="main-chart" width="1280" height="300"></canvas>
       </div>
     </header>
     <main class="container mx-auto max-w-7xl py-12 px-8">
@@ -81,65 +128,271 @@
         <div hx-get="htmx-state" hx-trigger="load"></div>
         <div>
           <button
-            hx-get="/htmx-chart"
-            hx-trigger="click"
-            hx-vals='{"timeframe": "24h"}'
-            hx-target=".chart-container"
             class="timeframe-button"
             data-timeframe="24h"
-          >
-            24h
-          </button>
+          >24h</button>
           <button
-            hx-get="/htmx-chart"
-            hx-trigger="click"
-            hx-vals='{"timeframe": "week"}'
-            hx-target=".chart-container"
             class="timeframe-button"
             data-timeframe="week"
-          >
-            Week
-          </button>
+          >Week</button>
           <button
-            hx-get="/htmx-chart"
-            hx-trigger="click"
-            hx-vals='{"timeframe": "month"}'
-            hx-target=".chart-container"
             class="timeframe-button"
             data-timeframe="month"
-          >
-            Month
-          </button>
+          >Month</button>
           <button
-            hx-get="/htmx-chart"
-            hx-trigger="click"
-            hx-vals='{"timeframe": "year"}'
-            hx-target=".chart-container"
             class="timeframe-button"
             data-timeframe="year"
-          >
-            Year
-          </button>
+          >Year</button>
           <button
-            hx-get="/htmx-chart"
-            hx-trigger="click"
-            hx-vals='{"timeframe": "all"}'
-            hx-target=".chart-container"
             class="timeframe-button"
             data-timeframe="all"
-          >
-            All
-          </button>
+          >All</button>
         </div>
       </div>
       <div
         hx-get="/htmx-collections"
-        hx-trigger="load, htmx:trigger"
-        hx-ext="debug"
-        class="my-2"
+        hx-trigger="load"
+        class="my-2 collections-container"
       >
         <!-- Initially empty - replaced by HTMX with skeleton list of collections -->
       </div>
     </main>
+
+    <!-- Scripts at the bottom to ensure DOM is loaded -->
+    <script>
+      const defaultChartConfig = {
+        type: 'line',
+        options: {
+          responsive: false,
+          maintainAspectRatio: false,
+          animation: false,
+          layout: {
+            padding: 0
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              enabled: true,
+              mode: 'index',
+              intersect: false,
+              backgroundColor: 'rgba(0,0,0,0.8)',
+              titleFont: { size: 14 },
+              bodyFont: { size: 13 },
+              padding: 10,
+              displayColors: false,
+              callbacks: {
+                title: (items) => items[0] ? `Block Height: ${items[0].label}` : '',
+                label: (item) => `Count: ${item.raw}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'linear',
+              bounds: 'data',
+              offset: false,
+              display: true,
+              grid: { display: false },
+              ticks: { display: false }
+            },
+            y: {
+              type: 'linear',
+              beginAtZero: true,
+              bounds: 'data',
+              offset: false,
+              display: true,
+              grid: { display: false },
+              ticks: { display: false }
+            }
+          }
+        }
+      };
+
+      const mainChartConfig = {
+        ...defaultChartConfig,
+        options: {
+          ...defaultChartConfig.options,
+          scales: {
+            x: {
+              type: 'linear',
+              bounds: 'data',
+              offset: false,
+              title: { 
+                display: true, 
+                text: 'Block Height', 
+                color: '#fff',
+                font: { size: 14 }
+              },
+              grid: { color: '#333' },
+              ticks: { 
+                color: '#fff',
+                font: { size: 14 },
+                callback: (value) => value.toString(),
+                maxTicksLimit: 10,
+                autoSkip: true
+              }
+            },
+            y: {
+              type: 'linear',
+              beginAtZero: true,
+              bounds: 'data',
+              offset: false,
+              title: { 
+                display: true, 
+                text: 'Count', 
+                color: '#fff',
+                font: { size: 14 }
+              },
+              grid: { color: '#333' },
+              ticks: { 
+                color: '#fff',
+                font: { size: 14 },
+                callback: (value) => value.toString()
+              }
+            }
+          }
+        }
+      };
+
+      // Chart initialization functions
+      function initializeCharts() {
+        const canvases = document.querySelectorAll('canvas[data-collection]');
+        canvases.forEach(initializeChart);
+      }
+
+      async function initializeChart(canvas) {
+        if (!canvas || !canvas.dataset) return;
+
+        try {
+          const collection = canvas.dataset.collection;
+          if (!collection) return;
+
+          const chartId = `chart-${collection}`;
+          if (window.chartInstances.get(chartId)) {
+            return;
+          }
+
+          const response = await fetch(`/chart-data/${collection}`);
+          const data = await response.json();
+          
+          if (data.error) {
+            console.error('Error fetching chart data:', data.error);
+            return;
+          }
+          
+          const config = {
+            ...defaultChartConfig,
+            data: {
+              labels: data.labels,
+              datasets: [{
+                label: 'Count',
+                data: data.values,
+                fill: true,
+                borderColor: 'rgba(213,99,255,0.5)',
+                backgroundColor: 'rgba(255,99,255,0.5)',
+                borderWidth: 3,
+                pointBackgroundColor: 'rgba(255,99,255,0.5)',
+                pointRadius: 3,
+                tension: 0.4
+              }]
+            }
+          };
+
+          const chart = new Chart(canvas, config);
+          window.chartInstances.set(chartId, chart);
+          startAutoUpdate(chartId, `/chart-data/${collection}`);
+        } catch (error) {
+          console.error('Error initializing chart:', error);
+        }
+      }
+
+      async function initializeMainChart() {
+        const canvas = document.getElementById('main-chart');
+        if (!canvas) return;
+
+        try {
+          const timeframe = window.chartState.timeframe;
+          const endpoint = `/chart-data?timeframe=${timeframe}`;
+
+          const existingChart = window.chartInstances.get('main-chart');
+          if (existingChart) {
+            await updateChartData('main-chart', endpoint);
+            return;
+          }
+
+          const response = await fetch(endpoint);
+          const data = await response.json();
+          
+          if (data.error) {
+            console.error('Error fetching chart data:', data.error);
+            return;
+          }
+
+          const config = {
+            ...mainChartConfig,
+            data: {
+              labels: data.labels,
+              datasets: [{
+                label: 'Count',
+                data: data.values,
+                fill: true,
+                borderColor: 'rgba(213,99,255,0.5)',
+                backgroundColor: 'rgba(255,99,255,0.5)',
+                borderWidth: 3,
+                pointBackgroundColor: 'rgba(255,99,255,0.5)',
+                pointRadius: 3,
+                tension: 0.4
+              }]
+            }
+          };
+
+          if (data.range) {
+            config.options.scales.x.min = data.range[0];
+            config.options.scales.x.max = data.range[1];
+          }
+
+          const chart = new Chart(canvas, config);
+          window.chartInstances.set('main-chart', chart);
+          startAutoUpdate('main-chart', endpoint);
+        } catch (error) {
+          console.error('Error initializing main chart:', error);
+        }
+      }
+
+      // Wait for DOM to be ready
+      document.addEventListener('DOMContentLoaded', () => {
+        // Initialize main chart
+        initializeMainChart();
+
+        // Setup timeframe button listeners
+        document.querySelectorAll('.timeframe-button').forEach((button) => {
+          button.addEventListener('click', function() {
+            const newTimeframe = this.getAttribute('data-timeframe');
+            if (newTimeframe) {
+              window.chartState.timeframe = newTimeframe;
+              updateChartData('main-chart', `/chart-data?timeframe=${newTimeframe}`);
+            }
+          });
+        });
+
+        // Initialize charts after HTMX swaps
+        document.body.addEventListener('htmx:afterSwap', (event) => {
+          if (!event.target || !event.target.classList) return;
+          const target = event.target;
+
+          if (target.classList.contains('collections-container')) {
+            // Only initialize charts that don't exist yet
+            const canvases = target.querySelectorAll('canvas[data-collection]');
+            canvases.forEach(canvas => {
+              if (!canvas.dataset) return;
+              const collection = canvas.dataset.collection;
+              if (collection && !window.chartInstances.has(`chart-${collection}`)) {
+                initializeChart(canvas);
+              }
+            });
+          }
+        });
+      });
+    </script>
   </body>
 </html>

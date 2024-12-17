@@ -75,6 +75,20 @@ const generateChart = (
         legend: {
           display: false,
         },
+        tooltip: {
+          enabled: true,
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          titleFont: { size: 14 },
+          bodyFont: { size: 13 },
+          padding: 10,
+          displayColors: false,
+          callbacks: {
+            title: (items) => `Block Height: ${items[0].label}`,
+            label: (item) => `Count: ${item.raw}`
+          }
+        }
       },
       scales: globalChart
         ? {
@@ -82,10 +96,16 @@ const generateChart = (
               type: 'linear',
               min: minBlock,
               max: maxBlock,
-              title: { display: true, text: 'Block Height', color: '#fff' },
+              title: { 
+                display: true, 
+                text: 'Block Height', 
+                color: '#fff',
+                font: { size: 14 }
+              },
               grid: { color: '#333' },
               ticks: { 
                 color: '#fff',
+                font: { size: 14 },
                 callback: (value) => value.toString(),
                 maxTicksLimit: 10,
                 autoSkip: true
@@ -93,10 +113,16 @@ const generateChart = (
             },
             y: {
               type: 'linear',
-              title: { display: true, text: 'Count', color: '#fff' },
+              title: { 
+                display: true, 
+                text: 'Count', 
+                color: '#fff',
+                font: { size: 14 }
+              },
               grid: { color: '#333' },
               ticks: { 
                 color: '#fff',
+                font: { size: 14 },
                 callback: (value) => value.toString()
               },
             },
