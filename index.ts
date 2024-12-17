@@ -13,6 +13,7 @@ import { dirname } from "node:path";
 import QuickChart from "quickchart-js";
 import { fileURLToPath } from "node:url";
 import { type BapIdentity, getBAPIdByAddress, resolveSigners } from "./bap.js";
+import { registerSocialRoutes } from './social.js';
 import {
   type CacheCount,
   type CacheChart,
@@ -123,6 +124,9 @@ const start = async () => {
 
   const port = Number(process.env.PORT) || 3055;
   const host = process.env.HOST || "127.0.0.1";
+
+  // Register social routes
+  registerSocialRoutes(app);
 
   app.get("/s/:collectionName?/:base64Query", async ({ params, set }) => {
     const { collectionName, base64Query: b64 } = params;
