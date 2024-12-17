@@ -37,6 +37,7 @@
     "dev": "bun run index.ts",
     "start": "bun run build/index.js",
     "prod": "bun run build && bun run start",
-    "flush-cache": "redis-cli -u $REDIS_PRIVATE_URL FLUSHALL"
+    "flush-cache": "redis-cli -u $REDIS_PRIVATE_URL FLUSHALL",
+    "test-redis": "bun run scripts/test-redis.ts"
   }
 }

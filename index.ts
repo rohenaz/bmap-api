@@ -96,7 +96,8 @@ const app = new Elysia()
   .use(cors({
     origin: process.env.CORS_ORIGIN || '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    credentials: true
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
   }))
   .use(staticPlugin({ assets: './public', prefix: '/' }))
   .onError(({ error }) => {
@@ -126,7 +127,7 @@ const start = async () => {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       "X-Accel-Buffering": "no",
-      Connection: "keep-alive",
+      Connection: "keep-alive"
     };
 
     const json = Buffer.from(b64, "base64").toString();
@@ -256,13 +257,16 @@ const start = async () => {
         </div>`;
 
       console.timeEnd("Total Execution Time");
-      return new Response(html, { headers: { 'Content-Type': 'text/html' } });
+      return new Response(html, { 
+        headers: { 'Content-Type': 'text/html' }
+      });
     } catch (error: unknown) {
       console.error("An error occurred in htmx-collections:", error);
       const message = error instanceof Error ? error.message : String(error);
-      return new Response(`<div class="text-red-500">Error loading collections: ${message}</div>`, {
-        headers: { 'Content-Type': 'text/html' }
-      });
+      return new Response(
+        `<div class="text-red-500">Error loading collections: ${message}</div>`, 
+        { headers: { 'Content-Type': 'text/html' } }
+      );
     }
   });
 
@@ -272,7 +276,7 @@ const start = async () => {
     const code = JSON.stringify(q, null, 2);
 
     return new Response(explorerTemplate("BMAP", code), {
-      headers: { 'Content-Type': 'text/html' },
+      headers: { 'Content-Type': 'text/html' }
     });
   });
 
@@ -281,7 +285,7 @@ const start = async () => {
     const code = Buffer.from(b64, "base64").toString();
 
     return new Response(explorerTemplate("BMAP", code), {
-      headers: { 'Content-Type': 'text/html' },
+      headers: { 'Content-Type': 'text/html' }
     });
   });
 
@@ -443,8 +447,8 @@ const start = async () => {
           return new Response(dataBuf, {
             headers: {
               "Content-Type": contentType,
-              "Content-Length": String(dataBuf.length),
-            },
+              "Content-Length": String(dataBuf.length)
+            }
           });
         }
         throw new Error("No data found");
@@ -554,44 +558,85 @@ const start = async () => {
     }
   });
 
-  app.listen({ port, hostname: host }, () => {
-    console.log(
-      chalk.magenta("BMAP API"),
-      chalk.green(`listening on ${host}:${port}!`),
-    );
-  });
+
 
   app.get("/identities", async () => {
     try {
+      // First, check if Redis is connected
+      if (!client.isReady) {
+        console.error("Redis client is not ready");
+        return new Response(JSON.stringify({ 
+          error: "Redis connection not ready",
+          details: "The cache service is currently unavailable"
+        }), {
+          status: 503,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      // Get all keys matching the pattern
       const idCacheKey = "signer-*";
+      console.log("Searching for Redis keys with pattern:", idCacheKey);
       const keys = await client.keys(idCacheKey);
-      console.log("keys", keys);
-  
+      console.log("Found Redis keys:", keys);
+
+      if (!keys.length) {
+        console.log("No identity keys found in Redis");
+        return new Response(JSON.stringify({ 
+          data: [],
+          message: "No cached identities found" 
+        }), {
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache"
+          }
+        });
+      }
+
+      // Fetch all values
       const identities = await Promise.all(
         keys.map(async (k) => {
+          console.log("Fetching key:", k);
           const cachedValue = await readFromRedis(k);
-          if (cachedValue.type === 'signer' && cachedValue.value) {
+          console.log("Cached value for", k, ":", cachedValue);
+          
+          if (cachedValue && cachedValue.type === 'signer' && cachedValue.value) {
             return cachedValue.value;
           }
+          console.log("Invalid or missing value for key:", k);
           return null;
         })
       );
-  
+
       const filteredIdentities = identities.filter((id) => id !== null);
-  
-      return new Response(JSON.stringify(filteredIdentities), {
+      console.log("Filtered identities count:", filteredIdentities.length);
+
+      return new Response(JSON.stringify({
+        data: filteredIdentities,
+        count: filteredIdentities.length,
+        totalKeys: keys.length
+      }), {
         headers: {
           "Content-Type": "application/json",
           "Cache-Control": "no-cache"
         }
       });
     } catch (e) {
-      console.error("Failed to get identities", e);
-      return new Response(JSON.stringify({ error: String(e) }), {
+      console.error("Failed to get identities:", e);
+      return new Response(JSON.stringify({ 
+        error: String(e),
+        details: "Failed to retrieve identities from cache"
+      }), {
         status: 500,
         headers: { "Content-Type": "application/json" }
       });
     }
+  });
+  app.listen({ port, hostname: host }, () => {
+    console.log(
+      chalk.magenta("BMAP API"),
+      chalk.green(`listening on ${host}:${port}!`),
+    );
   });
 };
 
