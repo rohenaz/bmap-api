@@ -1,9 +1,9 @@
 import type { Elysia } from 'elysia';
 import { getDbo } from './db.js';
-import { readFromRedis, saveToRedis } from './cache.js';
+import { readFromRedis, saveToRedis, client } from './cache.js';
 import { getBAPIdByAddress } from './bap.js';
 import type { BapIdentity } from './bap.js';
-import type { CacheSigner, CacheValue } from './cache.js';
+import type { CacheSigner } from './cache.js';
 
 interface SigmaIdentityAPIResponse {
   status: string;
@@ -100,6 +100,29 @@ interface Message {
 type CacheMessages = {
   type: 'messages';
   value: MessageResponse;
+}
+
+interface LikeRequest {
+  txids: string[];
+}
+
+interface LikeInfo {
+  txid: string;
+  likes: any[];  // Will be replaced with proper type once we know the structure
+  total: number;
+  signers: BapIdentity[];
+}
+
+interface LikeResponse {
+  txid: string;
+  likes: any[];  // Will be replaced with proper type once we know the structure
+  total: number;
+  signers: BapIdentity[];
+}
+
+type CacheLikes = {
+  type: 'likes';
+  value: LikeResponse;
 }
 
 function sigmaIdentityToBapIdentity(result: SigmaIdentityResult): BapIdentity {
@@ -199,11 +222,10 @@ async function processRelationships(bapId: string, docs: any[], ownedAddresses: 
 
     if (ownedAddresses.has(address)) {
       return bapId;
-    } else {
-      const otherIdentity = await getBAPIdByAddress(address);
-      if (!otherIdentity) return null;
-      return otherIdentity.idKey;
     }
+    const otherIdentity = await getBAPIdByAddress(address);
+    if (!otherIdentity) return null;
+    return otherIdentity.idKey;
   }
 
   const requestors = await Promise.all(docs.map(doc => getRequestorBapId(doc)));
@@ -308,12 +330,12 @@ export function registerSocialRoutes(app: Elysia) {
     try {
       const channel = query.channel;
       if (!channel) {
-        return new Response(JSON.stringify({ 
+        return new Response(JSON.stringify({
           error: "Missing 'channel' parameter",
           details: "The channel parameter is required for fetching reactions"
         }), {
           status: 400,
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'Cache-Control': 'no-cache'
           }
@@ -322,7 +344,7 @@ export function registerSocialRoutes(app: Elysia) {
 
       const page = query.page ? Number.parseInt(query.page as string, 10) : 1;
       const limit = query.limit ? Number.parseInt(query.limit as string, 10) : 100;
-      
+
       if (Number.isNaN(page) || page < 1) {
         return new Response(JSON.stringify({
           error: "Invalid page parameter",
@@ -360,17 +382,17 @@ export function registerSocialRoutes(app: Elysia) {
 
       console.log('Cache miss for reactions:', cacheKey);
       const db = await getDbo();
-      
+
       const queryObj = {
         "MAP.type": "like",
         "MAP.channel": channel
       };
 
       const col = db.collection("like");
-      
+
       // Get total count first
       const count = await col.countDocuments(queryObj);
-      
+
       // Then get paginated results
       const results = await col
         .find(queryObj)
@@ -380,12 +402,12 @@ export function registerSocialRoutes(app: Elysia) {
         .project({ _id: 0 })  // Exclude _id field
         .toArray();
 
-      const response: ReactionResponse = { 
-        channel, 
-        page, 
+      const response: ReactionResponse = {
+        channel,
+        page,
         limit,
         count,
-        results 
+        results
       };
 
       // Cache for 60 seconds
@@ -426,7 +448,7 @@ export function registerSocialRoutes(app: Elysia) {
     try {
       const cacheKey = 'channels';
       const cached = await readFromRedis<CacheChannels>(cacheKey);
-  
+
       if (cached?.type === 'channels') {
         console.log('Cache hit for channels');
         return new Response(JSON.stringify({ channels: cached.value }), {
@@ -436,10 +458,10 @@ export function registerSocialRoutes(app: Elysia) {
           }
         });
       }
-  
+
       console.log('Cache miss for channels');
       const db = await getDbo();
-  
+
       const pipeline = [
         {
           $match: {
@@ -469,18 +491,18 @@ export function registerSocialRoutes(app: Elysia) {
           $limit: 100
         }
       ];
-  
+
       const results = await db.collection("message").aggregate(pipeline).toArray();
-      
+
       // Cast the results to ChannelInfo[]
       const typedResults = results as unknown as ChannelInfo[];
-  
+
       // Cache for 60 seconds
       await saveToRedis<CacheChannels>(cacheKey, {
         type: 'channels',
         value: typedResults
       });
-  
+
       // Return the object with "channels" key instead of "message"
       return new Response(JSON.stringify({ channels: typedResults }), {
         headers: {
@@ -491,7 +513,7 @@ export function registerSocialRoutes(app: Elysia) {
     } catch (error: unknown) {
       console.error('Error processing channels request:', error);
       const message = error instanceof Error ? error.message : String(error);
-  
+
       return new Response(JSON.stringify({
         error: "Failed to fetch channels",
         details: message,
@@ -510,12 +532,12 @@ export function registerSocialRoutes(app: Elysia) {
     try {
       const { channelId } = params;
       if (!channelId) {
-        return new Response(JSON.stringify({ 
+        return new Response(JSON.stringify({
           error: "Missing channel ID",
           details: "The channel ID is required in the URL path"
         }), {
           status: 400,
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'Cache-Control': 'no-cache'
           }
@@ -527,7 +549,7 @@ export function registerSocialRoutes(app: Elysia) {
 
       const page = query.page ? Number.parseInt(query.page, 10) : 1;
       const limit = query.limit ? Number.parseInt(query.limit, 10) : 100;
-      
+
       if (Number.isNaN(page) || page < 1) {
         return new Response(JSON.stringify({
           error: "Invalid page parameter",
@@ -566,17 +588,17 @@ export function registerSocialRoutes(app: Elysia) {
 
       console.log('Cache miss for messages:', cacheKey);
       const db = await getDbo();
-      
+
       const queryObj = {
         "MAP.type": "message",
         "MAP.channel": decodedChannelId
       };
 
       const col = db.collection("message");
-      
+
       // Get total count first
       const count = await col.countDocuments(queryObj);
-      
+
       // Then get paginated results
       const results = await col
         .find(queryObj)
@@ -586,12 +608,12 @@ export function registerSocialRoutes(app: Elysia) {
         .project({ _id: 0 })  // Exclude _id field
         .toArray() as Message[];
 
-      const response: MessageResponse = { 
-        channel: decodedChannelId, 
-        page, 
+      const response: MessageResponse = {
+        channel: decodedChannelId,
+        page,
         limit,
         count,
-        results 
+        results
       };
 
       // Cache for 60 seconds
@@ -612,6 +634,134 @@ export function registerSocialRoutes(app: Elysia) {
 
       return new Response(JSON.stringify({
         error: "Failed to fetch messages",
+        details: message,
+        timestamp: new Date().toISOString()
+      }), {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache"
+        }
+      });
+    }
+  });
+
+  app.post("/likes", async ({ body }) => {
+    try {
+      // Handle both array and object formats
+      const txids = Array.isArray(body) ? body : (body as LikeRequest).txids;
+      
+      if (!Array.isArray(txids) || txids.length === 0) {
+        return new Response(JSON.stringify({
+          error: "Invalid request",
+          details: "Request body must be either an array of txids or an object with a txids array"
+        }), {
+          status: 400,
+          headers: { 
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache"
+          }
+        });
+      }
+
+      const db = await getDbo();
+      const results: LikeResponse[] = [];
+
+      for (const txid of txids) {
+        // Check cache first
+        const cacheKey = `likes:${txid}`;
+        const cached = await readFromRedis<CacheLikes>(cacheKey);
+
+        if (cached?.type === 'likes') {
+          console.log('Cache hit for likes:', cacheKey);
+          // Clear the cache to ensure fresh data
+          await client.del(cacheKey);
+          console.log('Cleared cache for:', cacheKey);
+        }
+
+        // Query MongoDB for likes
+        const query = {
+          "MAP": {
+            $elemMatch: {
+              type: "like",
+              tx: txid
+            }
+          }
+        };
+        
+        console.log('Querying MongoDB for likes with:', JSON.stringify(query, null, 2));
+        
+        const likes = await db.collection("like").find(query).toArray();
+        console.log(`Found ${likes.length} likes for txid ${txid}`);
+
+        // Get unique signer addresses from AIP
+        const signerAddresses = new Set<string>();
+        for (const like of likes) {
+          if (Array.isArray(like.AIP)) {
+            for (const aip of like.AIP) {
+              if (aip.algorithm_signing_component) {
+                signerAddresses.add(aip.algorithm_signing_component);
+                console.log('Found signer address:', aip.algorithm_signing_component);
+              }
+            }
+          }
+        }
+
+        // Fetch signer identities
+        const signers: BapIdentity[] = [];
+        for (const address of signerAddresses) {
+          const signerCacheKey = `signer-${address}`;
+          const cachedSigner = await readFromRedis<CacheSigner>(signerCacheKey);
+          
+          if (cachedSigner?.type === 'signer' && cachedSigner.value) {
+            signers.push(cachedSigner.value);
+            continue;
+          }
+
+          try {
+            const identity = await getBAPIdByAddress(address);
+            if (identity) {
+              await saveToRedis<CacheSigner>(signerCacheKey, {
+                type: 'signer',
+                value: identity
+              });
+              signers.push(identity);
+            }
+          } catch (error) {
+            console.error(`Failed to fetch identity for address ${address}:`, error);
+          }
+        }
+
+        const likeInfo: LikeResponse = {
+          txid,
+          likes: likes,
+          total: likes.length,
+          signers
+        };
+
+        // Cache the result
+        await saveToRedis<CacheLikes>(cacheKey, {
+          type: 'likes',
+          value: likeInfo
+        });
+
+        results.push(likeInfo);
+      }
+
+      // Return just the first result since we want a single object response
+      return new Response(JSON.stringify(results[0]), {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "public, max-age=60"
+        }
+      });
+
+    } catch (error: unknown) {
+      console.error('Error processing likes request:', error);
+      const message = error instanceof Error ? error.message : String(error);
+
+      return new Response(JSON.stringify({
+        error: "Failed to fetch likes",
         details: message,
         timestamp: new Date().toISOString()
       }), {

@@ -42,53 +42,74 @@ type IngestBody = {
 };
 
 const bobFromRawTx = async (rawtx: string) => {
-  return await parse({
-    tx: { r: rawtx },
-    split: [
-      { token: { op: 106 }, include: "l" },
-      { token: { s: "|" } },
-    ],
-  });
+  try {
+    const result = await parse({
+      tx: { r: rawtx },
+      split: [
+        { token: { op: 106 }, include: "l" },
+        { token: { s: "|" } },
+      ],
+    });
+    
+    if (!result) {
+      throw new Error("No result from parsing transaction");
+    }
+    
+    return result;
+  } catch (error) {
+    console.error("Error parsing raw transaction:", error);
+    throw new Error(`Failed to parse transaction: ${error instanceof Error ? error.message : String(error)}`);
+  }
 };
 
-const bobFromPlanariaByTxid = async (txid: string) => {
-  const query = {
-    v: 3,
-    q: {
-      find: { "tx.h": txid },
-      sort: { "blk.i": -1, i: -1 },
-      limit: 1,
-    },
-  };
-  const b64 = Buffer.from(JSON.stringify(query)).toString("base64");
-  const url = `https://bob.planaria.network/q/YOUR_PLANARIA_KEY/${b64}`;
-  const header = { headers: { key: "YOUR_PLANARIA_API_KEY" } };
-  const res = await fetch(url, header);
-  const j = await res.json();
-  return j.c.concat(j.u)[0];
-};
 
 const jsonFromTxid = async (txid: string) => {
-  const url = `https://api.whatsonchain.com/v1/bsv/main/tx/${txid}`;
-  console.log("hitting", url);
-  const res = await fetch(url);
-  return await res.json();
+  try {
+    const url = `https://api.whatsonchain.com/v1/bsv/main/tx/${txid}`;
+    console.log("Fetching from WoC:", url);
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`WhatsonChain request failed: ${res.status} ${res.statusText}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("Error fetching from WhatsonChain:", error);
+    throw new Error(`Failed to fetch from WhatsonChain: ${error instanceof Error ? error.message : String(error)}`);
+  }
 };
 
 const rawTxFromTxid = async (txid: string) => {
-  const url = `https://api.whatsonchain.com/v1/bsv/main/tx/${txid}/hex`;
-  console.log("hitting", url);
-  const res = await fetch(url);
-  return await res.text();
+  try {
+    const url = `https://api.whatsonchain.com/v1/bsv/main/tx/${txid}/hex`;
+    console.log("Fetching raw tx from WoC:", url);
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`WhatsonChain request failed: ${res.status} ${res.statusText}`);
+    }
+    const text = await res.text();
+    if (!text) {
+      throw new Error("Empty response from WhatsonChain");
+    }
+    return text;
+  } catch (error) {
+    console.error("Error fetching raw tx from WhatsonChain:", error);
+    throw new Error(`Failed to fetch raw tx: ${error instanceof Error ? error.message : String(error)}`);
+  }
 };
 
 const bobFromTxid = async (txid: string) => {
-  const rawtx = await rawTxFromTxid(txid);
   try {
-    return await bobFromRawTx(rawtx);
-  } catch (e) {
-    console.log("Failed to get rawtx from whatsonchain for", txid, "Falling back to BOB planaria.", e);
-    return await bobFromPlanariaByTxid(txid);
+    const rawtx = await rawTxFromTxid(txid);
+    try {
+      return await bobFromRawTx(rawtx);
+    } catch (e) {
+      // console.log("Failed to get rawtx from whatsonchain for", txid, "Falling back to BOB planaria.", e);
+      // return await bobFromPlanariaByTxid(txid);
+      throw new Error(`Failed to get rawtx from whatsonchain for ${txid}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  } catch (error) {
+    console.error("Error in bobFromTxid:", error);
+    throw new Error(`Failed to process transaction: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
 
@@ -415,31 +436,114 @@ const start = async () => {
     throw new Error("Missing rawTx in request body");
   });
 
+  // Add new cache type at the top with other types
+  type CacheTx = {
+    type: 'tx';
+    value: BmapTx;
+  }
+
   app.get("/tx/:tx/:format?", async ({ params }) => {
-    const { tx, format } = params;
-    if (!tx) throw new Error("Missing txid");
+    const { tx: txid, format } = params;
+    if (!txid) {
+      return new Response(JSON.stringify({
+        error: "Missing txid",
+        details: "Transaction ID is required"
+      }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
 
     try {
+      // Special formats that don't need processing
       if (format === "raw") {
-        return await rawTxFromTxid(tx);
+        const rawTx = await rawTxFromTxid(txid);
+        return new Response(rawTx, {
+          headers: { "Content-Type": "text/plain" }
+        });
       }
+      
       if (format === "json") {
-        return await jsonFromTxid(tx);
+        const jsonTx = await jsonFromTxid(txid);
+        return new Response(JSON.stringify(jsonTx, null, 2), {
+          headers: { "Content-Type": "application/json" }
+        });
       }
-      if (format === "file") {
-        let txid = tx;
-        let vout = 0;
-        if (tx.includes("_")) {
-          const parts = tx.split("_");
-          txid = parts[0];
-          vout = Number.parseInt(parts[1]);
+
+      // Check Redis cache first
+      const cacheKey = `tx:${txid}`;
+      const cached = await readFromRedis<CacheTx>(cacheKey);
+      let decoded: BmapTx;
+
+      if (cached?.type === 'tx') {
+        console.log('Cache hit for tx:', txid);
+        decoded = cached.value;
+      } else {
+        console.log('Cache miss for tx:', txid);
+        
+        // Check MongoDB
+        const db = await getDbo();
+        const collections = ["message", "like", "post", "repost"]; // Add other relevant collections
+        let dbTx: BmapTx | null = null;
+
+        for (const collection of collections) {
+          const result = await db.collection(collection).findOne({ "tx.h": txid });
+          if (result) {
+            dbTx = result as BmapTx;
+            console.log('Found tx in MongoDB collection:', collection);
+            break;
+          }
         }
 
-        const bob = await bobFromTxid(txid);
-        const decoded = await TransformTx(
-          bob,
-          allProtocols.map((p) => p.name),
-        );
+        if (dbTx) {
+          decoded = dbTx;
+        } else {
+          // Process the transaction if not found
+          console.log('Processing new transaction:', txid);
+          const bob = await bobFromTxid(txid);
+          decoded = await TransformTx(bob, allProtocols.map((p) => p.name)) as BmapTx;
+
+          // Get block info from WhatsonChain
+          const txDetails = await jsonFromTxid(txid);
+          if (txDetails.blockheight && txDetails.time) {
+            decoded.blk = {
+              i: txDetails.blockheight,
+              t: txDetails.time
+            };
+          } else if (txDetails.time) {
+            decoded.timestamp = txDetails.time;
+          }
+
+          // If B or MAP protocols are found, save to MongoDB
+          if (decoded.B || decoded.MAP) {
+            try {
+              const collection = decoded.MAP?.[0]?.type || 'message';
+              await db.collection(collection).updateOne(
+                { "tx.h": txid },
+                { $set: decoded },
+                { upsert: true }
+              );
+              console.log('Saved tx to MongoDB collection:', collection);
+            } catch (error) {
+              console.error('Error saving to MongoDB:', error);
+            }
+          }
+        }
+
+        // Cache the result
+        await saveToRedis<CacheTx>(cacheKey, {
+          type: 'tx',
+          value: decoded
+        });
+      }
+
+      // Handle file format after we have the decoded tx
+      if (format === "file") {
+        let vout = 0;
+        if (txid.includes("_")) {
+          const parts = txid.split("_");
+          vout = Number.parseInt(parts[1], 10);
+        }
 
         let dataBuf: Buffer | undefined;
         let contentType: string | undefined;
@@ -459,26 +563,47 @@ const start = async () => {
             }
           });
         }
-        throw new Error("No data found");
+        throw new Error("No data found in transaction outputs");
       }
 
-      const bob = await bobFromTxid(tx);
-      const decoded = await TransformTx(bob, allProtocols.map((p) => p.name));
-
+      // Return the appropriate format
       switch (format) {
         case "bob":
-          return bob;
+          const bob = await bobFromTxid(txid);
+          return new Response(JSON.stringify(bob, null, 2), {
+            headers: { "Content-Type": "application/json" }
+          });
         case "bmap":
-          return decoded;
+          return new Response(JSON.stringify(decoded, null, 2), {
+            headers: { "Content-Type": "application/json" }
+          });
         default:
-          if (format && decoded[format]) return decoded[format];
-          return format?.length
+          if (format && decoded[format]) {
+            return new Response(JSON.stringify(decoded[format], null, 2), {
+              headers: { "Content-Type": "application/json" }
+            });
+          }
+          return new Response(format?.length
             ? `Key ${format} not found in tx`
-            : `<pre>${JSON.stringify(decoded, undefined, 2)}</pre>`;
+            : `<pre>${JSON.stringify(decoded, null, 2)}</pre>`, {
+              headers: { "Content-Type": format?.length ? "text/plain" : "text/html" }
+            });
       }
     } catch (error: unknown) {
+      console.error("Error processing tx request:", error);
       const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to process tx: ${message}`);
+      
+      return new Response(JSON.stringify({
+        error: "Failed to process transaction",
+        details: message,
+        timestamp: new Date().toISOString()
+      }), {
+        status: 500,
+        headers: { 
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache"
+        }
+      });
     }
   });
 

@@ -1,59 +1,52 @@
-// Let's examine identity data in the database
 // Switch to the database
 use('bmap');
 
-// First, let's look at a sample identity record
-db.identity.findOne();
+// Look at a sample document to understand the structure
+db.like.findOne();
 
-// Count total identities
-db.identity.countDocuments();
+// Look at any document with MAP field
+db.like.findOne({ "MAP": { $exists: true } });
 
-// Look for a specific BAP ID
-const bapId = 'Go8vCHAa4S6AhXKTABGpANiz35J';
-db.identity.find({
+// Look at the structure of MAP field
+db.like.aggregate([
+  { $match: { "MAP": { $exists: true } } },
+  { $project: { _id: 0, MAP: 1 } },
+  { $limit: 5 }
+]);
+
+// Look for any likes with any structure
+db.like.find({
   $or: [
-    { "AIP.address": bapId },
-    { "MAP.sender": bapId }
+    { "MAP.type": "like" },
+    { "MAP.0.type": "like" }
   ]
-}).pretty();
+}).limit(5).pretty();
 
-// Check if we have any identity transactions for this BAP ID
-db.identity.find({
+// Check if MAP is sometimes an array
+db.like.findOne({
+  "MAP.0": { $exists: true }
+});
+
+// Look for likes with tx field in different positions
+db.like.find({
   $or: [
-    { "AIP.address": bapId },
-    { "MAP.sender": bapId }
+    { "MAP.tx": { $exists: true } },
+    { "MAP.0.tx": { $exists: true } }
   ]
-}).sort({ "blk.i": -1 }).limit(1).pretty();
+}).limit(5).pretty();
 
-// Look at the most recent identity records
-db.identity.find().sort({ "blk.i": -1 }).limit(5).pretty();
-
-// Check if we have any identity records with specific MAP fields
-db.identity.find({
-  "MAP.app": "identity",
-  "MAP.type": "identity"
-}).sort({ "blk.i": -1 }).limit(5).pretty();
-
-// Check if we have any BAP protocol records
-db.identity.find({
-  "BAP": { $exists: true }
-}).sort({ "blk.i": -1 }).limit(5).pretty();
-
-// Look for any records with name or avatar fields
-db.identity.find({
-  $or: [
-    { "MAP.name": { $exists: true } },
-    { "MAP.avatar": { $exists: true } }
-  ]
-}).sort({ "blk.i": -1 }).limit(5).pretty();
-
-// Check indexes on the identity collection
-db.identity.getIndexes();
-
-// Analyze query performance
-db.identity.find({
-  $or: [
-    { "AIP.address": bapId },
-    { "MAP.sender": bapId }
-  ]
-}).explain("executionStats"); 
+// Count documents with different MAP structures
+db.like.aggregate([
+  {
+    $facet: {
+      "mapObject": [
+        { $match: { "MAP.type": "like" } },
+        { $count: "count" }
+      ],
+      "mapArray": [
+        { $match: { "MAP.0.type": "like" } },
+        { $count: "count" }
+      ]
+    }
+  }
+]);
