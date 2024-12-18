@@ -2,8 +2,9 @@ import type { Elysia } from 'elysia';
 import { getDbo } from './db.js';
 import { readFromRedis, saveToRedis, client } from './cache.js';
 import { getBAPIdByAddress } from './bap.js';
-import type { BapIdentity } from './bap.js';
-import type { CacheSigner } from './cache.js';
+import type { BapIdentity, BapIdentityObject } from './bap.js';
+import type { CacheSigner, CacheValue } from './cache.js';
+import type { WithId, Document } from 'mongodb';
 
 interface SigmaIdentityAPIResponse {
   status: string;
@@ -20,7 +21,7 @@ interface SigmaIdentityResult {
     txId: string;
     block?: number;
   }[];
-  identity?: any;
+  identity?: Record<string, unknown>;
   block?: number;
   timestamp?: number;
   valid?: boolean;
@@ -43,12 +44,13 @@ interface ReactionResponse {
   page: number;
   limit: number;
   count: number;
-  results: any[];
+  results: Record<string, unknown>[];
 }
 
 type CacheReactions = {
   type: 'reactions';
   value: ReactionResponse;
+  error?: never;
 }
 
 interface ChannelInfo {
@@ -62,6 +64,7 @@ interface ChannelInfo {
 type CacheChannels = {
   type: 'channels';
   value: ChannelInfo[];
+  error?: never;
 }
 
 interface MessageResponse {
@@ -100,51 +103,90 @@ interface Message {
 type CacheMessages = {
   type: 'messages';
   value: MessageResponse;
+  error?: never;
 }
 
 interface LikeRequest {
   txids: string[];
 }
 
+interface LikeDocument {
+  tx: {
+    h: string;
+  };
+  blk: {
+    i: number;
+    t: number;
+  };
+  MAP: {
+    type: string;
+    tx: string;
+  }[];
+  AIP?: {
+    algorithm_signing_component: string;
+  }[];
+}
+
 interface LikeInfo {
   txid: string;
-  likes: any[];  // Will be replaced with proper type once we know the structure
+  likes: LikeDocument[];
   total: number;
-  signers: BapIdentity[];
+  signerIds: string[];  // Store only signer IDs
 }
 
 interface LikeResponse {
   txid: string;
-  likes: any[];  // Will be replaced with proper type once we know the structure
+  likes: LikeDocument[];
   total: number;
-  signers: BapIdentity[];
+  signers: BapIdentity[];  // Full signer objects for API response
 }
 
-type CacheLikes = {
+type CacheLikes = CacheValue & {
   type: 'likes';
-  value: LikeResponse;
+  value: LikeInfo;  // Store minimal info in cache
+  error?: never;
+}
+
+interface BmapDocument {
+  tx: {
+    h: string;
+  };
+  blk: {
+    i: number;
+    t: number;
+  };
+  MAP: {
+    type: string;
+    bapID?: string;
+    [key: string]: unknown;
+  }[];
+  AIP?: {
+    algorithm_signing_component: string;
+    [key: string]: unknown;
+  }[];
+  [key: string]: unknown;
 }
 
 function sigmaIdentityToBapIdentity(result: SigmaIdentityResult): BapIdentity {
+  const identity = result.identity || "";
   return {
     idKey: result.idKey,
     rootAddress: result.rootAddress,
     currentAddress: result.currentAddress,
     addresses: result.addresses,
-    identity: result.identity || "",
+    identity: typeof identity === 'string' ? identity : JSON.stringify(identity),
     identityTxId: result.addresses[0]?.txId || "", // fallback if not present
     block: result.block || 0,
     timestamp: result.timestamp || 0,
     valid: result.valid ?? true
-    // Removed firstSeen because it's not part of BapIdentity
   };
 }
 
 async function fetchBapIdentityData(bapId: string): Promise<BapIdentity> {
   const cacheKey = `sigmaIdentity-${bapId}`;
   const cached = await readFromRedis<CacheSigner>(cacheKey);
-  if (cached.type !== 'error') {
-    return cached.value as BapIdentity;
+  if (cached?.type === 'signer') {
+    return cached.value;
   }
 
   const url = 'https://api.sigmaidentity.com/v1/identity/get';
@@ -166,7 +208,6 @@ async function fetchBapIdentityData(bapId: string): Promise<BapIdentity> {
 
   const bapIdentity = sigmaIdentityToBapIdentity(data.result);
 
-  // Use CacheSigner as the generic type parameter
   await saveToRedis<CacheSigner>(cacheKey, {
     type: 'signer',
     value: bapIdentity
@@ -175,7 +216,7 @@ async function fetchBapIdentityData(bapId: string): Promise<BapIdentity> {
   return bapIdentity;
 }
 
-async function fetchAllFriendsAndUnfriends(bapId: string) {
+async function fetchAllFriendsAndUnfriends(bapId: string): Promise<{ allDocs: BmapDocument[], ownedAddresses: Set<string> }> {
   const dbo = await getDbo();
 
   const idData = await fetchBapIdentityData(bapId);
@@ -187,25 +228,25 @@ async function fetchAllFriendsAndUnfriends(bapId: string) {
 
   const incomingFriends = await dbo.collection('friend')
     .find({ "MAP.type": "friend", "MAP.bapID": bapId })
-    .toArray();
+    .toArray() as unknown as BmapDocument[];
 
   const incomingUnfriends = await dbo.collection('unfriend')
     .find({ "MAP.type": "unfriend", "MAP.bapID": bapId })
-    .toArray();
+    .toArray() as unknown as BmapDocument[];
 
   const outgoingFriends = await dbo.collection('friend')
     .find({
       "MAP.type": "friend",
       "AIP.algorithm_signing_component": { $in: [...ownedAddresses] }
     })
-    .toArray();
+    .toArray() as unknown as BmapDocument[];
 
   const outgoingUnfriends = await dbo.collection('unfriend')
     .find({
       "MAP.type": "unfriend",
       "AIP.algorithm_signing_component": { $in: [...ownedAddresses] }
     })
-    .toArray();
+    .toArray() as unknown as BmapDocument[];
 
   const allDocs = [...incomingFriends, ...incomingUnfriends, ...outgoingFriends, ...outgoingUnfriends];
   allDocs.sort((a, b) => ((a.blk?.i ?? 0) - (b.blk?.i ?? 0)));
@@ -213,10 +254,10 @@ async function fetchAllFriendsAndUnfriends(bapId: string) {
   return { allDocs, ownedAddresses };
 }
 
-async function processRelationships(bapId: string, docs: any[], ownedAddresses: Set<string>): Promise<FriendshipResponse> {
+async function processRelationships(bapId: string, docs: BmapDocument[], ownedAddresses: Set<string>): Promise<FriendshipResponse> {
   const relationships: Record<string, RelationshipState> = {};
 
-  async function getRequestorBapId(doc: any): Promise<string | null> {
+  async function getRequestorBapId(doc: BmapDocument): Promise<string | null> {
     const address = doc?.AIP?.[0]?.algorithm_signing_component;
     if (!address) return null;
 
@@ -673,10 +714,15 @@ export function registerSocialRoutes(app: Elysia) {
         const cached = await readFromRedis<CacheLikes>(cacheKey);
 
         if (cached?.type === 'likes') {
-          console.log('Cache hit for likes:', cacheKey);
-          // Clear the cache to ensure fresh data
-          await client.del(cacheKey);
-          console.log('Cleared cache for:', cacheKey);
+          // Convert cached info to response format
+          const signers = await Promise.all(
+            cached.value.signerIds.map(id => getBAPIdByAddress(id))
+          );
+          results.push({
+            ...cached.value,
+            signers: signers.filter((s): s is BapIdentity => s !== null)
+          });
+          continue;
         }
 
         // Query MongoDB for likes
@@ -691,61 +737,69 @@ export function registerSocialRoutes(app: Elysia) {
         
         console.log('Querying MongoDB for likes with:', JSON.stringify(query, null, 2));
         
-        const likes = await db.collection("like").find(query).toArray();
+        const likes = await db.collection("like")
+          .find(query)
+          .toArray() as unknown as LikeDocument[];
+
         console.log(`Found ${likes.length} likes for txid ${txid}`);
 
-        // Get unique signer addresses from AIP
+        // Get unique signer addresses
         const signerAddresses = new Set<string>();
         for (const like of likes) {
           if (Array.isArray(like.AIP)) {
             for (const aip of like.AIP) {
               if (aip.algorithm_signing_component) {
                 signerAddresses.add(aip.algorithm_signing_component);
-                console.log('Found signer address:', aip.algorithm_signing_component);
               }
             }
           }
         }
 
         // Fetch signer identities
-        const signers: BapIdentity[] = [];
-        for (const address of signerAddresses) {
-          const signerCacheKey = `signer-${address}`;
-          const cachedSigner = await readFromRedis<CacheSigner>(signerCacheKey);
-          
-          if (cachedSigner?.type === 'signer' && cachedSigner.value) {
-            signers.push(cachedSigner.value);
-            continue;
-          }
-
-          try {
-            const identity = await getBAPIdByAddress(address);
-            if (identity) {
-              await saveToRedis<CacheSigner>(signerCacheKey, {
-                type: 'signer',
-                value: identity
-              });
-              signers.push(identity);
+        const signerIds = Array.from(signerAddresses);
+        const signers = await Promise.all(
+          signerIds.map(async (address) => {
+            const signerCacheKey = `signer-${address}`;
+            const cachedSigner = await readFromRedis<CacheSigner>(signerCacheKey);
+            
+            if (cachedSigner?.type === 'signer') {
+              return cachedSigner.value;
             }
-          } catch (error) {
-            console.error(`Failed to fetch identity for address ${address}:`, error);
-          }
-        }
 
-        const likeInfo: LikeResponse = {
+            try {
+              const identity = await getBAPIdByAddress(address);
+              if (identity) {
+                await saveToRedis<CacheSigner>(signerCacheKey, {
+                  type: 'signer',
+                  value: identity
+                });
+                return identity;
+              }
+            } catch (error) {
+              console.error(`Failed to fetch identity for address ${address}:`, error);
+            }
+            return null;
+          })
+        );
+
+        // Cache minimal info
+        const likeInfo: LikeInfo = {
           txid,
-          likes: likes,
+          likes,
           total: likes.length,
-          signers
+          signerIds
         };
 
-        // Cache the result
         await saveToRedis<CacheLikes>(cacheKey, {
           type: 'likes',
           value: likeInfo
         });
 
-        results.push(likeInfo);
+        // Add full response with signer objects
+        results.push({
+          ...likeInfo,
+          signers: signers.filter((s): s is BapIdentity => s !== null)
+        });
       }
 
       // Return just the first result since we want a single object response
