@@ -700,7 +700,10 @@ export function registerSocialRoutes(app: Elysia) {
           status: 400,
           headers: { 
             "Content-Type": "application/json",
-            "Cache-Control": "no-cache"
+            "Cache-Control": "no-cache",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type"
           }
         });
       }
@@ -713,13 +716,15 @@ export function registerSocialRoutes(app: Elysia) {
         const cacheKey = `likes:${txid}`;
         const cached = await readFromRedis<CacheLikes>(cacheKey);
 
-        if (cached?.type === 'likes') {
+        if (cached?.type === 'likes' && cached.value) {
           // Convert cached info to response format
           const signers = await Promise.all(
             cached.value.signerIds.map(id => getBAPIdByAddress(id))
           );
           results.push({
-            ...cached.value,
+            txid: cached.value.txid,
+            likes: cached.value.likes,
+            total: cached.value.total,
             signers: signers.filter((s): s is BapIdentity => s !== null)
           });
           continue;
@@ -762,7 +767,7 @@ export function registerSocialRoutes(app: Elysia) {
             const signerCacheKey = `signer-${address}`;
             const cachedSigner = await readFromRedis<CacheSigner>(signerCacheKey);
             
-            if (cachedSigner?.type === 'signer') {
+            if (cachedSigner?.type === 'signer' && cachedSigner.value) {
               return cachedSigner.value;
             }
 
@@ -792,12 +797,15 @@ export function registerSocialRoutes(app: Elysia) {
 
         await saveToRedis<CacheLikes>(cacheKey, {
           type: 'likes',
-          value: likeInfo
+          value: likeInfo,
+          error: undefined
         });
 
         // Add full response with signer objects
         results.push({
-          ...likeInfo,
+          txid: likeInfo.txid,
+          likes: likeInfo.likes,
+          total: likeInfo.total,
           signers: signers.filter((s): s is BapIdentity => s !== null)
         });
       }
@@ -806,7 +814,10 @@ export function registerSocialRoutes(app: Elysia) {
       return new Response(JSON.stringify(results[0]), {
         headers: {
           "Content-Type": "application/json",
-          "Cache-Control": "public, max-age=60"
+          "Cache-Control": "public, max-age=60",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type"
         }
       });
 
@@ -822,9 +833,23 @@ export function registerSocialRoutes(app: Elysia) {
         status: 500,
         headers: {
           "Content-Type": "application/json",
-          "Cache-Control": "no-cache"
+          "Cache-Control": "no-cache",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type"
         }
       });
     }
+  });
+
+  // Add OPTIONS handler for CORS preflight
+  app.options("/likes", () => {
+    return new Response(null, {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    });
   });
 }
