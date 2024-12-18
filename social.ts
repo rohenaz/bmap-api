@@ -384,25 +384,25 @@ export function registerSocialRoutes(app: Elysia) {
       });
     }
   });
-
   app.get("/channels", async () => {
     try {
       const cacheKey = 'channels';
       const cached = await readFromRedis<CacheChannels>(cacheKey);
-
-      if (cached.type === 'channels') {
+  
+      if (cached?.type === 'channels') {
         console.log('Cache hit for channels');
-        return new Response(JSON.stringify(cached.value), {
+        // Wrap cached.value in an object { message: cached.value }
+        return new Response(JSON.stringify({ message: cached.value }), {
           headers: {
             "Content-Type": "application/json",
             "Cache-Control": "public, max-age=60"
           }
         });
       }
-
+  
       console.log('Cache miss for channels');
       const db = await getDbo();
-
+  
       const pipeline = [
         {
           $match: {
@@ -410,20 +410,14 @@ export function registerSocialRoutes(app: Elysia) {
           }
         },
         {
-          $unwind: "$MAP"
-        },
-        {
-          $unwind: "$B"
-        },
-        {
           $sort: { "blk.t": 1 }
         },
         {
           $group: {
-            _id: "$MAP.channel",
-            channel: { $first: "$MAP.channel" },
-            creator: { $first: "$MAP.paymail" },
-            last_message: { $last: "$B.Data.utf8" },
+            _id: { $arrayElemAt: ["$MAP.channel", 0] },
+            channel: { $arrayElemAt: ["$MAP.channel", 0] },
+            creator: { $arrayElemAt: ["$MAP.paymail", 0] },
+            last_message: { $arrayElemAt: ["$B.Data.utf8", 0] },
             last_message_time: { $last: "$blk.t" },
             messages: { $sum: 1 }
           }
@@ -435,16 +429,20 @@ export function registerSocialRoutes(app: Elysia) {
           $limit: 100
         }
       ];
-
-      const results = await db.collection("message").aggregate(pipeline).toArray() as ChannelInfo[];
-
+  
+      const results = await db.collection("message").aggregate(pipeline).toArray();
+      
+      // Cast the results to ChannelInfo[]
+      const typedResults = results as unknown as ChannelInfo[];
+  
       // Cache for 60 seconds
       await saveToRedis<CacheChannels>(cacheKey, {
         type: 'channels',
-        value: results
+        value: typedResults
       });
-
-      return new Response(JSON.stringify(results), {
+  
+      // Return the object with "message" key
+      return new Response(JSON.stringify({ message: typedResults }), {
         headers: {
           "Content-Type": "application/json",
           "Cache-Control": "public, max-age=60"
@@ -453,7 +451,7 @@ export function registerSocialRoutes(app: Elysia) {
     } catch (error: unknown) {
       console.error('Error processing channels request:', error);
       const message = error instanceof Error ? error.message : String(error);
-
+  
       return new Response(JSON.stringify({
         error: "Failed to fetch channels",
         details: message,
