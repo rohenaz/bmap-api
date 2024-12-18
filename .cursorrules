@@ -92,3 +92,7 @@ This project is a **BMAP API** server that processes and serves Bitcoin transact
 - **Database**:
   - MongoDB is used for storing transaction data and other relevant information.
   - Connection pooling is configured with minimum and maximum pool sizes in `db.ts`.
+
+# Biome Rules
+- use Number.isNaN instead of isNaN
+- use Number.parseInt instead of parseInt

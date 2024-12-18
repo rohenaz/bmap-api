@@ -86,6 +86,17 @@ export type ChartCacheData = {
   config: ChartConfiguration;
 }
 
+export type CacheMessages = {
+  type: 'messages';
+  value: {
+    channel: string;
+    page: number;
+    limit: number;
+    count: number;
+    results: any[];
+  };
+}
+
 export type CacheValue = 
   | CacheBlockHeight 
   | CacheChart 
@@ -94,7 +105,8 @@ export type CacheValue =
   | CacheIngest 
   | CacheSigner
   | CacheReactions
-  | CacheChannels;
+  | CacheChannels
+  | CacheMessages;
 
 async function saveToRedis<T extends CacheValue>(
   key: string,

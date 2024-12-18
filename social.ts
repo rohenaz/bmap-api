@@ -64,6 +64,44 @@ type CacheChannels = {
   value: ChannelInfo[];
 }
 
+interface MessageResponse {
+  channel: string;
+  page: number;
+  limit: number;
+  count: number;
+  results: Message[];
+}
+
+interface Message {
+  tx: {
+    h: string;
+  };
+  blk: {
+    i: number;
+    t: number;
+  };
+  MAP: {
+    app: string;
+    type: string;
+    channel: string;
+    paymail: string;
+  }[];
+  B: {
+    Data: {
+      utf8: string;
+    };
+  }[];
+  AIP?: {
+    address: string;
+    algorithm_signing_component: string;
+  }[];
+}
+
+type CacheMessages = {
+  type: 'messages';
+  value: MessageResponse;
+}
+
 function sigmaIdentityToBapIdentity(result: SigmaIdentityResult): BapIdentity {
   return {
     idKey: result.idKey,
@@ -268,7 +306,7 @@ export function registerSocialRoutes(app: Elysia) {
 
   app.get("/reactions", async ({ query }) => {
     try {
-      const channel = query.channel as string;
+      const channel = query.channel;
       if (!channel) {
         return new Response(JSON.stringify({ 
           error: "Missing 'channel' parameter",
@@ -282,10 +320,10 @@ export function registerSocialRoutes(app: Elysia) {
         });
       }
 
-      const page = query.page ? parseInt(query.page as string, 10) : 1;
-      const limit = query.limit ? parseInt(query.limit as string, 10) : 100;
+      const page = query.page ? Number.parseInt(query.page as string, 10) : 1;
+      const limit = query.limit ? Number.parseInt(query.limit as string, 10) : 100;
       
-      if (isNaN(page) || page < 1) {
+      if (Number.isNaN(page) || page < 1) {
         return new Response(JSON.stringify({
           error: "Invalid page parameter",
           details: "Page must be a positive integer"
@@ -295,7 +333,7 @@ export function registerSocialRoutes(app: Elysia) {
         });
       }
 
-      if (isNaN(limit) || limit < 1 || limit > 1000) {
+      if (Number.isNaN(limit) || limit < 1 || limit > 1000) {
         return new Response(JSON.stringify({
           error: "Invalid limit parameter",
           details: "Limit must be between 1 and 1000"
@@ -391,8 +429,7 @@ export function registerSocialRoutes(app: Elysia) {
   
       if (cached?.type === 'channels') {
         console.log('Cache hit for channels');
-        // Wrap cached.value in an object { message: cached.value }
-        return new Response(JSON.stringify({ message: cached.value }), {
+        return new Response(JSON.stringify({ channels: cached.value }), {
           headers: {
             "Content-Type": "application/json",
             "Cache-Control": "public, max-age=60"
@@ -410,15 +447,18 @@ export function registerSocialRoutes(app: Elysia) {
           }
         },
         {
-          $sort: { "blk.t": 1 }
+          $unwind: "$MAP"
+        },
+        {
+          $unwind: "$B"
         },
         {
           $group: {
-            _id: { $arrayElemAt: ["$MAP.channel", 0] },
-            channel: { $arrayElemAt: ["$MAP.channel", 0] },
-            creator: { $arrayElemAt: ["$MAP.paymail", 0] },
-            last_message: { $arrayElemAt: ["$B.Data.utf8", 0] },
-            last_message_time: { $last: "$blk.t" },
+            _id: "$MAP.channel",
+            channel: { $first: "$MAP.channel" },
+            creator: { $first: "$MAP.paymail" },
+            last_message: { $last: "$B.Data.utf8" },
+            last_message_time: { $max: "$blk.t" },
             messages: { $sum: 1 }
           }
         },
@@ -441,8 +481,8 @@ export function registerSocialRoutes(app: Elysia) {
         value: typedResults
       });
   
-      // Return the object with "message" key
-      return new Response(JSON.stringify({ message: typedResults }), {
+      // Return the object with "channels" key instead of "message"
+      return new Response(JSON.stringify({ channels: typedResults }), {
         headers: {
           "Content-Type": "application/json",
           "Cache-Control": "public, max-age=60"
@@ -454,6 +494,124 @@ export function registerSocialRoutes(app: Elysia) {
   
       return new Response(JSON.stringify({
         error: "Failed to fetch channels",
+        details: message,
+        timestamp: new Date().toISOString()
+      }), {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache"
+        }
+      });
+    }
+  });
+
+  app.get("/messages/:channelId", async ({ params, query }) => {
+    try {
+      const { channelId } = params;
+      if (!channelId) {
+        return new Response(JSON.stringify({ 
+          error: "Missing channel ID",
+          details: "The channel ID is required in the URL path"
+        }), {
+          status: 400,
+          headers: { 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
+          }
+        });
+      }
+
+      // Decode the channel ID from the URL
+      const decodedChannelId = decodeURIComponent(channelId);
+
+      const page = query.page ? Number.parseInt(query.page, 10) : 1;
+      const limit = query.limit ? Number.parseInt(query.limit, 10) : 100;
+      
+      if (Number.isNaN(page) || page < 1) {
+        return new Response(JSON.stringify({
+          error: "Invalid page parameter",
+          details: "Page must be a positive integer"
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      if (Number.isNaN(limit) || limit < 1 || limit > 1000) {
+        return new Response(JSON.stringify({
+          error: "Invalid limit parameter",
+          details: "Limit must be between 1 and 1000"
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      const skip = (page - 1) * limit;
+
+      // Use the decoded channel ID for cache key
+      const cacheKey = `messages:${decodedChannelId}:${page}:${limit}`;
+      const cached = await readFromRedis<CacheMessages>(cacheKey);
+
+      if (cached.type === 'messages') {
+        console.log('Cache hit for messages:', cacheKey);
+        return new Response(JSON.stringify(cached.value), {
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "public, max-age=60"
+          }
+        });
+      }
+
+      console.log('Cache miss for messages:', cacheKey);
+      const db = await getDbo();
+      
+      const queryObj = {
+        "MAP.type": "message",
+        "MAP.channel": decodedChannelId
+      };
+
+      const col = db.collection("message");
+      
+      // Get total count first
+      const count = await col.countDocuments(queryObj);
+      
+      // Then get paginated results
+      const results = await col
+        .find(queryObj)
+        .sort({ "blk.t": -1 })
+        .skip(skip)
+        .limit(limit)
+        .project({ _id: 0 })  // Exclude _id field
+        .toArray() as Message[];
+
+      const response: MessageResponse = { 
+        channel: decodedChannelId, 
+        page, 
+        limit,
+        count,
+        results 
+      };
+
+      // Cache for 60 seconds
+      await saveToRedis<CacheMessages>(cacheKey, {
+        type: 'messages',
+        value: response
+      });
+
+      return new Response(JSON.stringify(response), {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "public, max-age=60"
+        }
+      });
+    } catch (error: unknown) {
+      console.error('Error processing messages request:', error);
+      const message = error instanceof Error ? error.message : String(error);
+
+      return new Response(JSON.stringify({
+        error: "Failed to fetch messages",
         details: message,
         timestamp: new Date().toISOString()
       }), {
