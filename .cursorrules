@@ -96,3 +96,80 @@ This project is a **BMAP API** server that processes and serves Bitcoin transact
 # Biome Rules
 - use Number.isNaN instead of isNaN
 - use Number.parseInt instead of parseInt
+
+# Elysia JS
+In Elysia.js, handling HTTP requests and crafting appropriate responses is streamlined through its handler functions and context properties. Here’s how you can manage request parameters, set response statuses, and customize headers:
+
+Accessing Request Parameters:
+
+Elysia provides a Context object to each handler, granting access to various parts of the incoming request:
+	•	Path Parameters: Defined in the route as :paramName and accessed via context.params.
+
+app.get('/user/:id', ({ params }) => {
+    const userId = params.id;
+    // Use userId as needed
+});
+
+
+	•	Query Parameters: Parsed from the URL and available through context.query.
+
+app.get('/search', ({ query }) => {
+    const searchTerm = query.q;
+    // Use searchTerm as needed
+});
+
+
+	•	Request Body: Accessible via context.body, useful for handling POST or PUT requests.
+
+app.post('/submit', async ({ body }) => {
+    const data = await body;
+    // Process data
+});
+
+
+
+Setting Response Status and Headers:
+
+Within a handler, you can customize the response using the set property of the Context object:
+	•	Setting Status Codes:
+	•	Using set.status: Directly assign the desired HTTP status code.
+
+app.get('/teapot', ({ set }) => {
+    set.status = 418;
+    return "I'm a teapot";
+});
+
+
+	•	Using the error Function: A convenient method to return a status code with a message.
+
+app.get('/not-found', ({ error }) => error(404, 'Resource not found'));
+
+This approach is recommended as it offers better TypeScript inference and type safety. ￼
+
+	•	Setting Headers: Modify response headers via set.headers.
+
+app.get('/info', ({ set }) => {
+    set.headers['X-Custom-Header'] = 'Elysia';
+    return 'Check the headers';
+});
+
+
+	•	Redirecting Responses: Use set.redirect to redirect the client to a different URL.
+
+app.get('/old-route', ({ set }) => {
+    set.redirect = '/new-route';
+});
+
+
+
+Returning Responses:
+
+Elysia automatically converts the return value of a handler into an HTTP response:
+	•	Primitive Values: Returning a string or object results in a 200 OK response with the appropriate body.
+
+app.get('/greet', () => 'Hello, World!');
+
+
+	•	Custom Responses: For more control, return a Response object.
+
+app.get('/custom', () => new Response('Custom Response', { status: 202 }));

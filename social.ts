@@ -438,177 +438,310 @@ async function processLikes(likes: LikeDocument[]): Promise<{ signerIds: string[
 
 export function registerSocialRoutes(app: Elysia) {
   // Add OPTIONS handler for all routes with proper headers
-  app.options("*", () => {
-    return new Response(null, { 
-      status: 204,
-      headers: corsHeaders 
-    });
+  app.options("*", ({ set }) => {
+    set.headers = corsHeaders;
+    set.status = 204;
+    return null;
   });
 
-  app.get("/friendships/:bapId", async ({ params }) => {
+  app.get("/friendships/:bapId", async ({ params, set }) => {
     const { bapId } = params;
 
     if (!bapId || typeof bapId !== 'string') {
-      return new Response(JSON.stringify({
+      set.status = 400;
+      set.headers = errorHeaders;
+      return {
         error: "Missing or invalid bapId",
         details: "The bapId parameter must be a valid string"
-      }), {
-        status: 400,
-        headers: errorHeaders
-      });
+      };
     }
 
     try {
       const { allDocs, ownedAddresses } = await fetchAllFriendsAndUnfriends(bapId);
       const result = await processRelationships(bapId, allDocs, ownedAddresses);
-      return new Response(JSON.stringify(result), {
-        headers: successHeaders
-      });
+      set.headers = successHeaders;
+      return result;
     } catch (error: unknown) {
       console.error('Error processing friendships request:', error);
       const message = error instanceof Error ? error.message : String(error);
 
-      return new Response(JSON.stringify({
+      set.status = 500;
+      set.headers = errorHeaders;
+      return {
         error: "Failed to fetch friendship data",
         details: message
-      }), {
-        status: 500,
-        headers: errorHeaders
-      });
+      };
     }
   });
 
-  app.get("/reactions", async ({ query }) => {
+  app.post("/likes", async ({ body, query, set }) => {
+    set.headers = {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+      "Cache-Control": "public, max-age=60"
+    };
+
     try {
-      const channel = query.channel;
-      if (!channel) {
-        return new Response(JSON.stringify({
-          error: "Missing 'channel' parameter",
-          details: "The channel parameter is required for fetching reactions"
-        }), {
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache'
-          }
-        });
-      }
+      console.log('Received /likes request:', { body, query });
 
-      const page = query.page ? Number.parseInt(query.page as string, 10) : 1;
-      const limit = query.limit ? Number.parseInt(query.limit as string, 10) : 100;
+      // Handle channel-based query
+      if (query.channel) {
+        const page = query.page ? Number.parseInt(query.page as string, 10) : 1;
+        const limit = query.limit ? Number.parseInt(query.limit as string, 10) : 100;
 
-      if (Number.isNaN(page) || page < 1) {
-        return new Response(JSON.stringify({
-          error: "Invalid page parameter",
-          details: "Page must be a positive integer"
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-
-      if (Number.isNaN(limit) || limit < 1 || limit > 1000) {
-        return new Response(JSON.stringify({
-          error: "Invalid limit parameter",
-          details: "Limit must be between 1 and 1000"
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-
-      const skip = (page - 1) * limit;
-
-      const cacheKey = `reactions:${channel}:${page}:${limit}`;
-      const cached = await readFromRedis<CacheValue>(cacheKey);
-
-      if (cached?.type === 'reactions') {
-        console.log('Cache hit for reactions:', cacheKey);
-        return new Response(JSON.stringify(cached.value), {
-          headers: {
-            "Content-Type": "application/json",
-            "Cache-Control": "public, max-age=60"
-          }
-        });
-      }
-
-      console.log('Cache miss for reactions:', cacheKey);
-      const db = await getDbo();
-
-      const queryObj = {
-        "MAP.type": "like",
-        "MAP.channel": channel
-      };
-
-      const col = db.collection("like");
-
-      // Get total count first
-      const count = await col.countDocuments(queryObj);
-
-      // Then get paginated results
-      const results = await col
-        .find(queryObj)
-        .sort({ "blk.i": -1 })
-        .skip(skip)
-        .limit(limit)
-        .project({ _id: 0 })  // Exclude _id field
-        .toArray();
-
-      const response: ReactionResponse = {
-        channel,
-        page,
-        limit,
-        count,
-        results
-      };
-
-      // Cache for 60 seconds
-      await saveToRedis<CacheValue>(cacheKey, {
-        type: 'reactions',
-        value: response
-      });
-
-      return new Response(JSON.stringify(response), {
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "public, max-age=60"
+        if (Number.isNaN(page) || page < 1) {
+          set.status = 400;
+          return {
+            error: "Invalid page parameter",
+            details: "Page must be a positive integer"
+          };
         }
-      });
+
+        if (Number.isNaN(limit) || limit < 1 || limit > 1000) {
+          set.status = 400;
+          return {
+            error: "Invalid limit parameter",
+            details: "Limit must be between 1 and 1000"
+          };
+        }
+
+        const skip = (page - 1) * limit;
+        const cacheKey = `likes:channel:${query.channel}:${page}:${limit}`;
+        const cached = await readFromRedis<CacheValue>(cacheKey);
+
+        if (cached?.type === 'likes') {
+          console.log('Cache hit for channel likes:', cacheKey);
+          return cached.value;
+        }
+
+        console.log('Cache miss for channel likes:', cacheKey);
+        const db = await getDbo();
+
+        const queryObj = {
+          "MAP.type": "like",
+          "MAP.channel": query.channel
+        };
+
+        const col = db.collection("like");
+        const count = await col.countDocuments(queryObj);
+        const results = await col
+          .find(queryObj)
+          .sort({ "blk.i": -1 })
+          .skip(skip)
+          .limit(limit)
+          .project({ _id: 0 })
+          .toArray();
+
+        const response = {
+          channel: query.channel,
+          page,
+          limit,
+          count,
+          results
+        };
+
+        await saveToRedis<CacheValue>(cacheKey, {
+          type: 'likes',
+          value: response
+        });
+
+        return response;
+      }
+
+      // Handle ID-based queries (existing functionality)
+      let txids: string[] = [];
+      let messageIds: string[] = [];
+      
+      if (Array.isArray(body)) {
+        console.log('Request body is an array of length:', body.length);
+        txids = body.filter(id => typeof id === 'string');
+        if (txids.length !== body.length) {
+          console.warn('Some array items were not strings:', body);
+        }
+      } else if (body && typeof body === 'object') {
+        console.log('Request body is an object:', body);
+        const request = body as LikeRequest;
+        txids = (request.txids || []).filter(id => typeof id === 'string');
+        messageIds = (request.messageIds || []).filter(id => typeof id === 'string');
+      } else {
+        console.warn('Invalid request body format:', body);
+        set.status = 400;
+        return {
+          error: "Invalid request format",
+          details: "Request body must be an array of txids or an object with txids/messageIds"
+        };
+      }
+
+      if (query?.d === 'disc-react' && messageIds.length === 0) {
+        console.log('Using legacy disc-react format');
+        messageIds = txids;
+        txids = [];
+      }
+      
+      if (txids.length === 0 && messageIds.length === 0) {
+        console.log('No valid IDs provided');
+        set.status = 400;
+        return {
+          error: "Invalid request",
+          details: "Request must include either txids or messageIds"
+        };
+      }
+
+      console.log('Processing request with:', { txids, messageIds });
+
+      const db = await getDbo();
+      const results: LikeResponse[] = [];
+
+      // Process txids
+      for (const txid of txids) {
+        const cacheKey = `likes:${txid}`;
+        const cached = await readFromRedis<CacheValue>(cacheKey);
+
+        if (cached?.type === 'likes' && cached.value) {
+          const signers = await Promise.all(
+            cached.value.signerIds.map(id => getBAPIdByAddress(id))
+          );
+          results.push({
+            txid: cached.value.txid,
+            likes: cached.value.likes,
+            total: cached.value.total,
+            signers: signers.filter((s): s is BapIdentity => s !== null)
+          });
+          continue;
+        }
+
+        const query = {
+          "MAP": {
+            $elemMatch: {
+              type: "like",
+              tx: txid
+            }
+          }
+        };
+        
+        console.log('Querying MongoDB for likes with:', JSON.stringify(query, null, 2));
+        
+        const likes = await db.collection("like")
+          .find(query)
+          .sort({ "blk.t": -1 })
+          .limit(1000)
+          .toArray() as unknown as LikeDocument[];
+
+        console.log(`Found ${likes.length} likes for txid ${txid}`);
+
+        const { signerIds, signers } = await processLikes(likes);
+
+        const likeInfo: LikeInfo = {
+          txid,
+          likes,
+          total: likes.length,
+          signerIds
+        };
+
+        await saveToRedis<CacheValue>(cacheKey, {
+          type: 'likes',
+          value: likeInfo
+        });
+
+        results.push({
+          txid: likeInfo.txid,
+          likes: likeInfo.likes,
+          total: likeInfo.total,
+          signers
+        });
+      }
+
+      // Process messageIds
+      for (const messageId of messageIds) {
+        const cacheKey = `likes:msg:${messageId}`;
+        const cached = await readFromRedis<CacheValue>(cacheKey);
+
+        if (cached?.type === 'likes' && cached.value) {
+          const signers = await Promise.all(
+            cached.value.signerIds.map(id => getBAPIdByAddress(id))
+          );
+          results.push({
+            txid: messageId,
+            likes: cached.value.likes,
+            total: cached.value.total,
+            signers: signers.filter((s): s is BapIdentity => s !== null)
+          });
+          continue;
+        }
+
+        const query = {
+          "MAP": {
+            $elemMatch: {
+              type: "like",
+              messageID: messageId
+            }
+          }
+        };
+        
+        console.log('Querying MongoDB for likes with messageID:', JSON.stringify(query, null, 2));
+        
+        const likes = await db.collection("like")
+          .find(query)
+          .sort({ "blk.t": -1 })
+          .limit(1000)
+          .toArray() as unknown as LikeDocument[];
+
+        console.log(`Found ${likes.length} likes for messageID ${messageId}`);
+
+        const { signerIds, signers } = await processLikes(likes);
+
+        const likeInfo: LikeInfo = {
+          txid: messageId,
+          likes,
+          total: likes.length,
+          signerIds
+        };
+
+        await saveToRedis<CacheValue>(cacheKey, {
+          type: 'likes',
+          value: likeInfo
+        });
+
+        results.push({
+          txid: likeInfo.txid,
+          likes: likeInfo.likes,
+          total: likeInfo.total,
+          signers
+        });
+      }
+
+      return results[0] || { txid: '', likes: [], total: 0, signers: [] };
+
     } catch (error: unknown) {
-      console.error('Error processing reactions request:', error);
+      console.error('Error processing likes request:', error);
       const message = error instanceof Error ? error.message : String(error);
 
-      // Log additional error details if available
-      if (error instanceof Error && error.stack) {
-        console.error('Error stack:', error.stack);
-      }
-
-      return new Response(JSON.stringify({
-        error: "Failed to fetch reactions",
+      set.status = 500;
+      set.headers = {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache"
+      };
+      return {
+        error: "Failed to fetch likes",
         details: message,
         timestamp: new Date().toISOString()
-      }), {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-cache"
-        }
-      });
+      };
     }
   });
-  app.get("/channels", async () => {
+
+  app.get("/channels", async ({ set }) => {
     try {
       const cacheKey = 'channels';
       const cached = await readFromRedis<CacheValue>(cacheKey);
 
       if (cached?.type === 'channels') {
         console.log('Cache hit for channels');
-        return new Response(JSON.stringify({ channels: cached.value }), {
-          headers: {
-            "Content-Type": "application/json",
-            "Cache-Control": "public, max-age=60"
-          }
-        });
+        set.headers = {
+          "Content-Type": "application/json",
+          "Cache-Control": "public, max-age=60"
+        };
+        return { channels: cached.value };
       }
 
       console.log('Cache miss for channels');
@@ -645,97 +778,85 @@ export function registerSocialRoutes(app: Elysia) {
       ];
 
       const results = await db.collection("message").aggregate(pipeline).toArray();
-
-      // Cast the results to ChannelInfo[]
       const typedResults = results as unknown as ChannelInfo[];
 
-      // Cache for 60 seconds
       await saveToRedis<CacheValue>(cacheKey, {
         type: 'channels',
         value: typedResults
       });
 
-      // Return the object with "channels" key instead of "message"
-      return new Response(JSON.stringify({ channels: typedResults }), {
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "public, max-age=60"
-        }
-      });
+      set.headers = {
+        "Content-Type": "application/json",
+        "Cache-Control": "public, max-age=60"
+      };
+      return { channels: typedResults };
     } catch (error: unknown) {
       console.error('Error processing channels request:', error);
       const message = error instanceof Error ? error.message : String(error);
 
-      return new Response(JSON.stringify({
+      set.status = 500;
+      set.headers = {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache"
+      };
+      return {
         error: "Failed to fetch channels",
         details: message,
         timestamp: new Date().toISOString()
-      }), {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-cache"
-        }
-      });
+      };
     }
   });
 
-  app.get("/messages/:channelId", async ({ params, query }) => {
+  app.get("/messages/:channelId", async ({ params, query, set }) => {
     try {
       const { channelId } = params;
       if (!channelId) {
-        return new Response(JSON.stringify({
+        set.status = 400;
+        set.headers = {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        };
+        return {
           error: "Missing channel ID",
           details: "The channel ID is required in the URL path"
-        }), {
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache'
-          }
-        });
+        };
       }
 
-      // Decode the channel ID from the URL
       const decodedChannelId = decodeURIComponent(channelId);
 
       const page = query.page ? Number.parseInt(query.page, 10) : 1;
       const limit = query.limit ? Number.parseInt(query.limit, 10) : 100;
 
       if (Number.isNaN(page) || page < 1) {
-        return new Response(JSON.stringify({
+        set.status = 400;
+        set.headers = { 'Content-Type': 'application/json' };
+        return {
           error: "Invalid page parameter",
           details: "Page must be a positive integer"
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        };
       }
 
       if (Number.isNaN(limit) || limit < 1 || limit > 1000) {
-        return new Response(JSON.stringify({
+        set.status = 400;
+        set.headers = { 'Content-Type': 'application/json' };
+        return {
           error: "Invalid limit parameter",
           details: "Limit must be between 1 and 1000"
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        };
       }
 
       const skip = (page - 1) * limit;
 
-      // Use the decoded channel ID for cache key
       const cacheKey = `messages:${decodedChannelId}:${page}:${limit}`;
       const cached = await readFromRedis<CacheValue>(cacheKey);
 
       if (cached?.type === 'messages') {
         console.log('Cache hit for messages:', cacheKey);
-        return new Response(JSON.stringify(cached.value), {
-          headers: {
-            "Content-Type": "application/json",
-            "Cache-Control": "public, max-age=60"
-          }
-        });
+        set.headers = {
+          "Content-Type": "application/json",
+          "Cache-Control": "public, max-age=60"
+        };
+        return cached.value;
       }
 
       console.log('Cache miss for messages:', cacheKey);
@@ -748,16 +869,14 @@ export function registerSocialRoutes(app: Elysia) {
 
       const col = db.collection("message");
 
-      // Get total count first
       const count = await col.countDocuments(queryObj);
 
-      // Then get paginated results
       const results = await col
         .find(queryObj)
         .sort({ "blk.t": -1 })
         .skip(skip)
         .limit(limit)
-        .project({ _id: 0 })  // Exclude _id field
+        .project({ _id: 0 })
         .toArray() as Message[];
 
       const response: MessageResponse = {
@@ -768,256 +887,30 @@ export function registerSocialRoutes(app: Elysia) {
         results
       };
 
-      // Cache for 60 seconds
       await saveToRedis<CacheValue>(cacheKey, {
         type: 'messages',
         value: response
       });
 
-      return new Response(JSON.stringify(response), {
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "public, max-age=60"
-        }
-      });
+      set.headers = {
+        "Content-Type": "application/json",
+        "Cache-Control": "public, max-age=60"
+      };
+      return response;
     } catch (error: unknown) {
       console.error('Error processing messages request:', error);
       const message = error instanceof Error ? error.message : String(error);
 
-      return new Response(JSON.stringify({
+      set.status = 500;
+      set.headers = {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache"
+      };
+      return {
         error: "Failed to fetch messages",
         details: message,
         timestamp: new Date().toISOString()
-      }), {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-cache"
-        }
-      });
-    }
-  });
-
-  app.post("/likes", async ({ body, query, request }) => {
-    // Add CORS headers to the request
-    const headers = {
-      ...corsHeaders,
-      "Content-Type": "application/json",
-      "Cache-Control": "public, max-age=60"
-    };
-
-    try {
-      console.log('Received /likes request:', {
-        body,
-        query,
-        headers: request.headers,
-        contentType: request.headers.get('content-type')
-      });
-
-      // Validate request body
-      let txids: string[] = [];
-      let messageIds: string[] = [];
-      
-      if (Array.isArray(body)) {
-        console.log('Request body is an array of length:', body.length);
-        txids = body.filter(id => typeof id === 'string');
-        if (txids.length !== body.length) {
-          console.warn('Some array items were not strings:', body);
-        }
-      } else if (body && typeof body === 'object') {
-        console.log('Request body is an object:', body);
-        const request = body as LikeRequest;
-        txids = (request.txids || []).filter(id => typeof id === 'string');
-        messageIds = (request.messageIds || []).filter(id => typeof id === 'string');
-      } else {
-        console.warn('Invalid request body format:', body);
-        return new Response(JSON.stringify({
-          error: "Invalid request format",
-          details: "Request body must be an array of txids or an object with txids/messageIds"
-        }), {
-          status: 400,
-          headers
-        });
-      }
-
-      // Support the old query format if present
-      if (query?.d === 'disc-react' && messageIds.length === 0) {
-        console.log('Using legacy disc-react format');
-        messageIds = txids;
-        txids = [];
-      }
-      
-      if (txids.length === 0 && messageIds.length === 0) {
-        console.log('No valid IDs provided');
-        return new Response(JSON.stringify({
-          error: "Invalid request",
-          details: "Request must include either txids or messageIds"
-        }), {
-          status: 400,
-          headers
-        });
-      }
-
-      console.log('Processing request with:', { txids, messageIds });
-
-      const db = await getDbo();
-      const results: LikeResponse[] = [];
-
-      // Process txids
-      for (const txid of txids) {
-        // Check cache first
-        const cacheKey = `likes:${txid}`;
-        const cached = await readFromRedis<CacheValue>(cacheKey);
-
-        if (cached?.type === 'likes' && cached.value) {
-          // Convert cached info to response format
-          const signers = await Promise.all(
-            cached.value.signerIds.map(id => getBAPIdByAddress(id))
-          );
-          results.push({
-            txid: cached.value.txid,
-            likes: cached.value.likes,
-            total: cached.value.total,
-            signers: signers.filter((s): s is BapIdentity => s !== null)
-          });
-          continue;
-        }
-
-        // Query MongoDB for likes
-        const query = {
-          "MAP": {
-            $elemMatch: {
-              type: "like",
-              tx: txid
-            }
-          }
-        };
-        
-        console.log('Querying MongoDB for likes with:', JSON.stringify(query, null, 2));
-        
-        const likes = await db.collection("like")
-          .find(query)
-          .sort({ "blk.t": -1 })
-          .limit(1000)
-          .toArray() as unknown as LikeDocument[];
-
-        console.log(`Found ${likes.length} likes for txid ${txid}`);
-
-        // Process likes and get signers
-        const { signerIds, signers } = await processLikes(likes);
-
-        // Cache minimal info
-        const likeInfo: LikeInfo = {
-          txid,
-          likes,
-          total: likes.length,
-          signerIds
-        };
-
-        await saveToRedis<CacheValue>(cacheKey, {
-          type: 'likes',
-          value: likeInfo
-        });
-
-        // Add full response with signer objects
-        results.push({
-          txid: likeInfo.txid,
-          likes: likeInfo.likes,
-          total: likeInfo.total,
-          signers
-        });
-      }
-
-      // Process messageIds
-      for (const messageId of messageIds) {
-        // Check cache first
-        const cacheKey = `likes:msg:${messageId}`;
-        const cached = await readFromRedis<CacheValue>(cacheKey);
-
-        if (cached?.type === 'likes' && cached.value) {
-          // Convert cached info to response format
-          const signers = await Promise.all(
-            cached.value.signerIds.map(id => getBAPIdByAddress(id))
-          );
-          results.push({
-            txid: messageId,
-            likes: cached.value.likes,
-            total: cached.value.total,
-            signers: signers.filter((s): s is BapIdentity => s !== null)
-          });
-          continue;
-        }
-
-        // Query MongoDB for likes
-        const query = {
-          "MAP": {
-            $elemMatch: {
-              type: "like",
-              messageID: messageId
-            }
-          }
-        };
-        
-        console.log('Querying MongoDB for likes with messageID:', JSON.stringify(query, null, 2));
-        
-        const likes = await db.collection("like")
-          .find(query)
-          .sort({ "blk.t": -1 })
-          .limit(1000)
-          .toArray() as unknown as LikeDocument[];
-
-        console.log(`Found ${likes.length} likes for messageID ${messageId}`);
-
-        // Process likes and get signers
-        const { signerIds, signers } = await processLikes(likes);
-
-        // Cache minimal info
-        const likeInfo: LikeInfo = {
-          txid: messageId,
-          likes,
-          total: likes.length,
-          signerIds
-        };
-
-        await saveToRedis<CacheValue>(cacheKey, {
-          type: 'likes',
-          value: likeInfo
-        });
-
-        // Add full response with signer objects
-        results.push({
-          txid: likeInfo.txid,
-          likes: likeInfo.likes,
-          total: likeInfo.total,
-          signers
-        });
-      }
-
-      // Return just the first result since we want a single object response
-      const response = results[0] || { txid: '', likes: [], total: 0, signers: [] };
-      console.log('Sending response:', response);
-
-      return new Response(JSON.stringify(response), {
-        status: 200,
-        headers
-      });
-
-    } catch (error: unknown) {
-      console.error('Error processing likes request:', error);
-      const message = error instanceof Error ? error.message : String(error);
-
-      return new Response(JSON.stringify({
-        error: "Failed to fetch likes",
-        details: message,
-        timestamp: new Date().toISOString()
-      }), {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-          "Cache-Control": "no-cache"
-        }
-      });
+      };
     }
   });
 
@@ -1044,7 +937,6 @@ export function registerSocialRoutes(app: Elysia) {
 
     let changeStream;
     if (collectionName === "$all") {
-      // Watch all collections that we care about
       const collections = bitcoinSchemaCollections;
       const streams = collections.map(collection => {
         const target = db.collection(collection);
@@ -1055,7 +947,6 @@ export function registerSocialRoutes(app: Elysia) {
         start(controller) {
           controller.enqueue(`data: ${JSON.stringify({ type: "open", data: [] })}\n\n`);
 
-          // Handle each stream
           streams.forEach((stream, index) => {
             const collection = collections[index];
             stream.on("change", (next: ChangeStreamDocument<BmapTx>) => {
@@ -1079,44 +970,45 @@ export function registerSocialRoutes(app: Elysia) {
 
           return () => {
             clearInterval(heartbeat);
-            streams.forEach(stream => stream.close());
-          };
-        }
-      });
-    } else {
-      // Watch a specific collection
-      const target = db.collection(collectionName);
-      changeStream = target.watch(pipeline, { fullDocument: "updateLookup" });
-
-      return new ReadableStream({
-        start(controller) {
-          controller.enqueue(`data: ${JSON.stringify({ type: "open", data: [] })}\n\n`);
-
-          changeStream.on("change", (next: ChangeStreamDocument<BmapTx>) => {
-            if (next.operationType === "insert") {
-              console.log(chalk.blue("New insert event"), next.fullDocument.tx?.h);
-              controller.enqueue(
-                `data: ${JSON.stringify({ type: collectionName, data: [next.fullDocument] })}\n\n`
-              );
+            for (const stream of streams) {
+              stream.close();
             }
-          });
-
-          changeStream.on("error", (e) => {
-            console.log(chalk.blue("Changestream error - closing SSE"), e);
-            changeStream.close();
-            controller.close();
-          });
-
-          const heartbeat = setInterval(() => {
-            controller.enqueue(":heartbeat\n\n");
-          }, 30000);
-
-          return () => {
-            clearInterval(heartbeat);
-            changeStream.close();
           };
         }
       });
     }
+
+    const target = db.collection(collectionName);
+    changeStream = target.watch(pipeline, { fullDocument: "updateLookup" });
+
+    return new ReadableStream({
+      start(controller) {
+        controller.enqueue(`data: ${JSON.stringify({ type: "open", data: [] })}\n\n`);
+
+        changeStream.on("change", (next: ChangeStreamDocument<BmapTx>) => {
+          if (next.operationType === "insert") {
+            console.log(chalk.blue("New insert event"), next.fullDocument.tx?.h);
+            controller.enqueue(
+              `data: ${JSON.stringify({ type: collectionName, data: [next.fullDocument] })}\n\n`
+            );
+          }
+        });
+
+        changeStream.on("error", (e) => {
+          console.log(chalk.blue("Changestream error - closing SSE"), e);
+          changeStream.close();
+          controller.close();
+        });
+
+        const heartbeat = setInterval(() => {
+          controller.enqueue(":heartbeat\n\n");
+        }, 30000);
+
+        return () => {
+          clearInterval(heartbeat);
+          changeStream.close();
+        };
+      }
+    });
   });
 }
