@@ -1,38 +1,37 @@
 import type { B, BmapTx } from 'bmapjs';
-import type { AIP } from 'bmapjs';
 
-interface AIPWithAlgorithmSigningComponent extends AIP {
+interface AIPWithAlgorithmSigningComponent {
   algorithm_signing_component?: string;
+  address?: string;
 }
 
-interface BWithData extends B {
+interface BWithData {
   Data?: {
     utf8?: string;
   };
+  content?: string;
 }
 
 export const normalize = (tx: BmapTx): BmapTx => {
-  // The go implementation has some weird data structures we want to match the js version
   if (tx.AIP) {
-    // multiple AIP outputs
-    for (let i = 0; i < tx.AIP?.length; i++) {
-      const a = tx.AIP[i] as AIPWithAlgorithmSigningComponent;
-
-      if (!a.address) {
+    const aip = tx.AIP.map((a: AIPWithAlgorithmSigningComponent) => {
+      if (!a.address && a.algorithm_signing_component) {
         a.address = a.algorithm_signing_component;
-        a.algorithm_signing_component = undefined;
       }
-      tx.AIP[i] = a as AIP;
-    }
+      return a;
+    });
+    tx.AIP = aip;
+  }
 
+  if (tx.B) {
     for (let i = 0; i < tx.B?.length; i++) {
       const b = tx.B[i] as BWithData;
-      if (!b.content) {
-        b.content = b.Data?.utf8;
-        // TODO: delete the Data field
+      if (!b.content && b.Data?.utf8) {
+        b.content = b.Data.utf8;
       }
       tx.B[i] = b as B;
     }
   }
+
   return tx;
 };
