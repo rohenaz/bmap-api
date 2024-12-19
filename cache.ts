@@ -2,14 +2,12 @@ import redis from 'redis'
 import type { BapIdentity } from './bap.js'
 import type { TimeSeriesData } from './chart.js'
 import { getCurrentBlockHeight } from './db.js'
-import type { ChartData } from './chart.js'
-import { ChartConfiguration } from 'chart.js'
+import type { ChartConfiguration } from 'chart.js'
 import type { BmapTx } from 'bmapjs'
 
 // Import interfaces from social.ts
 import type {
   LikeInfo,
-  ReactionResponse,
   ChannelInfo,
   MessageResponse,
   Reactions
@@ -51,14 +49,13 @@ export type CacheValue =
   | { type: 'count'; value: Record<string, number>[] }
   | { type: 'signer'; value: BapIdentity }
   | { type: 'likes'; value: LikeInfo }
-  | { type: 'reactions'; value: ReactionResponse }
   | { type: 'channels'; value: ChannelInfo[] }
   | { type: 'messages'; value: MessageResponse }
   | { type: 'blockHeight'; value: number }
   | { type: 'ingest'; value: string[] }
   | { type: 'chart'; value: ChartCacheData }
   | { type: 'timeSeriesData'; value: TimeSeriesData }
-  | { type: 'channelLikes'; value: Reactions }
+  | { type: 'reactions'; value: Reactions }
 
 export async function saveToRedis<T extends CacheValue>(
   key: string,
