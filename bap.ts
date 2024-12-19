@@ -29,6 +29,9 @@ export type BapIdentity = {
   block: number;
   timestamp: number;
   valid: boolean;
+  paymail?: string;
+  displayName?: string;
+  icon?: string;
 };
 
 const bapApiUrl = 'https://api.sigmaidentity.com/v1/';

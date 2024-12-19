@@ -153,6 +153,361 @@ const app = new Elysia()
           { name: 'charts', description: 'Chart generation endpoints' },
           { name: 'identities', description: 'BAP identity management' },
         ],
+        paths: {
+          '/tx/{tx}/{format}': {
+            get: {
+              tags: ['transactions'],
+              summary: 'Get transaction details',
+              parameters: [
+                {
+                  name: 'tx',
+                  in: 'path',
+                  required: true,
+                  schema: { type: 'string' },
+                  example: '1234567890abcdef',
+                },
+                {
+                  name: 'format',
+                  in: 'path',
+                  required: false,
+                  schema: { type: 'string', enum: ['bob', 'raw'] },
+                },
+              ],
+              responses: {
+                '200': {
+                  description: 'Transaction details',
+                  content: {
+                    'application/json': {
+                      schema: { $ref: '#/components/schemas/Transaction' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '/friendships/{bapId}': {
+            get: {
+              tags: ['social'],
+              summary: 'Get friendship status for a BAP ID',
+              parameters: [
+                {
+                  name: 'bapId',
+                  in: 'path',
+                  required: true,
+                  schema: { type: 'string' },
+                  example: 'abc123def456',
+                },
+              ],
+              responses: {
+                '200': {
+                  description: 'Friendship status',
+                  content: {
+                    'application/json': {
+                      schema: { $ref: '#/components/schemas/FriendshipResponse' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '/likes': {
+            post: {
+              tags: ['social'],
+              summary: 'Get likes for transactions or messages',
+              requestBody: {
+                content: {
+                  'application/json': {
+                    schema: {
+                      oneOf: [
+                        {
+                          type: 'array',
+                          items: { type: 'string' },
+                          example: ['tx1', 'tx2'],
+                        },
+                        {
+                          type: 'object',
+                          properties: {
+                            txids: { type: 'array', items: { type: 'string' } },
+                            messageIds: { type: 'array', items: { type: 'string' } },
+                          },
+                          example: { txids: ['tx1'], messageIds: ['msg1'] },
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+              responses: {
+                '200': {
+                  description: 'Like information',
+                  content: {
+                    'application/json': {
+                      schema: { $ref: '#/components/schemas/LikeResponse' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '/chart-data/{name}': {
+            get: {
+              tags: ['charts'],
+              summary: 'Get chart data for a collection',
+              parameters: [
+                {
+                  name: 'name',
+                  in: 'path',
+                  required: false,
+                  schema: { type: 'string' },
+                  example: 'message',
+                },
+                {
+                  name: 'timeframe',
+                  in: 'query',
+                  required: false,
+                  schema: {
+                    type: 'string',
+                    enum: ['day', 'week', 'month', 'year'],
+                  },
+                  example: 'day',
+                },
+              ],
+              responses: {
+                '200': {
+                  description: 'Chart data',
+                  content: {
+                    'application/json': {
+                      schema: { $ref: '#/components/schemas/ChartData' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '/channels': {
+            get: {
+              tags: ['social'],
+              summary: 'Get list of channels',
+              responses: {
+                '200': {
+                  description: 'List of channels',
+                  content: {
+                    'application/json': {
+                      schema: {
+                        type: 'array',
+                        items: { $ref: '#/components/schemas/Channel' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '/messages/{channelId}': {
+            get: {
+              tags: ['social'],
+              summary: 'Get messages for a channel',
+              parameters: [
+                {
+                  name: 'channelId',
+                  in: 'path',
+                  required: true,
+                  schema: { type: 'string' },
+                  example: 'general',
+                },
+              ],
+              responses: {
+                '200': {
+                  description: 'Channel messages',
+                  content: {
+                    'application/json': {
+                      schema: { $ref: '#/components/schemas/MessageResponse' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '/identities': {
+            get: {
+              tags: ['identities'],
+              summary: 'Get all BAP identities',
+              responses: {
+                '200': {
+                  description: 'List of identities',
+                  content: {
+                    'application/json': {
+                      schema: {
+                        type: 'object',
+                        properties: {
+                          message: { type: 'string', example: 'Success' },
+                          signers: {
+                            type: 'array',
+                            items: { $ref: '#/components/schemas/UserIdentity' },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        components: {
+          schemas: {
+            Transaction: {
+              type: 'object',
+              properties: {
+                tx: {
+                  type: 'object',
+                  properties: {
+                    h: { type: 'string', example: '1234567890abcdef1234567890abcdef' },
+                  },
+                },
+                blk: {
+                  type: 'object',
+                  properties: {
+                    i: { type: 'number', example: 123456 },
+                    t: { type: 'number', example: 1634567890 },
+                  },
+                },
+                MAP: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      type: { type: 'string', example: 'message' },
+                      channel: { type: 'string', example: 'general' },
+                      paymail: { type: 'string', example: 'user@example.com' },
+                    },
+                  },
+                },
+              },
+            },
+            Identity: {
+              type: 'object',
+              properties: {
+                idKey: { type: 'string', example: 'abc123def456' },
+                rootAddress: { type: 'string', example: '1abcdef...' },
+                currentAddress: { type: 'string', example: '1xyz789...' },
+                identity: { type: 'string', example: '{"name": "John Doe"}' },
+              },
+            },
+            FriendshipResponse: {
+              type: 'object',
+              properties: {
+                friends: { type: 'array', items: { type: 'string' }, example: ['id1', 'id2'] },
+                incoming: { type: 'array', items: { type: 'string' }, example: ['id3'] },
+                outgoing: { type: 'array', items: { type: 'string' }, example: ['id4'] },
+              },
+            },
+            LikeResponse: {
+              type: 'object',
+              properties: {
+                txid: { type: 'string', example: '1234567890abcdef' },
+                likes: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      tx: { type: 'object', properties: { h: { type: 'string' } } },
+                      MAP: { type: 'array', items: { type: 'object' } },
+                    },
+                  },
+                },
+                total: { type: 'number', example: 5 },
+                signers: { type: 'array', items: { $ref: '#/components/schemas/Identity' } },
+              },
+            },
+            ChartData: {
+              type: 'object',
+              properties: {
+                labels: { type: 'array', items: { type: 'number' }, example: [1, 2, 3, 4, 5] },
+                values: { type: 'array', items: { type: 'number' }, example: [10, 20, 15, 25, 30] },
+                range: { type: 'array', items: { type: 'number' }, example: [1, 5] },
+              },
+            },
+            Channel: {
+              type: 'object',
+              properties: {
+                channel: { type: 'string', example: 'general' },
+                last_message: { type: 'string', example: 'Hello World' },
+                last_message_time: { type: 'number', example: 1634567890 },
+                messages: { type: 'number', example: 42 },
+                creator: { type: 'string', example: 'user@example.com' },
+              },
+            },
+            Message: {
+              type: 'object',
+              properties: {
+                tx: {
+                  type: 'object',
+                  properties: {
+                    h: { type: 'string', example: '1234567890abcdef' },
+                  },
+                },
+                MAP: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      type: { type: 'string', example: 'message' },
+                      channel: { type: 'string', example: 'general' },
+                      paymail: { type: 'string', example: 'user@example.com' },
+                    },
+                  },
+                },
+                B: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      Data: {
+                        type: 'object',
+                        properties: {
+                          utf8: { type: 'string', example: 'Hello World' },
+                        },
+                      },
+                    },
+                  },
+                },
+                AIP: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      bapId: { type: 'string', example: 'abc123' },
+                    },
+                  },
+                },
+                timestamp: { type: 'number', example: 1634567890 },
+              },
+            },
+            MessageResponse: {
+              type: 'object',
+              properties: {
+                channel: { type: 'string', example: 'general' },
+                page: { type: 'number', example: 1 },
+                limit: { type: 'number', example: 100 },
+                count: { type: 'number', example: 42 },
+                results: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/Message' },
+                },
+              },
+            },
+            UserIdentity: {
+              type: 'object',
+              properties: {
+                idKey: { type: 'string', example: 'abc123def456' },
+                paymail: { type: 'string', example: 'user@example.com' },
+                displayName: { type: 'string', example: 'John Doe' },
+                icon: { type: 'string', example: 'https://example.com/avatar.png' },
+              },
+            },
+          },
+        },
       },
     })
   )
@@ -778,14 +1133,15 @@ const start = async () => {
     return { alternateName: String(identityValue) };
   }
 
-  app.get('/identities', async () => {
+  app.get('/identities', async ({ set }) => {
     try {
+      console.log('Starting /identities request');
+
       if (!client.isReady) {
         console.error('Redis client is not ready');
-        return new Response(JSON.stringify([]), {
-          status: 503,
-          headers: { 'Content-Type': 'application/json' },
-        });
+        set.status = 503;
+        set.headers = { 'Content-Type': 'application/json' };
+        return { error: 'Redis client not ready' };
       }
 
       const idCacheKey = 'signer-*';
@@ -795,75 +1151,252 @@ const start = async () => {
 
       if (!keys.length) {
         console.log('No identity keys found in Redis');
-        return new Response(JSON.stringify([]), {
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache',
-          },
-        });
+        set.headers = {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+        };
+        return { message: 'No identities found', signers: [] };
       }
 
       const identities = await Promise.all(
         keys.map(async (k) => {
           try {
             console.log('Fetching key:', k);
-            const cachedValue = await readFromRedis(k);
-            console.log('Cached value type:', cachedValue?.type);
-            console.log('Cached value exists:', !!cachedValue?.value);
+            const cachedValue = await readFromRedis<CacheValue>(k);
+            console.log('Cached value:', JSON.stringify(cachedValue, null, 2));
 
-            if (cachedValue && cachedValue.type === 'signer' && cachedValue.value) {
+            if (cachedValue?.type === 'signer' && cachedValue.value) {
               const identity = cachedValue.value;
+              console.log('Processing identity:', identity.idKey);
 
               // Parse the identity into an object
               const identityObj = parseIdentity(identity.identity);
+              console.log('Parsed identity object:', identityObj);
 
+              // Return the shape that the frontend expects
               return {
                 idKey: identity.idKey,
-                rootAddress: identity.rootAddress,
-                currentAddress: identity.currentAddress,
-                addresses:
-                  identity.addresses?.map(
-                    (addr: { address: string; txId: string; block?: number }) => ({
-                      address: addr.address,
-                      txId: addr.txId,
-                      block: addr.block,
-                    })
-                  ) || [],
-                identity: identityObj,
-                identityTxId: identity.identityTxId,
-                block: identity.block || 0,
-                timestamp:
-                  typeof identity.timestamp === 'number'
-                    ? identity.timestamp
-                    : Math.floor(identity.timestamp / 1000),
-                valid: identity.valid ?? true,
+                paymail: identityObj.paymail || identity.paymail,
+                displayName: identityObj.alternateName || identityObj.name || identity.idKey,
+                icon: identityObj.image || identityObj.icon || identityObj.avatar,
               };
             }
             console.log('Invalid or missing value for key:', k);
             return null;
           } catch (error) {
-            console.error(`Error fetching key ${k}:`, error);
+            console.error(`Error processing key ${k}:`, error);
             return null;
           }
         })
       );
 
-      const filteredIdentities = identities.filter((id) => id !== null);
+      const filteredIdentities = identities.filter(
+        (id): id is NonNullable<typeof id> => id !== null
+      );
       console.log('Total identities found:', keys.length);
       console.log('Valid identities after filtering:', filteredIdentities.length);
+      console.log('Final identities:', JSON.stringify(filteredIdentities, null, 2));
 
-      return new Response(JSON.stringify(filteredIdentities), {
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-        },
-      });
+      set.headers = {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+      };
+      return { message: 'Success', signers: filteredIdentities };
     } catch (e) {
       console.error('Failed to get identities:', e);
-      return new Response(JSON.stringify([]), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
+      set.status = 500;
+      set.headers = { 'Content-Type': 'application/json' };
+      return { error: 'Failed to get identities', signers: [] };
+    }
+  });
+
+  app.get('/channels', async ({ set }) => {
+    try {
+      const cacheKey = 'channels';
+      const cached = await readFromRedis<CacheValue>(cacheKey);
+
+      if (cached?.type === 'channels') {
+        console.log('Cache hit for channels');
+        set.headers = {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=60',
+        };
+        return cached.value;
+      }
+
+      console.log('Cache miss for channels');
+      const db = await getDbo();
+
+      const pipeline = [
+        {
+          $match: {
+            'MAP.channel': { $exists: true, $ne: '' },
+          },
+        },
+        {
+          $unwind: '$MAP',
+        },
+        {
+          $unwind: '$B',
+        },
+        {
+          $group: {
+            _id: '$MAP.channel',
+            channel: { $first: '$MAP.channel' },
+            creator: { $first: '$MAP.paymail' },
+            last_message: { $last: '$B.Data.utf8' },
+            last_message_time: { $max: '$blk.t' },
+            messages: { $sum: 1 },
+          },
+        },
+        {
+          $sort: { last_message_time: -1 },
+        },
+        {
+          $limit: 100,
+        },
+      ];
+
+      const results = await db.collection('message').aggregate(pipeline).toArray();
+      const channels = results.map((r) => ({
+        channel: r.channel,
+        creator: r.creator,
+        last_message: r.last_message,
+        last_message_time: r.last_message_time,
+        messages: r.messages,
+      }));
+
+      await saveToRedis<CacheValue>(cacheKey, {
+        type: 'channels',
+        value: channels,
       });
+
+      set.headers = {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=60',
+      };
+      return channels;
+    } catch (error: unknown) {
+      console.error('Error processing channels request:', error);
+      const message = error instanceof Error ? error.message : String(error);
+
+      set.status = 500;
+      set.headers = {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+      };
+      return {
+        error: 'Failed to fetch channels',
+        details: message,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  });
+
+  app.get('/messages/:channelId', async ({ params, query, set }) => {
+    try {
+      const { channelId } = params;
+      if (!channelId) {
+        set.status = 400;
+        set.headers = {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+        };
+        return {
+          error: 'Missing channel ID',
+          details: 'The channel ID is required in the URL path',
+        };
+      }
+
+      const decodedChannelId = decodeURIComponent(channelId);
+
+      const page = query.page ? Number.parseInt(query.page as string, 10) : 1;
+      const limit = query.limit ? Number.parseInt(query.limit as string, 10) : 100;
+
+      if (Number.isNaN(page) || page < 1) {
+        set.status = 400;
+        set.headers = { 'Content-Type': 'application/json' };
+        return {
+          error: 'Invalid page parameter',
+          details: 'Page must be a positive integer',
+        };
+      }
+
+      if (Number.isNaN(limit) || limit < 1 || limit > 1000) {
+        set.status = 400;
+        set.headers = { 'Content-Type': 'application/json' };
+        return {
+          error: 'Invalid limit parameter',
+          details: 'Limit must be between 1 and 1000',
+        };
+      }
+
+      const skip = (page - 1) * limit;
+
+      const cacheKey = `messages:${decodedChannelId}:${page}:${limit}`;
+      const cached = await readFromRedis<CacheValue>(cacheKey);
+
+      if (cached?.type === 'messages') {
+        console.log('Cache hit for messages:', cacheKey);
+        set.headers = {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=60',
+        };
+        return cached.value;
+      }
+
+      console.log('Cache miss for messages:', cacheKey);
+      const db = await getDbo();
+
+      const queryObj = {
+        'MAP.type': 'message',
+        'MAP.channel': decodedChannelId,
+      };
+
+      const col = db.collection('message');
+
+      const count = await col.countDocuments(queryObj);
+
+      const results = (await col
+        .find(queryObj)
+        .sort({ 'blk.t': -1 })
+        .skip(skip)
+        .limit(limit)
+        .project({ _id: 0 })
+        .toArray()) as BmapTx[];
+
+      const response = {
+        channel: decodedChannelId,
+        page,
+        limit,
+        count,
+        results,
+      };
+
+      await saveToRedis<CacheValue>(cacheKey, {
+        type: 'messages',
+        value: response,
+      });
+
+      set.headers = {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=60',
+      };
+      return response;
+    } catch (error: unknown) {
+      console.error('Error processing messages request:', error);
+      const message = error instanceof Error ? error.message : String(error);
+
+      set.status = 500;
+      set.headers = {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+      };
+      return {
+        error: 'Failed to fetch messages',
+        details: message,
+        timestamp: new Date().toISOString(),
+      };
     }
   });
 

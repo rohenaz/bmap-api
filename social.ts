@@ -950,14 +950,16 @@ export function registerSocialRoutes(app: Elysia) {
         return target.watch(pipeline, { fullDocument: 'updateLookup' });
       });
 
+      let isActive = true;
+
       return new ReadableStream({
         start(controller) {
           controller.enqueue(`data: ${JSON.stringify({ type: 'open', data: [] })}\n\n`);
 
           streams.forEach((stream, index) => {
-            const collection = collections[index];
             stream.on('change', (next: ChangeStreamDocument<BmapTx>) => {
               if (next.operationType === 'insert') {
+                const collection = collections[index];
                 console.log(chalk.blue('New insert event in', collection), next.fullDocument.tx?.h);
                 controller.enqueue(
                   `data: ${JSON.stringify({ type: collection, data: [next.fullDocument] })}\n\n`
@@ -966,19 +968,46 @@ export function registerSocialRoutes(app: Elysia) {
             });
 
             stream.on('error', (e) => {
-              console.log(chalk.blue(`Changestream error in ${collection} - closing SSE`), e);
-              stream.close();
+              console.log(chalk.blue('Changestream error - closing SSE'), e);
+              if (isActive) {
+                isActive = false;
+                for (const s of streams) {
+                  s.close();
+                }
+                controller.close();
+              }
+            });
+
+            stream.on('end', () => {
+              console.log(chalk.blue('Changestream ended - closing SSE'));
+              isActive = false;
+              clearInterval(_heartbeat);
+              for (const s of streams) {
+                s.close();
+              }
+              controller.close();
+            });
+
+            stream.on('close', () => {
+              console.log(chalk.blue('Changestream closed - closing SSE'));
+              isActive = false;
+              clearInterval(_heartbeat);
+              for (const s of streams) {
+                s.close();
+              }
             });
           });
 
-          const heartbeat = setInterval(() => {
+          const _heartbeat = setInterval(() => {
             controller.enqueue(':heartbeat\n\n');
           }, 30000);
 
           return () => {
-            clearInterval(heartbeat);
-            for (const stream of streams) {
-              stream.close();
+            console.log('Stream cancelled by client');
+            isActive = false;
+            clearInterval(_heartbeat);
+            for (const s of streams) {
+              s.close();
             }
           };
         },
@@ -987,6 +1016,7 @@ export function registerSocialRoutes(app: Elysia) {
 
     const target = db.collection(collectionName);
     const changeStream = target.watch(pipeline, { fullDocument: 'updateLookup' });
+    let isActive = true;
 
     return new ReadableStream({
       start(controller) {
@@ -1002,19 +1032,29 @@ export function registerSocialRoutes(app: Elysia) {
         });
 
         changeStream.on('error', (e) => {
-          console.log(chalk.blue(`Changestream error in ${collectionName} - closing SSE`), e);
-          changeStream.close();
-          controller.close();
+          console.log(chalk.blue('Changestream error - closing SSE'), e);
+          if (isActive) {
+            isActive = false;
+            changeStream.close();
+            controller.close();
+          }
         });
 
-        const heartbeat = setInterval(() => {
+        const _heartbeat = setInterval(() => {
           controller.enqueue(':heartbeat\n\n');
         }, 30000);
 
         return () => {
-          clearInterval(heartbeat);
+          console.log('Stream cancelled by client');
+          isActive = false;
+          clearInterval(_heartbeat);
           changeStream.close();
         };
+      },
+      cancel() {
+        console.log('Stream cancelled by client');
+        isActive = false;
+        changeStream.close();
       },
     });
   });
