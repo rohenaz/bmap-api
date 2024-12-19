@@ -742,7 +742,7 @@ export function registerSocialRoutes(app: Elysia) {
           "Content-Type": "application/json",
           "Cache-Control": "public, max-age=60"
         };
-        return { channels: cached.value };
+        return cached.value;
       }
 
       console.log('Cache miss for channels');
@@ -790,7 +790,7 @@ export function registerSocialRoutes(app: Elysia) {
         "Content-Type": "application/json",
         "Cache-Control": "public, max-age=60"
       };
-      return { channels: typedResults };
+      return typedResults;
     } catch (error: unknown) {
       console.error('Error processing channels request:', error);
       const message = error instanceof Error ? error.message : String(error);
