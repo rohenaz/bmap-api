@@ -1,0 +1,9 @@
+#!/bin/sh
+
+# Run full TypeScript build
+echo "Running TypeScript build..."
+bun run build || exit 1
+
+# Run Biome check on all files
+echo "Running Biome checks..."
+bun x @biomejs/biome check . || exit 1 

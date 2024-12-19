@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# Get list of staged files
+files=$(git diff --cached --name-only --diff-filter=ACMR "*.ts" "*.tsx" | tr '\n' ' ')
+
+if [ -n "$files" ]; then
+  # Run Biome check on staged files
+  bun x @biomejs/biome check $files || exit 1
+fi
+
+# Run TypeScript check
+bun run tsc || exit 1 

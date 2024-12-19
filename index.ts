@@ -22,6 +22,7 @@ import { getBlocksRange, getTimeSeriesData } from './chart.js';
 import { getCollectionCounts, getDbo, getState } from './db.js';
 import { registerSocialRoutes } from './social.js';
 import './p2p.js';
+import { swagger } from '@elysiajs/swagger';
 import type { ChangeStream } from 'mongodb';
 import type { CacheValue } from './cache.js';
 import { processTransaction } from './process.js';
@@ -138,6 +139,23 @@ const app = new Elysia()
     })
   )
   .use(staticPlugin({ assets: './public', prefix: '/' }))
+  .use(
+    swagger({
+      documentation: {
+        info: {
+          title: 'BMAP API',
+          version: '1.0.0',
+          description: 'Bitcoin transaction processing and social features API',
+        },
+        tags: [
+          { name: 'transactions', description: 'Transaction related endpoints' },
+          { name: 'social', description: 'Social features like friends and likes' },
+          { name: 'charts', description: 'Chart generation endpoints' },
+          { name: 'identities', description: 'BAP identity management' },
+        ],
+      },
+    })
+  )
   .onError(({ error }) => {
     console.error('Application error:', error);
     return new Response(`<div class="text-red-500">Server error: ${error.message}</div>`, {

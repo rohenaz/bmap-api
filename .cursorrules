@@ -1,175 +1,137 @@
 # Project Overview
 
-This project is a **BMAP API** server that processes and serves Bitcoin transactions using various Bitcoin SV protocols. It leverages technologies such as:
+This project is a **BMAP API** server that processes and serves Bitcoin transactions using Bitcoin SV protocols. Key functionalities:
+- Processing and storing Bitcoin transactions in MongoDB with Redis caching
+- Generating dynamic charts using Chart.js with @napi-rs/canvas
+- Serving social endpoints for friends, identities, and likes
+- Streaming Bitcoin transactions via JungleBus
+- BAP (Bitcoin Attestation Protocol) identity integration
 
-- **Node.js** and **TypeScript** for server-side development.
-- **Express.js** for building the API server.
-- **MongoDB** for data storage and retrieval.
-- **Redis** for caching.
-- **bmapjs**, **bpu-ts**, and other Bitcoin protocol libraries for parsing and processing Bitcoin transactions.
-- **QuickChart** for generating dynamic charts.
-- **JungleBus** for streaming Bitcoin transactions.
+# Technology Stack
+
+- **Bun**: Modern JavaScript runtime for server-side development
+- **TypeScript**: For type safety and improved developer experience
+- **Elysia.js**: High-performance web framework for Bun
+- **MongoDB**: Primary database for transaction storage
+- **Redis**: Caching layer for transactions, identities, and social data
+- **bmapjs**: For parsing and processing BSV transactions
+- **bpu-ts**: For Bitcoin script parsing
+- **Chart.js** with **@napi-rs/canvas**: Native chart generation
+- **JungleBus**: Real-time Bitcoin transaction streaming
 
 # Project Structure
 
-- **`index.ts`**: The main entry point of the application, initializing the server and setting up routes.
-- **`cache.ts`**: Handles caching mechanisms using Redis. Provides functions to save, read, and manage cache data.
-- **`db.ts`**: Manages MongoDB database connections and operations.
-- **`chart.ts`**: Generates charts using QuickChart based on transaction data.
-- **`process.ts`**: Processes incoming Bitcoin transactions and integrates with the system.
-- **`bap.ts`**: Handles BAP (Bitcoin Attestation Protocol) identities and related operations.
-- **`actions.ts`**: Contains actions related to saving transactions and interacting with the database.
-- **`types.ts`**: Defines custom TypeScript types used throughout the project.
-- **Other files**: Configuration files like `.eslintrc`, `tsconfig.json`, and scripts in `package.json`.
+Core Files:
+- **`index.ts`**: Server initialization and route setup
+- **`cache.ts`**: Redis caching implementation
+- **`db.ts`**: MongoDB connection and query handling
+- **`process.ts`**: Transaction processing pipeline
+- **`chart.ts`**: Chart generation using Chart.js/canvas
+- **`bap.ts`**: BAP identity management
+- **`actions.ts`**: Transaction saving and database operations
+- **`social.ts`**: Social feature endpoints (friends, likes, identities)
+- **`types.ts`**: Shared TypeScript types and interfaces
+- **`bmap.ts`**: BMAP transaction normalization
 
-# Key Dependencies
+Support Files:
+- **`scripts/test-redis.ts`**: Redis connection testing
+- **`public/`**: Static assets
+- **`git-hooks/`**: Pre-commit and pre-push hooks
+- **`biome.json`**: Code formatting and linting rules
 
-- **bmapjs**: For parsing and transforming Bitcoin transactions.
-- **bpu-ts**: Library for parsing Bitcoin scripts.
-- **express**: Web framework for building the API.
-- **mongodb**: MongoDB driver for database operations.
-- **redis**: Redis client for caching.
-- **quickchart-js**: Library for generating chart images.
-- **chalk**: For terminal string styling.
-- **dotenv**: For loading environment variables.
-- **TypeScript**: For static typing and improved developer experience.
+# Development Guidelines
 
-# Development Notes
+Code Quality:
+- Use Biome for consistent code formatting and linting
+- Run `bun run lint` for checks, `bun run lint:fix` for auto-fixes
+- Git hooks enforce Biome rules and TypeScript checks on commit/push
+- Maintain strict TypeScript types in `types.ts`
 
-- **TypeScript Configuration**:
-  - The `tsconfig.json` is set up to compile TypeScript code targeting `ESNext`.
-  - Module resolution is set to `node`, and the output directory is `./build`.
-  - The `include` property includes all `.ts` and `.d.ts` files in all directories.
-  - `"skipLibCheck"` is set to `true` to skip type checking of declaration files.
-- **ESLint and Prettier**:
-  - ESLint is configured to enforce code quality and consistency.
-  - Prettier is used for code formatting, with rules specified in `package.json`.
-- **Node.js Version**:
-  - The project specifies Node.js version `22` in `package.json`.
-  - However, the `.nvmrc` file specifies `v18`.
-  - Ensure you are using the correct Node.js version to avoid compatibility issues.
+Error Handling:
+- Use try-catch blocks with specific error types
+- Log errors with relevant context
+- Handle Redis and MongoDB connection failures gracefully
+- Validate environment variables at startup
 
-# Instructions for Cursor AI Agent
+Performance:
+- Leverage Redis caching for frequently accessed data
+- Use MongoDB indexes for query optimization
+- Implement proper connection pooling
+- Consider batch processing for bulk operations
 
-- **Coding Conventions**:
-  - Follow the existing code style enforced by ESLint and Prettier configurations.
-  - Use `async`/`await` for handling asynchronous operations.
-  - Prefer `type` over `interface` where applicable, following the rule in `.eslintrc`.
-- **Module Imports**:
-  - Use ES Module syntax (`import ... from '...'`) for all imports.
-  - Ensure correct path resolutions, especially when importing local modules.
-- **Error Handling**:
-  - Handle errors gracefully using `try...catch` blocks.
-  - Use `express-async-handler` for handling asynchronous routes in Express.
-- **No Line Numbers in Code**:
-  - When writing or modifying code, do not include line numbers before each line.
-  - Code snippets and files should be clean and free of extraneous annotations.
+Testing:
+- Add unit tests for critical functions
+- Test Redis caching logic
+- Verify MongoDB queries
+- Test API endpoints for correct responses
 
-# Known Issues
+# Environment Setup
 
-- **Deprecation Warning**:  ```
-  (node:97564) [DEP0040] DeprecationWarning: The 'punycode' module is deprecated. Please use a userland alternative instead.  ```
-  - This warning occurs due to a dependency using the deprecated `punycode` module.
-  - While the application still functions, consider updating dependencies to eliminate this warning.
-  - Use `npm ls punycode` or `yarn why punycode` to identify which package depends on `punycode`.
-  - Update or replace the affected package if possible.
+Required Variables:
+- `REDIS_PRIVATE_URL`: Redis connection string
+- `BMAP_MONGO_URL`: MongoDB connection URL
+- Additional MongoDB configuration variables
 
-# Additional Notes
+Development Tools:
+- Bun for runtime and package management
+- TypeScript for type checking
+- Biome for code quality
+- Git hooks for pre-commit/push checks
 
-- **Environment Variables**:
-  - Ensure that all required environment variables are set, such as database connection strings and Redis URLs.
-  - Use `.env` files for local development and configure `dotenv` accordingly.
-- **Scripts**:
-  - Use the scripts defined in `package.json` for common tasks:
-    - `build`: Compiles TypeScript code.
-    - `dev`: Runs the application in development mode using `ts-node`.
-    - `start`: Runs the compiled code using Node.js.
-    - `prod`: Builds and starts the application using `bun`.
-    - `debug`: Builds and runs the application with `nodemon` for debugging.
-- **Caching**:
-  - The application uses Redis to cache transaction IDs and other data for improved performance.
-  - `cache.ts` contains functions for interacting with Redis, such as `saveToRedis` and `readFromRedis`.
-- **Database**:
-  - MongoDB is used for storing transaction data and other relevant information.
-  - Connection pooling is configured with minimum and maximum pool sizes in `db.ts`.
+# API Design
 
-# Biome Rules
-- use Number.isNaN instead of isNaN
-- use Number.parseInt instead of parseInt
+Elysia.js Patterns:
+- Use typed route parameters with `context.params`
+- Handle query parameters via `context.query`
+- Process request body with `context.body`
+- Set response status with `set.status`
+- Return errors using `error()`
 
-# Elysia JS
-In Elysia.js, handling HTTP requests and crafting appropriate responses is streamlined through its handler functions and context properties. Here’s how you can manage request parameters, set response statuses, and customize headers:
+Endpoints:
+- Transaction queries
+- Social interactions (friends, likes)
+- Identity management
+- Chart generation
+- Real-time updates
 
-Accessing Request Parameters:
+# Data Architecture
 
-Elysia provides a Context object to each handler, granting access to various parts of the incoming request:
-	•	Path Parameters: Defined in the route as :paramName and accessed via context.params.
+MongoDB Collections:
+- `c`: Confirmed transactions
+- `u`: Unconfirmed transactions
+- Indexes on:
+  - Transaction hashes
+  - Timestamps
+  - Block information
 
-app.get('/user/:id', ({ params }) => {
-    const userId = params.id;
-    // Use userId as needed
-});
+Redis Caching:
+- Transaction data
+- BAP identities
+- Social graph information
+- Cache invalidation strategies
 
+# Best Practices
 
-	•	Query Parameters: Parsed from the URL and available through context.query.
+Code Organization:
+- Keep files focused and modular
+- Use TypeScript interfaces for data structures
+- Document complex logic with comments
+- Follow Biome formatting rules
 
-app.get('/search', ({ query }) => {
-    const searchTerm = query.q;
-    // Use searchTerm as needed
-});
+Error Management:
+- Implement proper error boundaries
+- Use typed error responses
+- Log errors with stack traces
+- Handle edge cases explicitly
 
+Performance:
+- Cache frequently accessed data
+- Use appropriate indexes
+- Implement connection pooling
+- Monitor memory usage
 
-	•	Request Body: Accessible via context.body, useful for handling POST or PUT requests.
-
-app.post('/submit', async ({ body }) => {
-    const data = await body;
-    // Process data
-});
-
-
-
-Setting Response Status and Headers:
-
-Within a handler, you can customize the response using the set property of the Context object:
-	•	Setting Status Codes:
-	•	Using set.status: Directly assign the desired HTTP status code.
-
-app.get('/teapot', ({ set }) => {
-    set.status = 418;
-    return "I'm a teapot";
-});
-
-
-	•	Using the error Function: A convenient method to return a status code with a message.
-
-app.get('/not-found', ({ error }) => error(404, 'Resource not found'));
-
-This approach is recommended as it offers better TypeScript inference and type safety. ￼
-
-	•	Setting Headers: Modify response headers via set.headers.
-
-app.get('/info', ({ set }) => {
-    set.headers['X-Custom-Header'] = 'Elysia';
-    return 'Check the headers';
-});
-
-
-	•	Redirecting Responses: Use set.redirect to redirect the client to a different URL.
-
-app.get('/old-route', ({ set }) => {
-    set.redirect = '/new-route';
-});
-
-
-
-Returning Responses:
-
-Elysia automatically converts the return value of a handler into an HTTP response:
-	•	Primitive Values: Returning a string or object results in a 200 OK response with the appropriate body.
-
-app.get('/greet', () => 'Hello, World!');
-
-
-	•	Custom Responses: For more control, return a Response object.
-
-app.get('/custom', () => new Response('Custom Response', { status: 202 }));
+Security:
+- Validate input data
+- Sanitize database queries
+- Use proper error messages
+- Implement rate limiting if needed
