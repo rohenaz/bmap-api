@@ -11,7 +11,8 @@ import type {
   LikeInfo,
   ReactionResponse,
   ChannelInfo,
-  MessageResponse
+  MessageResponse,
+  ChannelLikes
 } from './social.js'
 
 const client = redis.createClient({
@@ -56,7 +57,8 @@ export type CacheValue =
   | { type: 'blockHeight'; value: number }
   | { type: 'ingest'; value: string[] }
   | { type: 'chart'; value: ChartCacheData }
-  | { type: 'timeSeriesData'; value: TimeSeriesData };
+  | { type: 'timeSeriesData'; value: TimeSeriesData }
+  | { type: 'channelLikes'; value: ChannelLikes }
 
 export async function saveToRedis<T extends CacheValue>(
   key: string,

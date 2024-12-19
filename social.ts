@@ -64,6 +64,14 @@ export interface ReactionResponse {
   results: Record<string, unknown>[];
 }
 
+export interface ChannelLikes {
+  channel: string;
+  page: number;
+  limit: number;
+  count: number;
+  results: LikeDocument[];
+}
+
 export interface ChannelInfo {
   channel: string;
   creator: string;
@@ -509,7 +517,7 @@ export function registerSocialRoutes(app: Elysia) {
         const cacheKey = `likes:channel:${query.channel}:${page}:${limit}`;
         const cached = await readFromRedis<CacheValue>(cacheKey);
 
-        if (cached?.type === 'likes') {
+        if (cached?.type === 'channelLikes') {
           console.log('Cache hit for channel likes:', cacheKey);
           return cached.value;
         }
@@ -530,9 +538,9 @@ export function registerSocialRoutes(app: Elysia) {
           .skip(skip)
           .limit(limit)
           .project({ _id: 0 })
-          .toArray();
+          .toArray() as LikeDocument[];
 
-        const response = {
+        const response: ChannelLikes = {
           channel: query.channel,
           page,
           limit,
@@ -541,7 +549,7 @@ export function registerSocialRoutes(app: Elysia) {
         };
 
         await saveToRedis<CacheValue>(cacheKey, {
-          type: 'likes',
+          type: 'channelLikes',
           value: response
         });
 
