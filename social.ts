@@ -283,7 +283,34 @@ async function processRelationships(bapId: string, docs: BmapTx[], ownedAddresse
   return { friends, incoming, outgoing };
 }
 
+// Common CORS headers for all endpoints
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Max-Age": "86400"
+};
+
+// Common response headers for success responses
+const successHeaders = {
+  "Content-Type": "application/json",
+  "Cache-Control": "public, max-age=60",
+  ...corsHeaders
+};
+
+// Common response headers for error responses
+const errorHeaders = {
+  "Content-Type": "application/json",
+  "Cache-Control": "no-cache",
+  ...corsHeaders
+};
+
 export function registerSocialRoutes(app: Elysia) {
+  // Add OPTIONS handler for all routes
+  app.options("*", () => {
+    return new Response(null, { headers: corsHeaders });
+  });
+
   app.get("/friendships/:bapId", async ({ params }) => {
     const { bapId } = params;
 
@@ -293,10 +320,7 @@ export function registerSocialRoutes(app: Elysia) {
         details: "The bapId parameter must be a valid string"
       }), {
         status: 400,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-cache"
-        }
+        headers: errorHeaders
       });
     }
 
@@ -304,10 +328,7 @@ export function registerSocialRoutes(app: Elysia) {
       const { allDocs, ownedAddresses } = await fetchAllFriendsAndUnfriends(bapId);
       const result = await processRelationships(bapId, allDocs, ownedAddresses);
       return new Response(JSON.stringify(result), {
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "public, max-age=60"
-        }
+        headers: successHeaders
       });
     } catch (error: unknown) {
       console.error('Error processing friendships request:', error);
@@ -318,10 +339,7 @@ export function registerSocialRoutes(app: Elysia) {
         details: message
       }), {
         status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-cache"
-        }
+        headers: errorHeaders
       });
     }
   });
@@ -661,10 +679,14 @@ export function registerSocialRoutes(app: Elysia) {
     });
   });
 
-  app.post("/likes", async ({ body, query }) => {
+  app.post("/likes", async ({ body, query, request }) => {
     try {
-      // Log the incoming request
-      console.log('Received /likes request:', { body, query });
+      // Log the incoming request with headers
+      console.log('Received /likes request:', {
+        body,
+        query,
+        headers: request.headers
+      });
 
       // Handle both array and object formats, and support both txids and messageIds
       let txids: string[] = [];
@@ -853,11 +875,7 @@ export function registerSocialRoutes(app: Elysia) {
       console.log('Sending response:', response);
 
       return new Response(JSON.stringify(response), {
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "public, max-age=60",
-          ...corsHeaders
-        }
+        headers: successHeaders
       });
 
     } catch (error: unknown) {
@@ -870,11 +888,7 @@ export function registerSocialRoutes(app: Elysia) {
         timestamp: new Date().toISOString()
       }), {
         status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-cache",
-          ...corsHeaders
-        }
+        headers: errorHeaders
       });
     }
   });
