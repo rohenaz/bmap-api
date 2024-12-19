@@ -6,6 +6,22 @@ import type { BapIdentity, BapIdentityObject } from './bap.js';
 import type { CacheValue, CacheSigner } from './cache.js';
 import type { WithId, Document } from 'mongodb';
 import type { BmapTx } from 'bmapjs';
+import { ChangeStreamDocument } from 'mongodb';
+import { ReadableStream } from 'stream/web';
+import chalk from 'chalk';
+
+// Bitcoin schema collections to watch
+const bitcoinSchemaCollections = [
+  "follow",
+  "unfollow",
+  "unlike",
+  "like",
+  "message",
+  "repost",
+  "friend",
+  "post",
+  "ord"
+];
 
 interface SigmaIdentityAPIResponse {
   status: string;
@@ -1006,6 +1022,105 @@ export function registerSocialRoutes(app: Elysia) {
       }), {
         status: 500,
         headers: errorHeaders
+      });
+    }
+  });
+
+  app.get("/s/:collectionName?/:base64Query", async ({ params, set }) => {
+    const { collectionName, base64Query: b64 } = params;
+    set.headers = {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "X-Accel-Buffering": "no",
+      Connection: "keep-alive"
+    };
+
+    const json = Buffer.from(b64, "base64").toString();
+    const db = await getDbo();
+
+    console.log(chalk.blue("New change stream subscription on", collectionName));
+    const query = JSON.parse(json);
+
+    const pipeline = [{ $match: { operationType: "insert" } }];
+    const keys = Object.keys(query.q.find || {});
+    for (const k of keys) {
+      pipeline[0].$match[`fullDocument.${k}`] = query.q.find[k];
+    }
+
+    let changeStream;
+    if (collectionName === "$all") {
+      // Watch all collections that we care about
+      const collections = bitcoinSchemaCollections;
+      const streams = collections.map(collection => {
+        const target = db.collection(collection);
+        return target.watch(pipeline, { fullDocument: "updateLookup" });
+      });
+
+      return new ReadableStream({
+        start(controller) {
+          controller.enqueue(`data: ${JSON.stringify({ type: "open", data: [] })}\n\n`);
+
+          // Handle each stream
+          streams.forEach((stream, index) => {
+            const collection = collections[index];
+            stream.on("change", (next: ChangeStreamDocument<BmapTx>) => {
+              if (next.operationType === "insert") {
+                console.log(chalk.blue("New insert event in", collection), next.fullDocument.tx?.h);
+                controller.enqueue(
+                  `data: ${JSON.stringify({ type: collection, data: [next.fullDocument] })}\n\n`
+                );
+              }
+            });
+
+            stream.on("error", (e) => {
+              console.log(chalk.blue(`Changestream error in ${collection} - closing SSE`), e);
+              stream.close();
+            });
+          });
+
+          const heartbeat = setInterval(() => {
+            controller.enqueue(":heartbeat\n\n");
+          }, 30000);
+
+          return () => {
+            clearInterval(heartbeat);
+            streams.forEach(stream => stream.close());
+          };
+        }
+      });
+    } else {
+      // Watch a specific collection
+      const target = db.collection(collectionName);
+      changeStream = target.watch(pipeline, { fullDocument: "updateLookup" });
+
+      return new ReadableStream({
+        start(controller) {
+          controller.enqueue(`data: ${JSON.stringify({ type: "open", data: [] })}\n\n`);
+
+          changeStream.on("change", (next: ChangeStreamDocument<BmapTx>) => {
+            if (next.operationType === "insert") {
+              console.log(chalk.blue("New insert event"), next.fullDocument.tx?.h);
+              controller.enqueue(
+                `data: ${JSON.stringify({ type: collectionName, data: [next.fullDocument] })}\n\n`
+              );
+            }
+          });
+
+          changeStream.on("error", (e) => {
+            console.log(chalk.blue("Changestream error - closing SSE"), e);
+            changeStream.close();
+            controller.close();
+          });
+
+          const heartbeat = setInterval(() => {
+            controller.enqueue(":heartbeat\n\n");
+          }, 30000);
+
+          return () => {
+            clearInterval(heartbeat);
+            changeStream.close();
+          };
+        }
       });
     }
   });
