@@ -1,7 +1,7 @@
 import type { BmapTx } from 'bmapjs'
 import _ from 'lodash'
 import { normalize } from './bmap.js'
-import { type CacheSigner, readFromRedis, saveToRedis } from './cache.js'
+import { readFromRedis, saveToRedis, type CacheValue } from './cache.js'
 const { uniq, uniqBy } = _
 
 interface BapAddress {
@@ -10,15 +10,13 @@ interface BapAddress {
   block?: number;
 }
 
-interface BapIdentityObject {
-  "@type": string;
+export interface BapIdentityObject {
   alternateName?: string;
+  name?: string;
   description?: string;
-  homeLocation?: { name: string };
-  image?: string;
-  paymail?: string;
   url?: string;
-  [key: string]: any; // Allow additional fields
+  image?: string;
+  [key: string]: unknown;
 }
 
 export type BapIdentity = {
@@ -98,8 +96,8 @@ export const resolveSigners = async (txs: BmapTx[]) => {
       try {
         identity = await getBAPIdByAddress(address)
         if (identity) {
-          cacheValue = { type: 'signer', value: identity } as CacheSigner
-          await saveToRedis<CacheSigner>(cacheKey, cacheValue)
+          cacheValue = { type: 'signer', value: identity } as CacheValue
+          await saveToRedis<CacheValue>(cacheKey, cacheValue)
           console.log('BAP saved to cache:', identity)
         } else {
           console.log('No BAP found for address:', address)

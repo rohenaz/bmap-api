@@ -3,7 +3,7 @@ import type { BmapTx, BobTx } from 'bmapjs'
 import { parse } from 'bpu-ts'
 import { saveTx } from './actions.js'
 import { resolveSigners } from './bap.js'
-import { cacheIngestedTxid, wasIngested } from './cache.js'
+import { addToCache, checkCache } from './cache.js'
 
 const bobFromRawTx = async (rawtx: string) => {
   return await parse({
@@ -33,19 +33,14 @@ export async function processTransaction(
       t: ctx.block_time || Math.round(new Date().getTime() / 1000),
     }
 
-    const ingested = await wasIngested(ctx.id)
-    if (ingested) {
-      console.log('Already ingested', ctx.id)
+    const txid = result.tx.h
+    if (await checkCache(txid)) {
+      console.log('Already processed:', txid)
       return
     }
-    await cacheIngestedTxid(result.tx.h)
-    // TODO: We should enable this field in BmapTx
-    // and publish field extensions in docs
-    // result.tx = {
-    //   m: ctx.merkle_proof || '',
-    // }
 
-    // TODO: it is possible it doesn't have a timestamp at all if we missed it from mempool
+    await addToCache(txid)
+
     if (!ctx.block_hash) {
       result.timestamp =
         ctx.block_time || Math.floor(new Date().getTime() / 1000)
@@ -55,34 +50,7 @@ export async function processTransaction(
     return null
   }
 
-  // If this has an AIP or Sigma signature, look it up on the BAP API
-  // and add a record to the "_signers" collection
-  // _signers: [{
-  //   address: "1a...",
-  //   bapID: "1a...",
-  //   lastMessage: {
-  //     content: "Hello world",
-  //     context: "channel",
-  //     contextValue: "test",
-  //     timestamp: 1234567890,
-  //     context: undefined,
-  //     txid: "a1...",
-  //   },
-  //   lastPost: {
-  //     content: "Hello world",
-  //     context: "url",
-  //     contextValue: "http://google.com",
-  //     timestamp: 1234567890,
-  //     txid: "a1...",
-  //   },
-  //   profile: {
-  //     ...
-  //   }
-  // }]
-
-  // TODO when new blocks come in look for signers and update cache
   if (result?.AIP?.length > 0) {
-    // Map over each AIP entry to handle asynchronously
     try {
       await resolveSigners([result as BmapTx])
     } catch (e) {

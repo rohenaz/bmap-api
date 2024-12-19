@@ -28,6 +28,7 @@ import "./p2p.js";
 import { processTransaction } from "./process.js";
 import { Timeframe } from "./types.js";
 import { explorerTemplate } from './src/components/explorer.js';
+import type { CacheValue } from './cache.js';
 
 dotenv.config();
 
@@ -437,7 +438,7 @@ const start = async () => {
   });
 
   // Add new cache type at the top with other types
-  type CacheTx = {
+  type CacheTx = CacheValue & {
     type: 'tx';
     value: BmapTx;
   }
@@ -472,10 +473,10 @@ const start = async () => {
 
       // Check Redis cache first
       const cacheKey = `tx:${txid}`;
-      const cached = await readFromRedis<CacheTx>(cacheKey);
+      const cached = await readFromRedis<CacheValue>(cacheKey);
       let decoded: BmapTx;
 
-      if (cached?.type === 'tx') {
+      if (cached?.type === 'tx' && cached.value) {
         console.log('Cache hit for tx:', txid);
         decoded = cached.value;
       } else {
@@ -531,7 +532,7 @@ const start = async () => {
         }
 
         // Cache the result
-        await saveToRedis<CacheTx>(cacheKey, {
+        await saveToRedis<CacheValue>(cacheKey, {
           type: 'tx',
           value: decoded
         });

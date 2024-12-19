@@ -3,8 +3,9 @@ import { getDbo } from './db.js';
 import { readFromRedis, saveToRedis, client } from './cache.js';
 import { getBAPIdByAddress } from './bap.js';
 import type { BapIdentity, BapIdentityObject } from './bap.js';
-import type { CacheSigner, CacheValue } from './cache.js';
+import type { CacheValue, CacheSigner } from './cache.js';
 import type { WithId, Document } from 'mongodb';
+import type { BmapTx } from 'bmapjs';
 
 interface SigmaIdentityAPIResponse {
   status: string;
@@ -39,7 +40,7 @@ interface FriendshipResponse {
   outgoing: string[];
 }
 
-interface ReactionResponse {
+export interface ReactionResponse {
   channel: string;
   page: number;
   limit: number;
@@ -47,13 +48,7 @@ interface ReactionResponse {
   results: Record<string, unknown>[];
 }
 
-type CacheReactions = {
-  type: 'reactions';
-  value: ReactionResponse;
-  error?: never;
-}
-
-interface ChannelInfo {
+export interface ChannelInfo {
   channel: string;
   creator: string;
   last_message: string;
@@ -61,13 +56,7 @@ interface ChannelInfo {
   messages: number;
 }
 
-type CacheChannels = {
-  type: 'channels';
-  value: ChannelInfo[];
-  error?: never;
-}
-
-interface MessageResponse {
+export interface MessageResponse {
   channel: string;
   page: number;
   limit: number;
@@ -100,14 +89,9 @@ interface Message {
   }[];
 }
 
-type CacheMessages = {
-  type: 'messages';
-  value: MessageResponse;
-  error?: never;
-}
-
 interface LikeRequest {
-  txids: string[];
+  txids?: string[];
+  messageIds?: string[];
 }
 
 interface LikeDocument {
@@ -120,14 +104,15 @@ interface LikeDocument {
   };
   MAP: {
     type: string;
-    tx: string;
+    tx?: string;
+    messageID?: string;
   }[];
   AIP?: {
     algorithm_signing_component: string;
   }[];
 }
 
-interface LikeInfo {
+export interface LikeInfo {
   txid: string;
   likes: LikeDocument[];
   total: number;
@@ -139,32 +124,6 @@ interface LikeResponse {
   likes: LikeDocument[];
   total: number;
   signers: BapIdentity[];  // Full signer objects for API response
-}
-
-type CacheLikes = CacheValue & {
-  type: 'likes';
-  value: LikeInfo;  // Store minimal info in cache
-  error?: never;
-}
-
-interface BmapDocument {
-  tx: {
-    h: string;
-  };
-  blk: {
-    i: number;
-    t: number;
-  };
-  MAP: {
-    type: string;
-    bapID?: string;
-    [key: string]: unknown;
-  }[];
-  AIP?: {
-    algorithm_signing_component: string;
-    [key: string]: unknown;
-  }[];
-  [key: string]: unknown;
 }
 
 function sigmaIdentityToBapIdentity(result: SigmaIdentityResult): BapIdentity {
@@ -184,7 +143,7 @@ function sigmaIdentityToBapIdentity(result: SigmaIdentityResult): BapIdentity {
 
 async function fetchBapIdentityData(bapId: string): Promise<BapIdentity> {
   const cacheKey = `sigmaIdentity-${bapId}`;
-  const cached = await readFromRedis<CacheSigner>(cacheKey);
+  const cached = await readFromRedis<CacheValue>(cacheKey);
   if (cached?.type === 'signer') {
     return cached.value;
   }
@@ -208,7 +167,7 @@ async function fetchBapIdentityData(bapId: string): Promise<BapIdentity> {
 
   const bapIdentity = sigmaIdentityToBapIdentity(data.result);
 
-  await saveToRedis<CacheSigner>(cacheKey, {
+  await saveToRedis<CacheValue>(cacheKey, {
     type: 'signer',
     value: bapIdentity
   });
@@ -216,7 +175,7 @@ async function fetchBapIdentityData(bapId: string): Promise<BapIdentity> {
   return bapIdentity;
 }
 
-async function fetchAllFriendsAndUnfriends(bapId: string): Promise<{ allDocs: BmapDocument[], ownedAddresses: Set<string> }> {
+async function fetchAllFriendsAndUnfriends(bapId: string): Promise<{ allDocs: BmapTx[], ownedAddresses: Set<string> }> {
   const dbo = await getDbo();
 
   const idData = await fetchBapIdentityData(bapId);
@@ -228,25 +187,25 @@ async function fetchAllFriendsAndUnfriends(bapId: string): Promise<{ allDocs: Bm
 
   const incomingFriends = await dbo.collection('friend')
     .find({ "MAP.type": "friend", "MAP.bapID": bapId })
-    .toArray() as unknown as BmapDocument[];
+    .toArray() as unknown as BmapTx[];
 
   const incomingUnfriends = await dbo.collection('unfriend')
     .find({ "MAP.type": "unfriend", "MAP.bapID": bapId })
-    .toArray() as unknown as BmapDocument[];
+    .toArray() as unknown as BmapTx[];
 
   const outgoingFriends = await dbo.collection('friend')
     .find({
       "MAP.type": "friend",
       "AIP.algorithm_signing_component": { $in: [...ownedAddresses] }
     })
-    .toArray() as unknown as BmapDocument[];
+    .toArray() as unknown as BmapTx[];
 
   const outgoingUnfriends = await dbo.collection('unfriend')
     .find({
       "MAP.type": "unfriend",
       "AIP.algorithm_signing_component": { $in: [...ownedAddresses] }
     })
-    .toArray() as unknown as BmapDocument[];
+    .toArray() as unknown as BmapTx[];
 
   const allDocs = [...incomingFriends, ...incomingUnfriends, ...outgoingFriends, ...outgoingUnfriends];
   allDocs.sort((a, b) => ((a.blk?.i ?? 0) - (b.blk?.i ?? 0)));
@@ -254,10 +213,10 @@ async function fetchAllFriendsAndUnfriends(bapId: string): Promise<{ allDocs: Bm
   return { allDocs, ownedAddresses };
 }
 
-async function processRelationships(bapId: string, docs: BmapDocument[], ownedAddresses: Set<string>): Promise<FriendshipResponse> {
+async function processRelationships(bapId: string, docs: BmapTx[], ownedAddresses: Set<string>): Promise<FriendshipResponse> {
   const relationships: Record<string, RelationshipState> = {};
 
-  async function getRequestorBapId(doc: BmapDocument): Promise<string | null> {
+  async function getRequestorBapId(doc: BmapTx): Promise<string | null> {
     const address = doc?.AIP?.[0]?.algorithm_signing_component;
     if (!address) return null;
 
@@ -409,9 +368,9 @@ export function registerSocialRoutes(app: Elysia) {
       const skip = (page - 1) * limit;
 
       const cacheKey = `reactions:${channel}:${page}:${limit}`;
-      const cached = await readFromRedis<CacheReactions>(cacheKey);
+      const cached = await readFromRedis<CacheValue>(cacheKey);
 
-      if (cached.type === 'reactions') {
+      if (cached?.type === 'reactions') {
         console.log('Cache hit for reactions:', cacheKey);
         return new Response(JSON.stringify(cached.value), {
           headers: {
@@ -452,7 +411,7 @@ export function registerSocialRoutes(app: Elysia) {
       };
 
       // Cache for 60 seconds
-      await saveToRedis<CacheReactions>(cacheKey, {
+      await saveToRedis<CacheValue>(cacheKey, {
         type: 'reactions',
         value: response
       });
@@ -488,7 +447,7 @@ export function registerSocialRoutes(app: Elysia) {
   app.get("/channels", async () => {
     try {
       const cacheKey = 'channels';
-      const cached = await readFromRedis<CacheChannels>(cacheKey);
+      const cached = await readFromRedis<CacheValue>(cacheKey);
 
       if (cached?.type === 'channels') {
         console.log('Cache hit for channels');
@@ -539,7 +498,7 @@ export function registerSocialRoutes(app: Elysia) {
       const typedResults = results as unknown as ChannelInfo[];
 
       // Cache for 60 seconds
-      await saveToRedis<CacheChannels>(cacheKey, {
+      await saveToRedis<CacheValue>(cacheKey, {
         type: 'channels',
         value: typedResults
       });
@@ -615,9 +574,9 @@ export function registerSocialRoutes(app: Elysia) {
 
       // Use the decoded channel ID for cache key
       const cacheKey = `messages:${decodedChannelId}:${page}:${limit}`;
-      const cached = await readFromRedis<CacheMessages>(cacheKey);
+      const cached = await readFromRedis<CacheValue>(cacheKey);
 
-      if (cached.type === 'messages') {
+      if (cached?.type === 'messages') {
         console.log('Cache hit for messages:', cacheKey);
         return new Response(JSON.stringify(cached.value), {
           headers: {
@@ -658,7 +617,7 @@ export function registerSocialRoutes(app: Elysia) {
       };
 
       // Cache for 60 seconds
-      await saveToRedis<CacheMessages>(cacheKey, {
+      await saveToRedis<CacheValue>(cacheKey, {
         type: 'messages',
         value: response
       });
@@ -687,15 +646,30 @@ export function registerSocialRoutes(app: Elysia) {
     }
   });
 
-  app.post("/likes", async ({ body }) => {
+  app.post("/likes", async ({ body, query }) => {
     try {
-      // Handle both array and object formats
-      const txids = Array.isArray(body) ? body : (body as LikeRequest).txids;
+      // Handle both array and object formats, and support both txids and messageIds
+      let txids: string[] = [];
+      let messageIds: string[] = [];
       
-      if (!Array.isArray(txids) || txids.length === 0) {
+      if (Array.isArray(body)) {
+        txids = body;
+      } else {
+        const request = body as LikeRequest;
+        txids = request.txids || [];
+        messageIds = request.messageIds || [];
+      }
+
+      // Support the old query format if present
+      if (query?.d === 'disc-react' && messageIds.length === 0) {
+        messageIds = txids;
+        txids = [];
+      }
+      
+      if (txids.length === 0 && messageIds.length === 0) {
         return new Response(JSON.stringify({
           error: "Invalid request",
-          details: "Request body must be either an array of txids or an object with a txids array"
+          details: "Request must include either txids or messageIds"
         }), {
           status: 400,
           headers: { 
@@ -711,10 +685,11 @@ export function registerSocialRoutes(app: Elysia) {
       const db = await getDbo();
       const results: LikeResponse[] = [];
 
+      // Process txids
       for (const txid of txids) {
         // Check cache first
         const cacheKey = `likes:${txid}`;
-        const cached = await readFromRedis<CacheLikes>(cacheKey);
+        const cached = await readFromRedis<CacheValue>(cacheKey);
 
         if (cached?.type === 'likes' && cached.value) {
           // Convert cached info to response format
@@ -744,48 +719,14 @@ export function registerSocialRoutes(app: Elysia) {
         
         const likes = await db.collection("like")
           .find(query)
+          .sort({ "blk.t": -1 })
+          .limit(1000)
           .toArray() as unknown as LikeDocument[];
 
         console.log(`Found ${likes.length} likes for txid ${txid}`);
 
-        // Get unique signer addresses
-        const signerAddresses = new Set<string>();
-        for (const like of likes) {
-          if (Array.isArray(like.AIP)) {
-            for (const aip of like.AIP) {
-              if (aip.algorithm_signing_component) {
-                signerAddresses.add(aip.algorithm_signing_component);
-              }
-            }
-          }
-        }
-
-        // Fetch signer identities
-        const signerIds = Array.from(signerAddresses);
-        const signers = await Promise.all(
-          signerIds.map(async (address) => {
-            const signerCacheKey = `signer-${address}`;
-            const cachedSigner = await readFromRedis<CacheSigner>(signerCacheKey);
-            
-            if (cachedSigner?.type === 'signer' && cachedSigner.value) {
-              return cachedSigner.value;
-            }
-
-            try {
-              const identity = await getBAPIdByAddress(address);
-              if (identity) {
-                await saveToRedis<CacheSigner>(signerCacheKey, {
-                  type: 'signer',
-                  value: identity
-                });
-                return identity;
-              }
-            } catch (error) {
-              console.error(`Failed to fetch identity for address ${address}:`, error);
-            }
-            return null;
-          })
-        );
+        // Process likes and get signers
+        const { signerIds, signers } = await processLikes(likes);
 
         // Cache minimal info
         const likeInfo: LikeInfo = {
@@ -795,10 +736,9 @@ export function registerSocialRoutes(app: Elysia) {
           signerIds
         };
 
-        await saveToRedis<CacheLikes>(cacheKey, {
+        await saveToRedis<CacheValue>(cacheKey, {
           type: 'likes',
-          value: likeInfo,
-          error: undefined
+          value: likeInfo
         });
 
         // Add full response with signer objects
@@ -806,7 +746,72 @@ export function registerSocialRoutes(app: Elysia) {
           txid: likeInfo.txid,
           likes: likeInfo.likes,
           total: likeInfo.total,
-          signers: signers.filter((s): s is BapIdentity => s !== null)
+          signers
+        });
+      }
+
+      // Process messageIds
+      for (const messageId of messageIds) {
+        // Check cache first
+        const cacheKey = `likes:msg:${messageId}`;
+        const cached = await readFromRedis<CacheValue>(cacheKey);
+
+        if (cached?.type === 'likes' && cached.value) {
+          // Convert cached info to response format
+          const signers = await Promise.all(
+            cached.value.signerIds.map(id => getBAPIdByAddress(id))
+          );
+          results.push({
+            txid: messageId,
+            likes: cached.value.likes,
+            total: cached.value.total,
+            signers: signers.filter((s): s is BapIdentity => s !== null)
+          });
+          continue;
+        }
+
+        // Query MongoDB for likes
+        const query = {
+          "MAP": {
+            $elemMatch: {
+              type: "like",
+              messageID: messageId
+            }
+          }
+        };
+        
+        console.log('Querying MongoDB for likes with messageID:', JSON.stringify(query, null, 2));
+        
+        const likes = await db.collection("like")
+          .find(query)
+          .sort({ "blk.t": -1 })
+          .limit(1000)
+          .toArray() as unknown as LikeDocument[];
+
+        console.log(`Found ${likes.length} likes for messageID ${messageId}`);
+
+        // Process likes and get signers
+        const { signerIds, signers } = await processLikes(likes);
+
+        // Cache minimal info
+        const likeInfo: LikeInfo = {
+          txid: messageId,
+          likes,
+          total: likes.length,
+          signerIds
+        };
+
+        await saveToRedis<CacheValue>(cacheKey, {
+          type: 'likes',
+          value: likeInfo
+        });
+
+        // Add full response with signer objects
+        results.push({
+          txid: likeInfo.txid,
+          likes: likeInfo.likes,
+          total: likeInfo.total,
+          signers
         });
       }
 
@@ -841,6 +846,53 @@ export function registerSocialRoutes(app: Elysia) {
       });
     }
   });
+
+  // Helper function to process likes and get signers
+  async function processLikes(likes: LikeDocument[]): Promise<{ signerIds: string[]; signers: BapIdentity[] }> {
+    // Get unique signer addresses
+    const signerAddresses = new Set<string>();
+    for (const like of likes) {
+      if (Array.isArray(like.AIP)) {
+        for (const aip of like.AIP) {
+          if (aip.algorithm_signing_component) {
+            signerAddresses.add(aip.algorithm_signing_component);
+          }
+        }
+      }
+    }
+
+    // Fetch signer identities
+    const signerIds = Array.from(signerAddresses);
+    const signers = await Promise.all(
+      signerIds.map(async (address) => {
+        const signerCacheKey = `signer-${address}`;
+        const cachedSigner = await readFromRedis<CacheValue>(signerCacheKey);
+        
+        if (cachedSigner?.type === 'signer' && cachedSigner.value) {
+          return cachedSigner.value;
+        }
+
+        try {
+          const identity = await getBAPIdByAddress(address);
+          if (identity) {
+            await saveToRedis<CacheValue>(signerCacheKey, {
+              type: 'signer',
+              value: identity
+            });
+            return identity;
+          }
+        } catch (error) {
+          console.error(`Failed to fetch identity for address ${address}:`, error);
+        }
+        return null;
+      })
+    );
+
+    return {
+      signerIds,
+      signers: signers.filter((s): s is BapIdentity => s !== null)
+    };
+  }
 
   // Add OPTIONS handler for CORS preflight
   app.options("/likes", () => {

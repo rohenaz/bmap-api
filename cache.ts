@@ -4,6 +4,15 @@ import type { TimeSeriesData } from './chart.js'
 import { getCurrentBlockHeight } from './db.js'
 import type { ChartData } from './chart.js'
 import { ChartConfiguration } from 'chart.js'
+import type { BmapTx } from 'bmapjs'
+
+// Import interfaces from social.ts
+import type {
+  LikeInfo,
+  ReactionResponse,
+  ChannelInfo,
+  MessageResponse
+} from './social.js'
 
 const client = redis.createClient({
   url: process.env.REDIS_PRIVATE_URL,
@@ -24,55 +33,9 @@ client.on('error', (err) => {
   console.error('Redis error:', err)
 })
 
-export type CacheBlockHeight = {
-  type: 'blockHeight';
-  value: number;
-}
-
-export type CacheChart = {
-  type: 'chart';
-  value: ChartCacheData;
-}
-
-export type CacheCount = {
-  type: 'count';
-  value: Record<string, number>[];
-}
-
-export type CacheTimeSeriesData = {
-  type: 'timeSeriesData';
-  value: TimeSeriesData;
-}
-
-export type CacheIngest = {
-  type: 'ingest';
-  value: string[];
-}
-
-export type CacheSigner = {
-  type: 'signer';
-  value: BapIdentity;
-}
-
-export type CacheReactions = {
-  type: 'reactions';
-  value: {
-    channel: string;
-    page: number;
-    limit: number;
-    results: any[];
-  };
-}
-
-export type CacheChannels = {
-  type: 'channels';
-  value: {
-    channel: string;
-    creator: string;
-    last_message: string;
-    last_message_time: number;
-    messages: number;
-  }[];
+export type ChartCacheData = {
+  chartBuffer: string; // base64 encoded buffer
+  config: ChartConfiguration;
 }
 
 export type CacheError = {
@@ -81,41 +44,28 @@ export type CacheError = {
   value: null;
 }
 
-export type ChartCacheData = {
-  chartBuffer: string; // base64 encoded buffer
-  config: ChartConfiguration;
-}
-
-export type CacheMessages = {
-  type: 'messages';
-  value: {
-    channel: string;
-    page: number;
-    limit: number;
-    count: number;
-    results: any[];
-  };
-}
-
 export type CacheValue = 
-  | CacheBlockHeight 
-  | CacheChart 
-  | CacheCount 
-  | CacheTimeSeriesData 
-  | CacheIngest 
-  | CacheSigner
-  | CacheReactions
-  | CacheChannels
-  | CacheMessages;
+  | { type: 'error'; value: string }
+  | { type: 'tx'; value: BmapTx }
+  | { type: 'count'; value: Record<string, number>[] }
+  | { type: 'signer'; value: BapIdentity }
+  | { type: 'likes'; value: LikeInfo }
+  | { type: 'reactions'; value: ReactionResponse }
+  | { type: 'channels'; value: ChannelInfo[] }
+  | { type: 'messages'; value: MessageResponse }
+  | { type: 'blockHeight'; value: number }
+  | { type: 'ingest'; value: string[] }
+  | { type: 'chart'; value: ChartCacheData }
+  | { type: 'timeSeriesData'; value: TimeSeriesData };
 
-async function saveToRedis<T extends CacheValue>(
+export async function saveToRedis<T extends CacheValue>(
   key: string,
   value: T
 ): Promise<void> {
   await client.set(key, JSON.stringify(value))
 }
 
-async function readFromRedis<T extends CacheValue | CacheError>(
+export async function readFromRedis<T extends CacheValue | CacheError>(
   key: string
 ): Promise<T | CacheError> {
   const value = await client.get(key)
@@ -124,69 +74,91 @@ async function readFromRedis<T extends CacheValue | CacheError>(
     : ({ type: 'error', value: null, error: 404 } as CacheError)
 }
 
-async function getBlockHeightFromCache(): Promise<number> {
-  const cachedValue = await readFromRedis<CacheBlockHeight>('currentBlockHeight')
-  if (cachedValue.type === 'error') {
-    const currentBlockHeight = await getCurrentBlockHeight()
-    const currentBlockHeightKey = `currentBlockHeight-${currentBlockHeight}`
-    await saveToRedis<CacheBlockHeight>(currentBlockHeightKey, {
-      type: 'blockHeight',
-      value: currentBlockHeight,
-    })
-    return currentBlockHeight
-  } else {
-    console.info('Using cached block height')
+export async function getBlockHeightFromCache(): Promise<number> {
+  const currentBlockHeightKey = 'currentBlockHeight'
+  const cachedValue = await readFromRedis<CacheValue>(currentBlockHeightKey)
+  if (cachedValue?.type === 'blockHeight') {
     return cachedValue.value
   }
+  const currentBlockHeight = await getCurrentBlockHeight()
+  await saveToRedis<CacheValue>(currentBlockHeightKey, {
+    type: 'blockHeight',
+    value: currentBlockHeight
+  })
+  return currentBlockHeight
 }
 
-async function deleteFromCache(key: string): Promise<void> {
+export async function deleteFromCache(key: string): Promise<void> {
   await client.del(key)
 }
 
-async function wasIngested(txid: string): Promise<boolean> {
-  const cachedValue = await readFromRedis<CacheIngest>(`ingest-${txid}`)
-  return cachedValue.type === 'ingest' ? cachedValue.value.includes(txid) : false
+export async function getIngestCache(txid: string): Promise<string[]> {
+  const cachedValue = await readFromRedis<CacheValue>(`ingest-${txid}`)
+  if (cachedValue?.type === 'ingest') {
+    return cachedValue.value
+  }
+  return []
 }
 
-async function cacheIngestedTxid(txid: string): Promise<void> {
+export async function saveIngestCache(txid: string, ingestCache: string[]): Promise<void> {
   const ingestKey = `ingest-${txid}`
-  const cachedValue = await readFromRedis<CacheIngest>(ingestKey)
-  let ingestCache = cachedValue.type === 'ingest' ? cachedValue.value : []
-  if (!ingestCache.includes(txid)) {
-    ingestCache = [...ingestCache, txid]
-    await saveToRedis<CacheIngest>(ingestKey, { type: 'ingest', value: ingestCache })
+  const cachedValue = await readFromRedis<CacheValue>(ingestKey)
+  if (!cachedValue || cachedValue.type !== 'ingest') {
+    await saveToRedis<CacheValue>(ingestKey, { type: 'ingest', value: ingestCache })
   }
 }
 
-async function checkCache(txid: string): Promise<boolean> {
-  return wasIngested(txid)
+export async function getIngestCacheKeys(): Promise<string[]> {
+  const cachedValue = await readFromRedis<CacheValue>('ingest')
+  if (cachedValue?.type === 'ingest') {
+    return cachedValue.value
+  }
+  return []
 }
 
-async function addToCache(txid: string): Promise<void> {
-  await cacheIngestedTxid(txid)
+export async function getIngestCacheValues(): Promise<string[]> {
+  const cachedValue = await readFromRedis<CacheValue>('ingest')
+  if (cachedValue?.type === 'ingest') {
+    return cachedValue.value
+  }
+  return []
 }
 
-async function loadCache(): Promise<string[]> {
-  const cachedValue = await readFromRedis<CacheIngest>('ingest')
-  return cachedValue.type === 'ingest' ? cachedValue.value : []
+export async function checkCache(txid: string): Promise<boolean> {
+  const cachedValue = await readFromRedis<CacheValue>(`ingest-${txid}`)
+  return cachedValue?.type === 'ingest' && cachedValue.value.includes(txid)
 }
 
-async function countCachedItems(): Promise<number> {
-  const cachedValue = await readFromRedis<CacheIngest>('ingest')
-  return cachedValue.type === 'ingest' ? cachedValue.value.length : 0
+export async function addToCache(txid: string): Promise<void> {
+  const ingestKey = `ingest-${txid}`
+  const cachedValue = await readFromRedis<CacheValue>(ingestKey)
+  let ingestCache = cachedValue?.type === 'ingest' ? cachedValue.value : []
+  if (!ingestCache.includes(txid)) {
+    ingestCache = [...ingestCache, txid]
+    await saveToRedis<CacheValue>(ingestKey, { type: 'ingest', value: ingestCache })
+  }
 }
 
-export {
-  addToCache,
-  cacheIngestedTxid,
-  checkCache,
-  client,
-  countCachedItems,
-  deleteFromCache,
-  getBlockHeightFromCache,
-  loadCache,
-  readFromRedis,
-  saveToRedis,
-  wasIngested,
+export async function loadCache(): Promise<string[]> {
+  const cachedValue = await readFromRedis<CacheValue>('ingest')
+  return cachedValue?.type === 'ingest' ? cachedValue.value : []
 }
+
+export async function countCachedItems(): Promise<number> {
+  const cachedValue = await readFromRedis<CacheValue>('ingest')
+  return cachedValue?.type === 'ingest' ? cachedValue.value.length : 0
+}
+
+// Type aliases for backward compatibility
+export type CacheSigner = Extract<CacheValue, { type: 'signer' }>;
+export type CacheCount = Extract<CacheValue, { type: 'count' }>;
+export type CacheIngest = Extract<CacheValue, { type: 'ingest' }>;
+export type CacheReactions = Extract<CacheValue, { type: 'reactions' }>;
+export type CacheChannels = Extract<CacheValue, { type: 'channels' }>;
+export type CacheMessages = Extract<CacheValue, { type: 'messages' }>;
+export type CacheLikes = Extract<CacheValue, { type: 'likes' }>;
+export type CacheBlockHeight = Extract<CacheValue, { type: 'blockHeight' }>;
+export type CacheChart = Extract<CacheValue, { type: 'chart' }>;
+export type CacheTimeSeriesData = Extract<CacheValue, { type: 'timeSeriesData' }>;
+
+export { client }
