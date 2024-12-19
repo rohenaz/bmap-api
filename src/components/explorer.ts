@@ -431,4 +431,4 @@ export const explorerTemplate = (name: string, code: string) => `
       <div class="window"></div>
     </main>
   </body>
-</html>`; 
+</html>`;

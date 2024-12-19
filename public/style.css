@@ -7,8 +7,8 @@
   font-size: 0.8rem;
   font-weight: 500;
   padding: 0.25rem 0.5rem;
-  transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out,
-    color 0.2s ease-in-out;
+  transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, color 0.2s
+    ease-in-out;
 }
 
 .timeframe-button:hover {

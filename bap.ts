@@ -1,8 +1,8 @@
-import type { BmapTx } from 'bmapjs'
-import _ from 'lodash'
-import { normalize } from './bmap.js'
-import { readFromRedis, saveToRedis, type CacheValue } from './cache.js'
-const { uniq, uniqBy } = _
+import type { BmapTx } from 'bmapjs';
+import _ from 'lodash';
+import { normalize } from './bmap.js';
+import { type CacheValue, readFromRedis, saveToRedis } from './cache.js';
+const { uniq, uniqBy } = _;
 
 interface BapAddress {
   address: string;
@@ -31,13 +31,13 @@ export type BapIdentity = {
   valid: boolean;
 };
 
-const bapApiUrl = "https://api.sigmaidentity.com/v1/"
+const bapApiUrl = 'https://api.sigmaidentity.com/v1/';
 
 type Payload = {
-  address: string
-  block?: number
-  timestamp?: number
-}
+  address: string;
+  block?: number;
+  timestamp?: number;
+};
 
 export const getBAPIdByAddress = async (
   address: string,
@@ -47,14 +47,14 @@ export const getBAPIdByAddress = async (
   try {
     const payload: Payload = {
       address,
-    }
+    };
     if (block) {
-      payload.block = block
+      payload.block = block;
     }
     if (timestamp) {
-      payload.timestamp = timestamp
+      payload.timestamp = timestamp;
     }
-    console.log('payload', payload)
+    console.log('payload', payload);
     const result = await fetch(`${bapApiUrl}identity/validByAddress`, {
       method: 'POST',
       headers: {
@@ -62,67 +62,60 @@ export const getBAPIdByAddress = async (
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
-    })
-    const data = await result.json()
-    console.log('identity data', { data })
+    });
+    const data = await result.json();
+    console.log('identity data', { data });
     if (data && data.status === 'OK' && data.result) {
       try {
-        return data.result
+        return data.result;
       } catch (e) {
-        console.log('Failed to parse BAP identity', e, data.result)
+        console.log('Failed to parse BAP identity', e, data.result);
       }
     }
-    return undefined
+    return undefined;
   } catch (e) {
-    console.log(e)
-    throw e
+    console.log(e);
+    throw e;
   }
-}
+};
 
 // This function takes an array of transactions and resolves their signers from AIP and SIGMA
 export const resolveSigners = async (txs: BmapTx[]) => {
   // Helper function to resolve a signer from cache or fetch if not present
-  const resolveSigner = async (
-    address: string
-  ): Promise<BapIdentity | undefined> => {
-    const cacheKey = `signer-${address}`
-    let cacheValue = await readFromRedis(cacheKey)
-    let identity = {}
-    if (
-      !cacheValue ||
-      (cacheValue && 'error' in cacheValue && cacheValue.error === 404)
-    ) {
+  const resolveSigner = async (address: string): Promise<BapIdentity | undefined> => {
+    const cacheKey = `signer-${address}`;
+    let cacheValue = await readFromRedis(cacheKey);
+    let identity = {};
+    if (!cacheValue || (cacheValue && 'error' in cacheValue && cacheValue.error === 404)) {
       // If not found in cache, look it up and save
       try {
-        identity = await getBAPIdByAddress(address)
+        identity = await getBAPIdByAddress(address);
         if (identity) {
-          cacheValue = { type: 'signer', value: identity } as CacheValue
-          await saveToRedis<CacheValue>(cacheKey, cacheValue)
-          console.log('BAP saved to cache:', identity)
+          cacheValue = { type: 'signer', value: identity } as CacheValue;
+          await saveToRedis<CacheValue>(cacheKey, cacheValue);
+          console.log('BAP saved to cache:', identity);
         } else {
-          console.log('No BAP found for address:', address)
+          console.log('No BAP found for address:', address);
         }
       } catch (e) {
-        console.log('Failed to get BAP ID by Address:', e)
+        console.log('Failed to get BAP ID by Address:', e);
       }
     } else {
-      console.log('BAP already in cache for address:', address)
+      console.log('BAP already in cache for address:', address);
     }
-    return cacheValue ? (cacheValue.value as BapIdentity | undefined) : null
-  }
+    return cacheValue ? (cacheValue.value as BapIdentity | undefined) : null;
+  };
 
   // Function to process signers for a single transaction
   const processSigners = async (tx: BmapTx) => {
     const signerAddresses = [...(tx.AIP || []), ...(tx.SIGMA || [])].map(
       (signer) => signer.address
-    )
-    const uniqueAddresses = uniq(signerAddresses.filter((a) => !!a))
-    const signerPromises = uniqueAddresses.map((address) =>
-      resolveSigner(address)
-    )
-    const resolvedSigners = await Promise.all(signerPromises)
-    return resolvedSigners.filter((signer) => signer !== null)
-  }
+    );
+    const uniqueAddresses = uniq(signerAddresses.filter((a) => !!a));
+    const signerPromises = uniqueAddresses.map((address) => resolveSigner(address));
+    const resolvedSigners = await Promise.all(signerPromises);
+    return resolvedSigners.filter((signer) => signer !== null);
+  };
 
   // Process all transactions and flatten the list of signers
 
@@ -131,6 +124,6 @@ export const resolveSigners = async (txs: BmapTx[]) => {
       .filter((t) => !!t.AIP || !!t.SIGMA)
       .sort((a, b) => (a.blk?.t > b.blk?.t ? -1 : 1))
       .map((tx) => processSigners(normalize(tx)))
-  )
-  return uniqBy(signerLists.flat(), (b) => b.idKey)
-}
+  );
+  return uniqBy(signerLists.flat(), (b) => b.idKey);
+};

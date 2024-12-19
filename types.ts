@@ -1,4 +1,4 @@
-export const enum Timeframe {
+export enum Timeframe {
   Day = '24h',
   Week = 'week',
   Month = 'month',
