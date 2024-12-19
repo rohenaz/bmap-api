@@ -64,12 +64,12 @@ export interface ReactionResponse {
   results: Record<string, unknown>[];
 }
 
-export interface ChannelLikes {
+export interface Reactions {
   channel: string;
   page: number;
   limit: number;
   count: number;
-  results: LikeDocument[];
+  results: Reaction[];
 }
 
 export interface ChannelInfo {
@@ -118,7 +118,7 @@ interface LikeRequest {
   messageIds?: string[];
 }
 
-interface LikeDocument {
+interface Reaction {
   tx: {
     h: string;
   };
@@ -130,6 +130,7 @@ interface LikeDocument {
     type: string;
     tx?: string;
     messageID?: string;
+    emoji?: string;
   }[];
   AIP?: {
     algorithm_signing_component: string;
@@ -138,14 +139,14 @@ interface LikeDocument {
 
 export interface LikeInfo {
   txid: string;
-  likes: LikeDocument[];
+  likes: Reaction[];
   total: number;
   signerIds: string[];  // Store only signer IDs
 }
 
 interface LikeResponse {
   txid: string;
-  likes: LikeDocument[];
+  likes: Reaction[];
   total: number;
   signers: BapIdentity[];  // Full signer objects for API response
 }
@@ -368,7 +369,7 @@ async function normalizeSignerReference(address: string): Promise<string | null>
 }
 
 // Helper to process likes with better error handling and logging
-async function processLikes(likes: LikeDocument[]): Promise<{ signerIds: string[]; signers: BapIdentity[] }> {
+async function processLikes(likes: Reaction[]): Promise<{ signerIds: string[]; signers: BapIdentity[] }> {
   console.log('Processing likes:', likes.length);
   
   // Get unique signer addresses with validation
@@ -538,9 +539,9 @@ export function registerSocialRoutes(app: Elysia) {
           .skip(skip)
           .limit(limit)
           .project({ _id: 0 })
-          .toArray() as LikeDocument[];
+          .toArray() as Reaction[];
 
-        const response: ChannelLikes = {
+        const response: Reactions = {
           channel: query.channel,
           page,
           limit,
@@ -633,7 +634,7 @@ export function registerSocialRoutes(app: Elysia) {
           .find(query)
           .sort({ "blk.t": -1 })
           .limit(1000)
-          .toArray() as unknown as LikeDocument[];
+          .toArray() as unknown as Reaction[];
 
         console.log(`Found ${likes.length} likes for txid ${txid}`);
 
@@ -692,7 +693,7 @@ export function registerSocialRoutes(app: Elysia) {
           .find(query)
           .sort({ "blk.t": -1 })
           .limit(1000)
-          .toArray() as unknown as LikeDocument[];
+          .toArray() as unknown as Reaction[];
 
         console.log(`Found ${likes.length} likes for messageID ${messageId}`);
 
