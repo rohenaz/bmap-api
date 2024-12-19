@@ -305,6 +305,120 @@ const errorHeaders = {
   ...corsHeaders
 };
 
+// Validation helper for signer data
+function validateSignerData(signer: BapIdentity): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  if (!signer.idKey) errors.push('Missing idKey');
+  if (!signer.currentAddress) errors.push('Missing currentAddress');
+  if (!signer.rootAddress) errors.push('Missing rootAddress');
+  if (!signer.addresses || !signer.addresses.length) errors.push('Missing addresses');
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+// Helper to normalize signer references
+async function normalizeSignerReference(address: string): Promise<string | null> {
+  try {
+    const identity = await getBAPIdByAddress(address);
+    if (!identity) {
+      console.log('No identity found for address:', address);
+      return null;
+    }
+
+    const validation = validateSignerData(identity);
+    if (!validation.isValid) {
+      console.warn('Invalid signer data for address:', address, 'Errors:', validation.errors);
+      return null;
+    }
+
+    return identity.idKey;
+  } catch (error) {
+    console.error('Error normalizing signer reference:', error);
+    return null;
+  }
+}
+
+// Helper to process likes with better error handling and logging
+async function processLikes(likes: LikeDocument[]): Promise<{ signerIds: string[]; signers: BapIdentity[] }> {
+  console.log('Processing likes:', likes.length);
+  
+  // Get unique signer addresses with validation
+  const signerAddresses = new Set<string>();
+  const invalidLikes: string[] = [];
+  
+  for (const like of likes) {
+    if (!Array.isArray(like.AIP)) {
+      console.warn('Invalid like document - missing AIP array:', like.tx?.h);
+      invalidLikes.push(like.tx?.h);
+      continue;
+    }
+
+    for (const aip of like.AIP) {
+      if (!aip.algorithm_signing_component) {
+        console.warn('Invalid AIP entry - missing algorithm_signing_component:', like.tx?.h);
+        continue;
+      }
+      signerAddresses.add(aip.algorithm_signing_component);
+    }
+  }
+
+  if (invalidLikes.length > 0) {
+    console.warn('Found invalid like documents:', invalidLikes);
+  }
+
+  console.log('Found unique signer addresses:', signerAddresses.size);
+
+  // Fetch and validate signer identities
+  const signerIds = Array.from(signerAddresses);
+  const signerResults = await Promise.all(
+    signerIds.map(async (address) => {
+      const signerCacheKey = `signer-${address}`;
+      const cachedSigner = await readFromRedis<CacheValue>(signerCacheKey);
+      
+      if (cachedSigner?.type === 'signer' && cachedSigner.value) {
+        const validation = validateSignerData(cachedSigner.value);
+        if (!validation.isValid) {
+          console.warn('Invalid cached signer data for address:', address, 'Errors:', validation.errors);
+          return null;
+        }
+        return cachedSigner.value;
+      }
+
+      try {
+        const identity = await getBAPIdByAddress(address);
+        if (identity) {
+          const validation = validateSignerData(identity);
+          if (!validation.isValid) {
+            console.warn('Invalid fetched signer data for address:', address, 'Errors:', validation.errors);
+            return null;
+          }
+
+          await saveToRedis<CacheValue>(signerCacheKey, {
+            type: 'signer',
+            value: identity
+          });
+          return identity;
+        }
+      } catch (error) {
+        console.error(`Failed to fetch identity for address ${address}:`, error);
+      }
+      return null;
+    })
+  );
+
+  const validSigners = signerResults.filter((s): s is BapIdentity => s !== null);
+  console.log('Successfully processed signers:', validSigners.length);
+
+  return {
+    signerIds: validSigners.map(s => s.idKey),
+    signers: validSigners
+  };
+}
+
 export function registerSocialRoutes(app: Elysia) {
   // Add OPTIONS handler for all routes
   app.options("*", () => {
@@ -681,27 +795,30 @@ export function registerSocialRoutes(app: Elysia) {
 
   app.post("/likes", async ({ body, query, request }) => {
     try {
-      // Log the incoming request with headers
       console.log('Received /likes request:', {
         body,
         query,
-        headers: request.headers
+        headers: request.headers,
+        contentType: request.headers.get('content-type')
       });
 
-      // Handle both array and object formats, and support both txids and messageIds
+      // Validate request body
       let txids: string[] = [];
       let messageIds: string[] = [];
       
       if (Array.isArray(body)) {
-        console.log('Request body is an array');
-        txids = body;
+        console.log('Request body is an array of length:', body.length);
+        txids = body.filter(id => typeof id === 'string');
+        if (txids.length !== body.length) {
+          console.warn('Some array items were not strings:', body);
+        }
       } else if (body && typeof body === 'object') {
-        console.log('Request body is an object');
+        console.log('Request body is an object:', body);
         const request = body as LikeRequest;
-        txids = request.txids || [];
-        messageIds = request.messageIds || [];
+        txids = (request.txids || []).filter(id => typeof id === 'string');
+        messageIds = (request.messageIds || []).filter(id => typeof id === 'string');
       } else {
-        console.log('Invalid request body format:', body);
+        console.warn('Invalid request body format:', body);
         return new Response(JSON.stringify({
           error: "Invalid request format",
           details: "Request body must be an array of txids or an object with txids/messageIds"
@@ -892,51 +1009,4 @@ export function registerSocialRoutes(app: Elysia) {
       });
     }
   });
-
-  // Helper function to process likes and get signers
-  async function processLikes(likes: LikeDocument[]): Promise<{ signerIds: string[]; signers: BapIdentity[] }> {
-    // Get unique signer addresses
-    const signerAddresses = new Set<string>();
-    for (const like of likes) {
-      if (Array.isArray(like.AIP)) {
-        for (const aip of like.AIP) {
-          if (aip.algorithm_signing_component) {
-            signerAddresses.add(aip.algorithm_signing_component);
-          }
-        }
-      }
-    }
-
-    // Fetch signer identities
-    const signerIds = Array.from(signerAddresses);
-    const signers = await Promise.all(
-      signerIds.map(async (address) => {
-        const signerCacheKey = `signer-${address}`;
-        const cachedSigner = await readFromRedis<CacheValue>(signerCacheKey);
-        
-        if (cachedSigner?.type === 'signer' && cachedSigner.value) {
-          return cachedSigner.value;
-        }
-
-        try {
-          const identity = await getBAPIdByAddress(address);
-          if (identity) {
-            await saveToRedis<CacheValue>(signerCacheKey, {
-              type: 'signer',
-              value: identity
-            });
-            return identity;
-          }
-        } catch (error) {
-          console.error(`Failed to fetch identity for address ${address}:`, error);
-        }
-        return null;
-      })
-    );
-
-    return {
-      signerIds,
-      signers: signers.filter((s): s is BapIdentity => s !== null)
-    };
-  }
 }
