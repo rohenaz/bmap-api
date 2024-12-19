@@ -646,41 +646,74 @@ export function registerSocialRoutes(app: Elysia) {
     }
   });
 
+  // Common CORS headers
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Max-Age": "86400"
+  };
+
+  // Add OPTIONS handler for CORS preflight
+  app.options("/likes", () => {
+    return new Response(null, {
+      headers: corsHeaders
+    });
+  });
+
   app.post("/likes", async ({ body, query }) => {
     try {
+      // Log the incoming request
+      console.log('Received /likes request:', { body, query });
+
       // Handle both array and object formats, and support both txids and messageIds
       let txids: string[] = [];
       let messageIds: string[] = [];
       
       if (Array.isArray(body)) {
+        console.log('Request body is an array');
         txids = body;
-      } else {
+      } else if (body && typeof body === 'object') {
+        console.log('Request body is an object');
         const request = body as LikeRequest;
         txids = request.txids || [];
         messageIds = request.messageIds || [];
+      } else {
+        console.log('Invalid request body format:', body);
+        return new Response(JSON.stringify({
+          error: "Invalid request format",
+          details: "Request body must be an array of txids or an object with txids/messageIds"
+        }), {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders
+          }
+        });
       }
 
       // Support the old query format if present
       if (query?.d === 'disc-react' && messageIds.length === 0) {
+        console.log('Using legacy disc-react format');
         messageIds = txids;
         txids = [];
       }
       
       if (txids.length === 0 && messageIds.length === 0) {
+        console.log('No valid IDs provided');
         return new Response(JSON.stringify({
           error: "Invalid request",
           details: "Request must include either txids or messageIds"
         }), {
           status: 400,
-          headers: { 
+          headers: {
             "Content-Type": "application/json",
-            "Cache-Control": "no-cache",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type"
+            ...corsHeaders
           }
         });
       }
+
+      console.log('Processing request with:', { txids, messageIds });
 
       const db = await getDbo();
       const results: LikeResponse[] = [];
@@ -816,13 +849,14 @@ export function registerSocialRoutes(app: Elysia) {
       }
 
       // Return just the first result since we want a single object response
-      return new Response(JSON.stringify(results[0]), {
+      const response = results[0] || { txid: '', likes: [], total: 0, signers: [] };
+      console.log('Sending response:', response);
+
+      return new Response(JSON.stringify(response), {
         headers: {
           "Content-Type": "application/json",
           "Cache-Control": "public, max-age=60",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type"
+          ...corsHeaders
         }
       });
 
@@ -839,9 +873,7 @@ export function registerSocialRoutes(app: Elysia) {
         headers: {
           "Content-Type": "application/json",
           "Cache-Control": "no-cache",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type"
+          ...corsHeaders
         }
       });
     }
@@ -893,15 +925,4 @@ export function registerSocialRoutes(app: Elysia) {
       signers: signers.filter((s): s is BapIdentity => s !== null)
     };
   }
-
-  // Add OPTIONS handler for CORS preflight
-  app.options("/likes", () => {
-    return new Response(null, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    });
-  });
 }
