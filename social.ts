@@ -302,9 +302,10 @@ async function processRelationships(bapId: string, docs: BmapTx[], ownedAddresse
 // Common CORS headers for all endpoints
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  "Access-Control-Max-Age": "86400"
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept",
+  "Access-Control-Max-Age": "86400",
+  "Access-Control-Expose-Headers": "Content-Length, Content-Type"
 };
 
 // Common response headers for success responses
@@ -436,9 +437,12 @@ async function processLikes(likes: LikeDocument[]): Promise<{ signerIds: string[
 }
 
 export function registerSocialRoutes(app: Elysia) {
-  // Add OPTIONS handler for all routes
+  // Add OPTIONS handler for all routes with proper headers
   app.options("*", () => {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      status: 204,
+      headers: corsHeaders 
+    });
   });
 
   app.get("/friendships/:bapId", async ({ params }) => {
@@ -795,6 +799,13 @@ export function registerSocialRoutes(app: Elysia) {
   });
 
   app.post("/likes", async ({ body, query, request }) => {
+    // Add CORS headers to the request
+    const headers = {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+      "Cache-Control": "public, max-age=60"
+    };
+
     try {
       console.log('Received /likes request:', {
         body,
@@ -825,10 +836,7 @@ export function registerSocialRoutes(app: Elysia) {
           details: "Request body must be an array of txids or an object with txids/messageIds"
         }), {
           status: 400,
-          headers: {
-            "Content-Type": "application/json",
-            ...corsHeaders
-          }
+          headers
         });
       }
 
@@ -846,10 +854,7 @@ export function registerSocialRoutes(app: Elysia) {
           details: "Request must include either txids or messageIds"
         }), {
           status: 400,
-          headers: {
-            "Content-Type": "application/json",
-            ...corsHeaders
-          }
+          headers
         });
       }
 
@@ -993,7 +998,8 @@ export function registerSocialRoutes(app: Elysia) {
       console.log('Sending response:', response);
 
       return new Response(JSON.stringify(response), {
-        headers: successHeaders
+        status: 200,
+        headers
       });
 
     } catch (error: unknown) {
@@ -1006,7 +1012,11 @@ export function registerSocialRoutes(app: Elysia) {
         timestamp: new Date().toISOString()
       }), {
         status: 500,
-        headers: errorHeaders
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache"
+        }
       });
     }
   });
