@@ -60,8 +60,9 @@ export const saveBobTx = async (tx: BobTx) => {
     let bapId: BapIdentity | undefined;
     // multiple AIP outputs
     for (const aip of tx.AIP) {
-      if (aip.algorithm_signing_component) {
-        bapId = await getBAPIdByAddress(aip.algorithm_signing_component);
+      console.log({ aip });
+      if (aip.address || aip.signing_address) {
+        bapId = await getBAPIdByAddress(aip.address || aip.signing_address);
         if (bapId) break;
       }
     }

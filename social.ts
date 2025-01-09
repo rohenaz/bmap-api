@@ -252,7 +252,7 @@ async function processRelationships(
   const relationships: Record<string, RelationshipState> = {};
 
   async function getRequestorBapId(doc: BmapTx): Promise<string | null> {
-    const address = doc?.AIP?.[0]?.algorithm_signing_component;
+    const address = doc?.AIP?.[0]?.address || doc?.AIP?.[0]?.signing_address;
     if (!address) return null;
 
     if (ownedAddresses.has(address)) {

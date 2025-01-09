@@ -200,7 +200,8 @@ const app = new Elysia()
 
     // Handle validation errors
     if ('code' in error && error.code === 'VALIDATION') {
-      return new Response(`<div class="text-orange-500">Validation Error: ${error.message}</div>`, {
+      const errorMessage = 'message' in error ? error.message : 'Validation Error';
+      return new Response(`<div class="text-orange-500">Validation Error: ${errorMessage}</div>`, {
         status: 400,
         headers: { 'Content-Type': 'text/html' },
       });
@@ -208,7 +209,8 @@ const app = new Elysia()
 
     // Handle parse errors
     if ('code' in error && error.code === 'PARSE') {
-      return new Response(`<div class="text-red-500">Parse Error: ${error.message}</div>`, {
+      const errorMessage = 'message' in error ? error.message : 'Parse Error';
+      return new Response(`<div class="text-red-500">Parse Error: ${errorMessage}</div>`, {
         status: 400,
         headers: { 'Content-Type': 'text/html' },
       });
@@ -216,7 +218,8 @@ const app = new Elysia()
 
     // Log and handle all other errors
     console.error(chalk.red(`Error: ${request.method} ${request.url}`), error);
-    return new Response(`<div class="text-red-500">Server error: ${error.message}</div>`, {
+    const errorMessage = 'message' in error ? error.message : 'Internal Server Error';
+    return new Response(`<div class="text-red-500">Server error: ${errorMessage}</div>`, {
       status: 500,
       headers: { 'Content-Type': 'text/html' },
     });
@@ -603,7 +606,7 @@ const start = async () => {
           for (const collection of collections) {
             const result = await db.collection(collection).findOne({ 'tx.h': txid });
             if (result && 'tx' in result && 'out' in result) {
-              dbTx = result as BmapTx;
+              dbTx = result as unknown as BmapTx;
               console.log('Found tx in MongoDB collection:', collection);
               break;
             }

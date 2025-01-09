@@ -9,7 +9,7 @@
     "@napi-rs/canvas": "^0.1.65",
     "@orbitdb/core": "^1.0.2",
     "@types/react": "^19.0.4",
-    "bmapjs": "^0.4.0-beta.61",
+    "bmapjs": "^0.4.0-beta.63",
     "bpu-ts": "^0.0.26",
     "chalk": "^5.4.1",
     "chart.js": "^4.4.7",
