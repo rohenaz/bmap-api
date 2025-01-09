@@ -7,6 +7,30 @@ This project is a **BMAP API** server that processes and serves Bitcoin transact
 - Streaming Bitcoin transactions via JungleBus
 - BAP (Bitcoin Attestation Protocol) identity integration
 
+# Identity Formats
+
+The API deals with three distinct identity formats:
+
+**BAP IDs**:
+- Derived identity strings (e.g. "Go8vCHAa4S6AhXKTABGpANiz35J")
+- 26 characters of base58-encoded data
+- Unique identifier for a BAP identity
+- NOT a public key or address
+- Used in social features and message routing
+
+**Bitcoin Addresses**:
+- Legacy format (e.g. "1CfG7EzS1Qj8vGxKzr2ecHhYqZh2ndJT9g")
+- Found in AIP protocol data as either:
+  - `address` field
+  - `algorithm_signing_component` field (these fields are synonymous)
+- Used for transaction signing and verification
+
+**Public Keys**:
+- 33 or 65 byte hex strings
+- Used for message encryption/decryption
+- Not directly exposed in API responses
+- Derived from BAP identity when needed for encryption
+
 # Technology Stack
 
 - **Bun**: Modern JavaScript runtime for server-side development
@@ -117,6 +141,7 @@ Code Organization:
 - Use TypeScript interfaces for data structures
 - Document complex logic with comments
 - Follow Biome formatting rules
+- avoid someArray.forEach in favor of "for of" and "for in" loops
 
 Error Management:
 - Implement proper error boundaries

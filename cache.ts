@@ -6,7 +6,13 @@ import type { TimeSeriesData } from './chart.js';
 import { getCurrentBlockHeight } from './db.js';
 
 // Import interfaces from social.ts
-import type { ChannelInfo, LikeInfo, MessageResponse, Reactions } from './social.js';
+import type {
+  CacheListResponse,
+  ChannelInfo,
+  LikeInfo,
+  MessageResponse,
+  Reactions,
+} from './social.js';
 
 const client = redis.createClient({
   url: process.env.REDIS_PRIVATE_URL,
@@ -50,7 +56,8 @@ export type CacheValue =
   | { type: 'ingest'; value: string[] }
   | { type: 'chart'; value: ChartCacheData }
   | { type: 'timeSeriesData'; value: TimeSeriesData }
-  | { type: 'reactions'; value: Reactions };
+  | { type: 'reactions'; value: Reactions }
+  | { type: 'identities'; value: CacheListResponse };
 
 export async function saveToRedis<T extends CacheValue>(key: string, value: T): Promise<void> {
   await client.set(key, JSON.stringify(value));

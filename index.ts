@@ -2,12 +2,13 @@ import { fileURLToPath } from 'node:url';
 import { cors } from '@elysiajs/cors';
 import { staticPlugin } from '@elysiajs/static';
 import type { Transaction } from '@gorillapool/js-junglebus';
+import type { Static } from '@sinclair/typebox';
 import bmapjs from 'bmapjs';
 import type { BmapTx } from 'bmapjs';
 import { parse } from 'bpu-ts';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
-import { Elysia } from 'elysia';
+import { Elysia, NotFoundError, t } from 'elysia';
 import type { ChangeStreamDocument, Document, Sort, SortDirection } from 'mongodb';
 import { type BapIdentity, getBAPIdByAddress, resolveSigners } from './bap.js';
 import {
@@ -47,10 +48,59 @@ const bitcoinSchemaCollections = [
   'ord',
 ];
 
-type IngestBody = {
-  rawTx: string;
-};
+// Define request types
+const IngestBody = t.Object({
+  rawTx: t.String(),
+});
 
+const QueryParams = t.Object({
+  collectionName: t.String(),
+  base64Query: t.String(),
+});
+
+const TxParams = t.Object({
+  tx: t.String(),
+  format: t.Optional(t.String()),
+});
+
+const ChartParams = t.Object({
+  name: t.Optional(t.String()),
+  timeframe: t.Optional(t.String()),
+});
+
+// Helper function to parse identity values
+function parseIdentity(identityValue: unknown): Record<string, unknown> {
+  // If identity is already an object, return it as is
+  if (typeof identityValue === 'object' && identityValue !== null) {
+    return identityValue as Record<string, unknown>;
+  }
+
+  // If it's a string, try to parse as JSON
+  if (typeof identityValue === 'string') {
+    // Strip leading/trailing quotes if present
+    let trimmed = identityValue.trim();
+    if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+      trimmed = trimmed.slice(1, -1);
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (typeof parsed === 'object' && parsed !== null) {
+        return parsed;
+      }
+      // It's valid JSON but not an object, wrap it in an object
+      return { alternateName: parsed };
+    } catch {
+      // Not valid JSON, just treat it as a plain string in an object
+      return { alternateName: trimmed };
+    }
+  }
+
+  // Fallback: wrap whatever it is in an object
+  return { alternateName: String(identityValue) };
+}
+
+// Transaction utility functions
 const bobFromRawTx = async (rawtx: string) => {
   try {
     const result = await parse({
@@ -115,8 +165,6 @@ const bobFromTxid = async (txid: string) => {
     try {
       return await bobFromRawTx(rawtx);
     } catch (e) {
-      // console.log("Failed to get rawtx from whatsonchain for", txid, "Falling back to BOB planaria.", e);
-      // return await bobFromPlanariaByTxid(txid);
       throw new Error(
         `Failed to get rawtx from whatsonchain for ${txid}: ${e instanceof Error ? e.message : String(e)}`
       );
@@ -130,14 +178,49 @@ const bobFromTxid = async (txid: string) => {
 };
 
 const app = new Elysia()
-  .use(
-    cors({
-      origin: process.env.CORS_ORIGIN || '*',
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      credentials: true,
-      allowedHeaders: ['Content-Type', 'Authorization'],
-    })
-  )
+  .use(cors())
+  .derive(() => ({
+    requestTimeout: 0, // Disable timeout for SSE
+  }))
+  .onRequest(({ request }) => {
+    // Only log 404s and errors
+    if (request.method === 'GET' && !request.url.includes('/favicon.ico')) {
+      console.log(chalk.gray(`${request.method} ${request.url}`));
+    }
+  })
+  .onError(({ error, request }) => {
+    // Handle 404 errors
+    if (error instanceof NotFoundError) {
+      console.log(chalk.yellow(`404: ${request.method} ${request.url}`));
+      return new Response(`<div class="text-yellow-500">Not Found: ${request.url}</div>`, {
+        status: 404,
+        headers: { 'Content-Type': 'text/html' },
+      });
+    }
+
+    // Handle validation errors
+    if ('code' in error && error.code === 'VALIDATION') {
+      return new Response(`<div class="text-orange-500">Validation Error: ${error.message}</div>`, {
+        status: 400,
+        headers: { 'Content-Type': 'text/html' },
+      });
+    }
+
+    // Handle parse errors
+    if ('code' in error && error.code === 'PARSE') {
+      return new Response(`<div class="text-red-500">Parse Error: ${error.message}</div>`, {
+        status: 400,
+        headers: { 'Content-Type': 'text/html' },
+      });
+    }
+
+    // Log and handle all other errors
+    console.error(chalk.red(`Error: ${request.method} ${request.url}`), error);
+    return new Response(`<div class="text-red-500">Server error: ${error.message}</div>`, {
+      status: 500,
+      headers: { 'Content-Type': 'text/html' },
+    });
+  })
   .use(staticPlugin({ assets: './public', prefix: '/' }))
   .use(
     swagger({
@@ -153,373 +236,9 @@ const app = new Elysia()
           { name: 'charts', description: 'Chart generation endpoints' },
           { name: 'identities', description: 'BAP identity management' },
         ],
-        paths: {
-          '/tx/{tx}/{format}': {
-            get: {
-              tags: ['transactions'],
-              summary: 'Get transaction details',
-              parameters: [
-                {
-                  name: 'tx',
-                  in: 'path',
-                  required: true,
-                  schema: { type: 'string' },
-                  example: '1234567890abcdef',
-                },
-                {
-                  name: 'format',
-                  in: 'path',
-                  required: false,
-                  schema: { type: 'string', enum: ['bob', 'raw'] },
-                },
-              ],
-              responses: {
-                '200': {
-                  description: 'Transaction details',
-                  content: {
-                    'application/json': {
-                      schema: { $ref: '#/components/schemas/Transaction' },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          '/friendships/{bapId}': {
-            get: {
-              tags: ['social'],
-              summary: 'Get friendship status for a BAP ID',
-              parameters: [
-                {
-                  name: 'bapId',
-                  in: 'path',
-                  required: true,
-                  schema: { type: 'string' },
-                  example: 'abc123def456',
-                },
-              ],
-              responses: {
-                '200': {
-                  description: 'Friendship status',
-                  content: {
-                    'application/json': {
-                      schema: { $ref: '#/components/schemas/FriendshipResponse' },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          '/likes': {
-            post: {
-              tags: ['social'],
-              summary: 'Get likes for transactions or messages',
-              requestBody: {
-                content: {
-                  'application/json': {
-                    schema: {
-                      oneOf: [
-                        {
-                          type: 'array',
-                          items: { type: 'string' },
-                          example: ['tx1', 'tx2'],
-                        },
-                        {
-                          type: 'object',
-                          properties: {
-                            txids: { type: 'array', items: { type: 'string' } },
-                            messageIds: { type: 'array', items: { type: 'string' } },
-                          },
-                          example: { txids: ['tx1'], messageIds: ['msg1'] },
-                        },
-                      ],
-                    },
-                  },
-                },
-              },
-              responses: {
-                '200': {
-                  description: 'Like information',
-                  content: {
-                    'application/json': {
-                      schema: { $ref: '#/components/schemas/LikeResponse' },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          '/chart-data/{name}': {
-            get: {
-              tags: ['charts'],
-              summary: 'Get chart data for a collection',
-              parameters: [
-                {
-                  name: 'name',
-                  in: 'path',
-                  required: false,
-                  schema: { type: 'string' },
-                  example: 'message',
-                },
-                {
-                  name: 'timeframe',
-                  in: 'query',
-                  required: false,
-                  schema: {
-                    type: 'string',
-                    enum: ['day', 'week', 'month', 'year'],
-                  },
-                  example: 'day',
-                },
-              ],
-              responses: {
-                '200': {
-                  description: 'Chart data',
-                  content: {
-                    'application/json': {
-                      schema: { $ref: '#/components/schemas/ChartData' },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          '/channels': {
-            get: {
-              tags: ['social'],
-              summary: 'Get list of channels',
-              responses: {
-                '200': {
-                  description: 'List of channels',
-                  content: {
-                    'application/json': {
-                      schema: {
-                        type: 'array',
-                        items: { $ref: '#/components/schemas/Channel' },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          '/messages/{channelId}': {
-            get: {
-              tags: ['social'],
-              summary: 'Get messages for a channel',
-              parameters: [
-                {
-                  name: 'channelId',
-                  in: 'path',
-                  required: true,
-                  schema: { type: 'string' },
-                  example: 'general',
-                },
-              ],
-              responses: {
-                '200': {
-                  description: 'Channel messages',
-                  content: {
-                    'application/json': {
-                      schema: { $ref: '#/components/schemas/MessageResponse' },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          '/identities': {
-            get: {
-              tags: ['identities'],
-              summary: 'Get all BAP identities',
-              responses: {
-                '200': {
-                  description: 'List of identities',
-                  content: {
-                    'application/json': {
-                      schema: {
-                        type: 'object',
-                        properties: {
-                          message: { type: 'string', example: 'Success' },
-                          signers: {
-                            type: 'array',
-                            items: { $ref: '#/components/schemas/UserIdentity' },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-        components: {
-          schemas: {
-            Transaction: {
-              type: 'object',
-              properties: {
-                tx: {
-                  type: 'object',
-                  properties: {
-                    h: { type: 'string', example: '1234567890abcdef1234567890abcdef' },
-                  },
-                },
-                blk: {
-                  type: 'object',
-                  properties: {
-                    i: { type: 'number', example: 123456 },
-                    t: { type: 'number', example: 1634567890 },
-                  },
-                },
-                MAP: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      type: { type: 'string', example: 'message' },
-                      channel: { type: 'string', example: 'general' },
-                      paymail: { type: 'string', example: 'user@example.com' },
-                    },
-                  },
-                },
-              },
-            },
-            Identity: {
-              type: 'object',
-              properties: {
-                idKey: { type: 'string', example: 'abc123def456' },
-                rootAddress: { type: 'string', example: '1abcdef...' },
-                currentAddress: { type: 'string', example: '1xyz789...' },
-                identity: { type: 'string', example: '{"name": "John Doe"}' },
-              },
-            },
-            FriendshipResponse: {
-              type: 'object',
-              properties: {
-                friends: { type: 'array', items: { type: 'string' }, example: ['id1', 'id2'] },
-                incoming: { type: 'array', items: { type: 'string' }, example: ['id3'] },
-                outgoing: { type: 'array', items: { type: 'string' }, example: ['id4'] },
-              },
-            },
-            LikeResponse: {
-              type: 'object',
-              properties: {
-                txid: { type: 'string', example: '1234567890abcdef' },
-                likes: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      tx: { type: 'object', properties: { h: { type: 'string' } } },
-                      MAP: { type: 'array', items: { type: 'object' } },
-                    },
-                  },
-                },
-                total: { type: 'number', example: 5 },
-                signers: { type: 'array', items: { $ref: '#/components/schemas/Identity' } },
-              },
-            },
-            ChartData: {
-              type: 'object',
-              properties: {
-                labels: { type: 'array', items: { type: 'number' }, example: [1, 2, 3, 4, 5] },
-                values: { type: 'array', items: { type: 'number' }, example: [10, 20, 15, 25, 30] },
-                range: { type: 'array', items: { type: 'number' }, example: [1, 5] },
-              },
-            },
-            Channel: {
-              type: 'object',
-              properties: {
-                channel: { type: 'string', example: 'general' },
-                last_message: { type: 'string', example: 'Hello World' },
-                last_message_time: { type: 'number', example: 1634567890 },
-                messages: { type: 'number', example: 42 },
-                creator: { type: 'string', example: 'user@example.com' },
-              },
-            },
-            Message: {
-              type: 'object',
-              properties: {
-                tx: {
-                  type: 'object',
-                  properties: {
-                    h: { type: 'string', example: '1234567890abcdef' },
-                  },
-                },
-                MAP: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      type: { type: 'string', example: 'message' },
-                      channel: { type: 'string', example: 'general' },
-                      paymail: { type: 'string', example: 'user@example.com' },
-                    },
-                  },
-                },
-                B: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      Data: {
-                        type: 'object',
-                        properties: {
-                          utf8: { type: 'string', example: 'Hello World' },
-                        },
-                      },
-                    },
-                  },
-                },
-                AIP: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      bapId: { type: 'string', example: 'abc123' },
-                    },
-                  },
-                },
-                timestamp: { type: 'number', example: 1634567890 },
-              },
-            },
-            MessageResponse: {
-              type: 'object',
-              properties: {
-                channel: { type: 'string', example: 'general' },
-                page: { type: 'number', example: 1 },
-                limit: { type: 'number', example: 100 },
-                count: { type: 'number', example: 42 },
-                results: {
-                  type: 'array',
-                  items: { $ref: '#/components/schemas/Message' },
-                },
-              },
-            },
-            UserIdentity: {
-              type: 'object',
-              properties: {
-                idKey: { type: 'string', example: 'abc123def456' },
-                paymail: { type: 'string', example: 'user@example.com' },
-                displayName: { type: 'string', example: 'John Doe' },
-                icon: { type: 'string', example: 'https://example.com/avatar.png' },
-              },
-            },
-          },
-        },
       },
     })
-  )
-  .onError(({ error }) => {
-    console.error('Application error:', error);
-    return new Response(`<div class="text-red-500">Server error: ${error.message}</div>`, {
-      headers: { 'Content-Type': 'text/html' },
-    });
-  })
-  .derive(() => ({
-    requestTimeout: 30000,
-  }));
+  );
 
 const start = async () => {
   console.log(chalk.magenta('BMAP API'), chalk.cyan('initializing machine...'));
@@ -533,65 +252,89 @@ const start = async () => {
 
   app.get('/s/:collectionName?/:base64Query', async ({ params, set }) => {
     const { collectionName, base64Query: b64 } = params;
+
     set.headers = {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'X-Accel-Buffering': 'no',
       Connection: 'keep-alive',
+      'Access-Control-Allow-Origin': 'http://localhost:5173',
+      'Access-Control-Allow-Credentials': 'true',
     };
 
-    const json = Buffer.from(b64, 'base64').toString();
-    const db = await getDbo();
+    try {
+      const json = Buffer.from(b64, 'base64').toString();
+      const db = await getDbo();
 
-    console.log(chalk.blue('New change stream subscription on', collectionName));
-    const query = JSON.parse(json);
+      console.log(chalk.blue('New change stream subscription on', collectionName));
+      const query = JSON.parse(json);
 
-    const pipeline = [{ $match: { operationType: 'insert' } }];
-    const keys = Object.keys(query.q.find || {});
-    for (const k of keys) {
-      pipeline[0].$match[`fullDocument.${k}`] = query.q.find[k];
-    }
+      const pipeline = [{ $match: { operationType: 'insert' } }];
+      const keys = Object.keys(query.q.find || {});
+      for (const k of keys) {
+        pipeline[0].$match[`fullDocument.${k}`] = query.q.find[k];
+      }
 
-    let changeStream: ChangeStream | undefined;
-    if (collectionName === '$all') {
-      // Watch the entire database
-      changeStream = db.watch(pipeline, { fullDocument: 'updateLookup' });
-    } else {
-      // Watch a specific collection
-      const target = db.collection(collectionName);
-      changeStream = target.watch(pipeline, { fullDocument: 'updateLookup' });
-    }
+      let changeStream: ChangeStream | undefined;
+      const messageQueue: string[] = [];
+      let isActive = true;
 
-    return new ReadableStream({
-      start(controller) {
-        controller.enqueue(`data: ${JSON.stringify({ type: 'open', data: [] })}\n\n`);
-
-        changeStream.on('change', (next: ChangeStreamDocument<BmapTx>) => {
-          if (next.operationType === 'insert') {
-            console.log(chalk.blue('New insert event'), next.fullDocument.tx?.h);
-            const eventType = collectionName === '$all' ? next.ns.coll : collectionName;
-            controller.enqueue(
-              `data: ${JSON.stringify({ type: eventType, data: [next.fullDocument] })}\n\n`
-            );
+      async function* eventGenerator() {
+        try {
+          if (collectionName === '$all') {
+            changeStream = db.watch(pipeline, { fullDocument: 'updateLookup' });
+          } else {
+            const target = db.collection(collectionName);
+            changeStream = target.watch(pipeline, { fullDocument: 'updateLookup' });
           }
-        });
 
-        changeStream.on('error', (e) => {
-          console.log(chalk.blue('Changestream error - closing SSE'), e);
-          changeStream.close();
-          controller.close();
-        });
+          yield `data: ${JSON.stringify({ type: 'open', data: [] })}\n\n`;
 
-        const heartbeat = setInterval(() => {
-          controller.enqueue(':heartbeat\n\n');
-        }, 30000);
+          changeStream.on('change', (next: ChangeStreamDocument<BmapTx>) => {
+            if (next.operationType === 'insert' && isActive) {
+              const eventType = collectionName === '$all' ? next.ns.coll : collectionName;
+              messageQueue.push(
+                `data: ${JSON.stringify({ type: eventType, data: [next.fullDocument] })}\n\n`
+              );
+            }
+          });
 
-        return () => {
-          clearInterval(heartbeat);
-          changeStream.close();
-        };
-      },
-    });
+          changeStream.on('error', (error) => {
+            console.error(chalk.red('Change stream error:'), error);
+            isActive = false;
+          });
+
+          changeStream.on('close', () => {
+            console.log(chalk.blue('Change stream closed'));
+            isActive = false;
+          });
+
+          while (isActive) {
+            while (messageQueue.length > 0) {
+              yield messageQueue.shift();
+            }
+            yield ':heartbeat\n\n';
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+          }
+        } finally {
+          isActive = false;
+          if (changeStream) {
+            try {
+              await changeStream.close();
+            } catch (e) {
+              console.error('Error during change stream closure:', e);
+            }
+          }
+        }
+      }
+
+      return eventGenerator();
+    } catch (error) {
+      console.error(chalk.red('SSE setup error:'), error);
+      throw new Error(
+        `Failed to initialize event stream: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   });
 
   app.get('/htmx-state', async () => {
@@ -706,483 +449,405 @@ const start = async () => {
     });
   });
 
-  app.get('/q/:collectionName/:base64Query', async ({ params }) => {
-    console.log('Starting query execution');
-    const { collectionName, base64Query } = params;
-
-    try {
-      // Decode and parse query
-      const code = Buffer.from(base64Query, 'base64').toString();
-      console.log('Decoded query:', code);
-
-      type SortObject = { [key: string]: SortDirection };
-
-      let q: {
-        q: {
-          find: Record<string, unknown>;
-          limit?: number;
-          sort?: SortObject;
-          skip?: number;
-          project?: Document;
-        };
-      };
+  app.get(
+    '/q/:collectionName/:base64Query',
+    async ({ params }) => {
+      console.log('Starting query execution');
+      const { collectionName, base64Query } = params;
 
       try {
-        q = JSON.parse(code);
-      } catch (e) {
-        console.error('JSON parse error:', e);
-        return new Response(JSON.stringify({ error: 'Invalid JSON query' }), {
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache',
-          },
-        });
-      }
+        // Decode and parse query
+        const code = Buffer.from(base64Query, 'base64').toString();
+        console.log('Decoded query:', code);
 
-      // Validate query structure
-      if (!q.q || typeof q.q !== 'object') {
-        return new Response(
-          JSON.stringify({ error: 'Invalid query structure. Expected {q: {find: {...}}}' }),
-          {
-            status: 400,
-            headers: {
-              'Content-Type': 'application/json',
-              'Cache-Control': 'no-cache',
-            },
-          }
-        );
-      }
+        type SortObject = { [key: string]: SortDirection };
 
-      const db = await getDbo();
+        let q: {
+          q: {
+            find: Record<string, unknown>;
+            limit?: number;
+            sort?: SortObject;
+            skip?: number;
+            project?: Document;
+          };
+        };
 
-      // Extract query parameters with defaults
-      const query = q.q.find || {};
-      const limit = q.q.limit || 100;
-      const defaultSort: SortObject = { 'blk.i': -1 };
-      const sortParam = q.q.sort || defaultSort;
-
-      // Convert sort object to MongoDB sort format
-      const sortEntries = Object.entries(sortParam);
-      const sort: Sort =
-        sortEntries.length === 1 ? [sortEntries[0][0], sortEntries[0][1]] : sortEntries;
-
-      const skip = q.q.skip || 0;
-      const projection = q.q.project || null;
-
-      console.log('Executing query:', {
-        collection: collectionName,
-        query,
-        limit,
-        sort,
-        skip,
-        projection,
-      });
-
-      // Execute query with all parameters
-      const results = await db
-        .collection(collectionName)
-        .find(query)
-        .sort(sort)
-        .skip(skip)
-        .limit(limit)
-        .project(projection)
-        .toArray();
-
-      console.log(`Query returned ${results.length} results`);
-
-      // Return results with caching headers only
-      return new Response(JSON.stringify({ [collectionName]: results }), {
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=60',
-        },
-      });
-    } catch (error: unknown) {
-      console.error('Query execution error:', error);
-      const message = error instanceof Error ? error.message : String(error);
-      return new Response(
-        JSON.stringify({
-          error: message,
-          details: 'An error occurred while executing the query',
-        }),
-        {
-          status: 500,
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache',
-          },
+        try {
+          q = JSON.parse(code);
+        } catch (_e) {
+          throw new Error('Invalid JSON query');
         }
-      );
+
+        // Validate query structure
+        if (!q.q || typeof q.q !== 'object') {
+          throw new Error('Invalid query structure. Expected {q: {find: {...}}}');
+        }
+
+        const db = await getDbo();
+
+        // Extract query parameters with defaults
+        const query = q.q.find || {};
+        const limit = q.q.limit || 100;
+        const defaultSort: SortObject = { 'blk.i': -1 };
+        const sortParam = q.q.sort || defaultSort;
+
+        // Convert sort object to MongoDB sort format
+        const sortEntries = Object.entries(sortParam);
+        const sort: Sort =
+          sortEntries.length === 1 ? [sortEntries[0][0], sortEntries[0][1]] : sortEntries;
+
+        const skip = q.q.skip || 0;
+        const projection = q.q.project || null;
+
+        console.log('Executing query:', {
+          collection: collectionName,
+          query,
+          limit,
+          sort,
+          skip,
+          projection,
+        });
+
+        // Execute query with all parameters
+        const results = await db
+          .collection(collectionName)
+          .find(query)
+          .sort(sort)
+          .skip(skip)
+          .limit(limit)
+          .project(projection)
+          .toArray();
+
+        console.log(`Query returned ${results.length} results`);
+
+        return { [collectionName]: results };
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed to execute query: ${message}`);
+      }
+    },
+    {
+      params: QueryParams,
     }
-  });
+  );
 
-  app.post('/ingest', async ({ body }) => {
-    const typedBody = body as IngestBody;
-    console.log('ingest', typedBody.rawTx);
+  app.post(
+    '/ingest',
+    async (context: { body: { rawTx: string } }) => {
+      const { rawTx } = context.body;
+      console.log('Received ingest request with rawTx length:', rawTx?.length);
 
-    if (typedBody.rawTx) {
+      if (!rawTx) {
+        throw new Error('Missing rawTx in request body');
+      }
+
       try {
         const tx = await processTransaction({
-          transaction: typedBody.rawTx,
+          transaction: rawTx,
         } as Partial<Transaction>);
-        if (!tx) throw new Error('Transaction processing failed');
+
+        if (!tx) {
+          console.error('Transaction processing returned null');
+          throw new Error('Transaction processing failed - no result returned');
+        }
+
+        console.log('Transaction processed successfully:', tx.tx?.h);
         return tx;
       } catch (e) {
-        console.log(e);
-        throw new Error(String(e));
+        console.error('Error processing transaction:', e);
+        throw new Error(
+          `Transaction processing failed: ${e instanceof Error ? e.message : String(e)}`
+        );
       }
+    },
+    {
+      body: IngestBody,
     }
-    throw new Error('Missing rawTx in request body');
-  });
+  );
 
-  app.get('/tx/:tx/:format?', async ({ params }) => {
-    const { tx: txid, format } = params;
-    if (!txid) {
-      return new Response(
-        JSON.stringify({
-          error: 'Missing txid',
-          details: 'Transaction ID is required',
-        }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    try {
-      // Special formats that don't need processing
-      if (format === 'raw') {
-        const rawTx = await rawTxFromTxid(txid);
-        return new Response(rawTx, {
-          headers: { 'Content-Type': 'text/plain' },
-        });
+  app.get(
+    '/tx/:tx/:format?',
+    async ({ params }) => {
+      const { tx: txid, format } = params;
+      if (!txid) {
+        throw new Error('Missing txid');
       }
 
-      if (format === 'json') {
-        const jsonTx = await jsonFromTxid(txid);
-        return new Response(JSON.stringify(jsonTx, null, 2), {
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-
-      // Check Redis cache first
-      const cacheKey = `tx:${txid}`;
-      const cached = await readFromRedis<CacheValue>(cacheKey);
-      let decoded: BmapTx;
-
-      if (cached?.type === 'tx' && cached.value) {
-        console.log('Cache hit for tx:', txid);
-        decoded = cached.value;
-      } else {
-        console.log('Cache miss for tx:', txid);
-
-        // Check MongoDB
-        const db = await getDbo();
-        const collections = ['message', 'like', 'post', 'repost']; // Add other relevant collections
-        let dbTx: BmapTx | null = null;
-
-        for (const collection of collections) {
-          const result = await db.collection(collection).findOne({ 'tx.h': txid });
-          if (result) {
-            dbTx = result as BmapTx;
-            console.log('Found tx in MongoDB collection:', collection);
-            break;
-          }
+      try {
+        // Special formats that don't need processing
+        if (format === 'raw') {
+          return rawTxFromTxid(txid);
         }
 
-        if (dbTx) {
-          decoded = dbTx;
+        if (format === 'json') {
+          const jsonTx = await jsonFromTxid(txid);
+          return jsonTx;
+        }
+
+        // Check Redis cache first
+        const cacheKey = `tx:${txid}`;
+        const cached = await readFromRedis<CacheValue>(cacheKey);
+        let decoded: BmapTx;
+
+        if (cached?.type === 'tx' && cached.value) {
+          console.log('Cache hit for tx:', txid);
+          decoded = cached.value;
         } else {
-          // Process the transaction if not found
-          console.log('Processing new transaction:', txid);
-          const bob = await bobFromTxid(txid);
-          decoded = (await TransformTx(
-            bob,
-            allProtocols.map((p) => p.name)
-          )) as BmapTx;
+          console.log('Cache miss for tx:', txid);
 
-          // Get block info from WhatsonChain
-          const txDetails = await jsonFromTxid(txid);
-          if (txDetails.blockheight && txDetails.time) {
-            decoded.blk = {
-              i: txDetails.blockheight,
-              t: txDetails.time,
-            };
-          } else if (txDetails.time) {
-            decoded.timestamp = txDetails.time;
-          }
+          // Check MongoDB
+          const db = await getDbo();
+          const collections = ['message', 'like', 'post', 'repost'];
+          let dbTx: BmapTx | null = null;
 
-          // If B or MAP protocols are found, save to MongoDB
-          if (decoded.B || decoded.MAP) {
-            try {
-              const collection = decoded.MAP?.[0]?.type || 'message';
-              await db
-                .collection(collection)
-                .updateOne({ 'tx.h': txid }, { $set: decoded }, { upsert: true });
-              console.log('Saved tx to MongoDB collection:', collection);
-            } catch (error) {
-              console.error('Error saving to MongoDB:', error);
+          for (const collection of collections) {
+            const result = await db.collection(collection).findOne({ 'tx.h': txid });
+            if (result) {
+              dbTx = result as BmapTx;
+              console.log('Found tx in MongoDB collection:', collection);
+              break;
             }
           }
-        }
 
-        // Cache the result
-        await saveToRedis<CacheValue>(cacheKey, {
-          type: 'tx',
-          value: decoded,
-        });
-      }
+          if (dbTx) {
+            decoded = dbTx;
+          } else {
+            // Process the transaction if not found
+            console.log('Processing new transaction:', txid);
+            const bob = await bobFromTxid(txid);
+            decoded = await TransformTx(
+              bob,
+              allProtocols.map((p) => p.name)
+            );
 
-      // Handle file format after we have the decoded tx
-      if (format === 'file') {
-        let vout = 0;
-        if (txid.includes('_')) {
-          const parts = txid.split('_');
-          vout = Number.parseInt(parts[1], 10);
-        }
+            // Get block info from WhatsonChain
+            const txDetails = await jsonFromTxid(txid);
+            if (txDetails.blockheight && txDetails.time) {
+              decoded.blk = {
+                i: txDetails.blockheight,
+                t: txDetails.time,
+              };
+            } else if (txDetails.time) {
+              decoded.timestamp = txDetails.time;
+            }
 
-        let dataBuf: Buffer | undefined;
-        let contentType: string | undefined;
-        if (decoded.ORD?.[vout]) {
-          dataBuf = Buffer.from(decoded.ORD[vout]?.data, 'base64');
-          contentType = decoded.ORD[vout].contentType;
-        } else if (decoded.B?.[vout]) {
-          dataBuf = Buffer.from(decoded.B[vout]?.content, 'base64');
-          contentType = decoded.B[vout]['content-type'];
-        }
+            // If B or MAP protocols are found, save to MongoDB
+            if (decoded.B || decoded.MAP) {
+              try {
+                const collection = decoded.MAP?.[0]?.type || 'message';
+                await db
+                  .collection(collection)
+                  .updateOne({ 'tx.h': txid }, { $set: decoded }, { upsert: true });
+                console.log('Saved tx to MongoDB collection:', collection);
+              } catch (error) {
+                console.error('Error saving to MongoDB:', error);
+              }
+            }
+          }
 
-        if (dataBuf && contentType) {
-          return new Response(dataBuf, {
-            headers: {
-              'Content-Type': contentType,
-              'Content-Length': String(dataBuf.length),
-            },
+          // Cache the result
+          await saveToRedis<CacheValue>(cacheKey, {
+            type: 'tx',
+            value: decoded,
           });
         }
-        throw new Error('No data found in transaction outputs');
-      }
 
-      // Return the appropriate format
-      switch (format) {
-        case 'bob': {
-          const bob = await bobFromTxid(txid);
-          return new Response(JSON.stringify(bob, null, 2), {
-            headers: { 'Content-Type': 'application/json' },
-          });
-        }
-        case 'bmap':
-          return new Response(JSON.stringify(decoded, null, 2), {
-            headers: { 'Content-Type': 'application/json' },
-          });
-        default:
-          if (format && decoded[format]) {
-            return new Response(JSON.stringify(decoded[format], null, 2), {
-              headers: { 'Content-Type': 'application/json' },
+        // Handle file format after we have the decoded tx
+        if (format === 'file') {
+          let vout = 0;
+          if (txid.includes('_')) {
+            const parts = txid.split('_');
+            vout = Number.parseInt(parts[1], 10);
+          }
+
+          let dataBuf: Buffer | undefined;
+          let contentType: string | undefined;
+          if (decoded.ORD?.[vout]) {
+            dataBuf = Buffer.from(decoded.ORD[vout]?.data, 'base64');
+            contentType = decoded.ORD[vout].contentType;
+          } else if (decoded.B?.[vout]) {
+            dataBuf = Buffer.from(decoded.B[vout]?.content, 'base64');
+            contentType = decoded.B[vout]['content-type'];
+          }
+
+          if (dataBuf && contentType) {
+            return new Response(dataBuf, {
+              headers: {
+                'Content-Type': contentType,
+                'Content-Length': String(dataBuf.length),
+              },
             });
           }
-          return new Response(
-            format?.length
-              ? `Key ${format} not found in tx`
-              : `<pre>${JSON.stringify(decoded, null, 2)}</pre>`,
-            {
-              headers: { 'Content-Type': format?.length ? 'text/plain' : 'text/html' },
-            }
-          );
-      }
-    } catch (error: unknown) {
-      console.error('Error processing tx request:', error);
-      const message = error instanceof Error ? error.message : String(error);
-
-      return new Response(
-        JSON.stringify({
-          error: 'Failed to process transaction',
-          details: message,
-          timestamp: new Date().toISOString(),
-        }),
-        {
-          status: 500,
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache',
-          },
+          throw new Error('No data found in transaction outputs');
         }
-      );
+
+        // Return the appropriate format
+        switch (format) {
+          case 'bob': {
+            const bob = await bobFromTxid(txid);
+            return bob;
+          }
+          case 'bmap':
+            return decoded;
+          default:
+            if (format && decoded[format]) {
+              return decoded[format];
+            }
+            return format?.length
+              ? `Key ${format} not found in tx`
+              : `<pre>${JSON.stringify(decoded, null, 2)}</pre>`;
+        }
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed to process transaction: ${message}`);
+      }
+    },
+    {
+      params: TxParams,
     }
-  });
+  );
 
   app.get('/', () => {
     return new Response(Bun.file('./public/index.html'));
   });
 
-  app.get('/chart-data/:name?', async ({ params, query }) => {
-    console.log('Starting chart-data request');
-    try {
-      const timeframe = (query.timeframe as string) || Timeframe.Day;
-      const collectionName = params.name;
-      console.log('Chart data request for:', { collectionName, timeframe });
+  app.get(
+    '/chart-data/:name?',
+    async ({ params, query }) => {
+      console.log('Starting chart-data request');
+      try {
+        const timeframe = (query.timeframe as string) || Timeframe.Day;
+        const collectionName = params.name;
+        console.log('Chart data request for:', { collectionName, timeframe });
 
-      const currentBlockHeight = await getBlockHeightFromCache();
-      const [startBlock, endBlock] = getBlocksRange(currentBlockHeight, timeframe);
-      console.log('Block range:', startBlock, '-', endBlock);
+        const currentBlockHeight = await getBlockHeightFromCache();
+        const [startBlock, endBlock] = getBlocksRange(currentBlockHeight, timeframe);
+        console.log('Block range:', startBlock, '-', endBlock);
 
-      let range = 1;
-      switch (timeframe) {
-        case Timeframe.Day:
-          range = 1;
-          break;
-        case Timeframe.Week:
-          range = 7;
-          break;
-        case Timeframe.Month:
-          range = 30;
-          break;
-        case Timeframe.Year:
-          range = 365;
-          break;
-      }
-
-      if (!collectionName) {
-        const dbo = await getDbo();
-        const allCollections = await dbo.listCollections().toArray();
-        const allDataPromises = allCollections.map((c) =>
-          getTimeSeriesData(c.name, startBlock, endBlock, range)
-        );
-        const allTimeSeriesData = await Promise.all(allDataPromises);
-
-        const globalData: Record<number, number> = {};
-        for (const collectionData of allTimeSeriesData) {
-          for (const { _id, count } of collectionData) {
-            globalData[_id] = (globalData[_id] || 0) + count;
-          }
+        let range = 1;
+        switch (timeframe) {
+          case Timeframe.Day:
+            range = 1;
+            break;
+          case Timeframe.Week:
+            range = 7;
+            break;
+          case Timeframe.Month:
+            range = 30;
+            break;
+          case Timeframe.Year:
+            range = 365;
+            break;
         }
 
-        const aggregatedData = Object.keys(globalData).map((blockHeight) => ({
-          _id: Number(blockHeight),
-          count: globalData[blockHeight],
-        }));
+        if (!collectionName) {
+          const dbo = await getDbo();
+          const allCollections = await dbo.listCollections().toArray();
+          const allDataPromises = allCollections.map((c) =>
+            getTimeSeriesData(c.name, startBlock, endBlock, range)
+          );
+          const allTimeSeriesData = await Promise.all(allDataPromises);
 
-        return new Response(
-          JSON.stringify({
+          const globalData: Record<number, number> = {};
+          for (const collectionData of allTimeSeriesData) {
+            for (const { _id, count } of collectionData) {
+              globalData[_id] = (globalData[_id] || 0) + count;
+            }
+          }
+
+          const aggregatedData = Object.keys(globalData).map((blockHeight) => ({
+            _id: Number(blockHeight),
+            count: globalData[blockHeight],
+          }));
+
+          return {
             labels: aggregatedData.map((d) => d._id),
             values: aggregatedData.map((d) => d.count),
             range: [startBlock, endBlock],
-          }),
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              'Cache-Control': 'public, max-age=3600',
-            },
-          }
-        );
-      }
+          };
+        }
 
-      const timeSeriesData = await getTimeSeriesData(collectionName, startBlock, endBlock, range);
-      return new Response(
-        JSON.stringify({
+        const timeSeriesData = await getTimeSeriesData(collectionName, startBlock, endBlock, range);
+        return {
           labels: timeSeriesData.map((d) => d._id),
           values: timeSeriesData.map((d) => d.count),
           range: [startBlock, endBlock],
-        }),
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'public, max-age=3600',
-          },
-        }
-      );
-    } catch (error: unknown) {
-      console.error('Error in chart-data:', error);
-      const message = error instanceof Error ? error.message : String(error);
-      return new Response(JSON.stringify({ error: message }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-  });
-
-  function parseIdentity(identityValue: unknown): Record<string, unknown> {
-    // If identity is already an object, return it as is
-    if (typeof identityValue === 'object' && identityValue !== null) {
-      return identityValue as Record<string, unknown>;
-    }
-
-    // If it's a string, try to parse as JSON
-    if (typeof identityValue === 'string') {
-      // Strip leading/trailing quotes if present
-      let trimmed = identityValue.trim();
-      if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-        trimmed = trimmed.slice(1, -1);
+        };
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed to generate chart data: ${message}`);
       }
-
-      try {
-        const parsed = JSON.parse(trimmed);
-        if (typeof parsed === 'object' && parsed !== null) {
-          return parsed;
-        }
-        // It's valid JSON but not an object, wrap it in an object
-        return { alternateName: parsed };
-      } catch {
-        // Not valid JSON, just treat it as a plain string in an object
-        return { alternateName: trimmed };
-      }
+    },
+    {
+      params: ChartParams,
+      query: t.Object({
+        timeframe: t.Optional(t.String()),
+      }),
     }
-
-    // Fallback: wrap whatever it is in an object
-    return { alternateName: String(identityValue) };
-  }
+  );
 
   app.get('/identities', async ({ set }) => {
     try {
-      console.log('Starting /identities request');
+      console.log('=== Starting /identities request ===');
 
+      // Check Redis connection
+      console.log('Checking Redis connection...');
       if (!client.isReady) {
         console.error('Redis client is not ready');
         set.status = 503;
-        set.headers = { 'Content-Type': 'application/json' };
-        return { error: 'Redis client not ready' };
+        return { error: 'Redis client not ready', signers: [] };
       }
+      console.log('Redis client is ready');
 
+      // Search for identity keys
+      console.log('Searching for Redis keys...');
       const idCacheKey = 'signer-*';
-      console.log('Searching for Redis keys with pattern:', idCacheKey);
       const keys = await client.keys(idCacheKey);
-      console.log('Found Redis keys:', keys);
+      console.log(`Found ${keys.length} Redis keys:`, keys);
 
       if (!keys.length) {
         console.log('No identity keys found in Redis');
-        set.headers = {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-        };
         return { message: 'No identities found', signers: [] };
       }
 
+      // Process each identity
+      console.log('Processing identities...');
       const identities = await Promise.all(
         keys.map(async (k) => {
           try {
-            console.log('Fetching key:', k);
+            console.log(`\nProcessing key: ${k}`);
             const cachedValue = await readFromRedis<CacheValue>(k);
-            console.log('Cached value:', JSON.stringify(cachedValue, null, 2));
+            console.log('Raw cached value:', cachedValue);
 
-            if (cachedValue?.type === 'signer' && cachedValue.value) {
-              const identity = cachedValue.value;
-              console.log('Processing identity:', identity.idKey);
-
-              // Parse the identity into an object
-              const identityObj = parseIdentity(identity.identity);
-              console.log('Parsed identity object:', identityObj);
-
-              // Return the shape that the frontend expects
-              return {
-                idKey: identity.idKey,
-                paymail: identityObj.paymail || identity.paymail,
-                displayName: identityObj.alternateName || identityObj.name || identity.idKey,
-                icon: identityObj.image || identityObj.icon || identityObj.avatar,
-              };
+            if (!cachedValue) {
+              console.log(`No value found for key: ${k}`);
+              return null;
             }
-            console.log('Invalid or missing value for key:', k);
-            return null;
+
+            if (cachedValue.type !== 'signer') {
+              console.log(`Invalid type for key ${k}:`, cachedValue.type);
+              return null;
+            }
+
+            const identity = cachedValue.value;
+            console.log('Identity value:', identity);
+
+            if (!identity || !identity.idKey) {
+              console.log('Invalid identity structure:', identity);
+              return null;
+            }
+
+            // Parse the identity into an object
+            const identityObj = parseIdentity(identity.identity);
+            console.log('Parsed identity object:', identityObj);
+
+            // Return the shape that the frontend expects
+            return {
+              idKey: identity.idKey,
+              paymail: identityObj.paymail || identity.paymail,
+              displayName: identityObj.alternateName || identityObj.name || identity.idKey,
+              icon: identityObj.image || identityObj.icon || identityObj.avatar,
+            };
           } catch (error) {
             console.error(`Error processing key ${k}:`, error);
             return null;
@@ -1193,210 +858,20 @@ const start = async () => {
       const filteredIdentities = identities.filter(
         (id): id is NonNullable<typeof id> => id !== null
       );
-      console.log('Total identities found:', keys.length);
-      console.log('Valid identities after filtering:', filteredIdentities.length);
+
+      console.log('\n=== Identity Processing Summary ===');
+      console.log('Total keys found:', keys.length);
+      console.log('Successfully processed:', filteredIdentities.length);
+      console.log('Failed/invalid:', keys.length - filteredIdentities.length);
       console.log('Final identities:', JSON.stringify(filteredIdentities, null, 2));
 
-      set.headers = {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-      };
       return { message: 'Success', signers: filteredIdentities };
     } catch (e) {
-      console.error('Failed to get identities:', e);
+      console.error('=== Error in /identities endpoint ===');
+      console.error('Error details:', e);
+      console.error('Stack trace:', e instanceof Error ? e.stack : 'No stack trace');
       set.status = 500;
-      set.headers = { 'Content-Type': 'application/json' };
       return { error: 'Failed to get identities', signers: [] };
-    }
-  });
-
-  app.get('/channels', async ({ set }) => {
-    try {
-      const cacheKey = 'channels';
-      const cached = await readFromRedis<CacheValue>(cacheKey);
-
-      if (cached?.type === 'channels') {
-        console.log('Cache hit for channels');
-        set.headers = {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=60',
-        };
-        return cached.value;
-      }
-
-      console.log('Cache miss for channels');
-      const db = await getDbo();
-
-      const pipeline = [
-        {
-          $match: {
-            'MAP.channel': { $exists: true, $ne: '' },
-          },
-        },
-        {
-          $unwind: '$MAP',
-        },
-        {
-          $unwind: '$B',
-        },
-        {
-          $group: {
-            _id: '$MAP.channel',
-            channel: { $first: '$MAP.channel' },
-            creator: { $first: '$MAP.paymail' },
-            last_message: { $last: '$B.Data.utf8' },
-            last_message_time: { $max: '$blk.t' },
-            messages: { $sum: 1 },
-          },
-        },
-        {
-          $sort: { last_message_time: -1 },
-        },
-        {
-          $limit: 100,
-        },
-      ];
-
-      const results = await db.collection('message').aggregate(pipeline).toArray();
-      const channels = results.map((r) => ({
-        channel: r.channel,
-        creator: r.creator,
-        last_message: r.last_message,
-        last_message_time: r.last_message_time,
-        messages: r.messages,
-      }));
-
-      await saveToRedis<CacheValue>(cacheKey, {
-        type: 'channels',
-        value: channels,
-      });
-
-      set.headers = {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=60',
-      };
-      return channels;
-    } catch (error: unknown) {
-      console.error('Error processing channels request:', error);
-      const message = error instanceof Error ? error.message : String(error);
-
-      set.status = 500;
-      set.headers = {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-      };
-      return {
-        error: 'Failed to fetch channels',
-        details: message,
-        timestamp: new Date().toISOString(),
-      };
-    }
-  });
-
-  app.get('/messages/:channelId', async ({ params, query, set }) => {
-    try {
-      const { channelId } = params;
-      if (!channelId) {
-        set.status = 400;
-        set.headers = {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-        };
-        return {
-          error: 'Missing channel ID',
-          details: 'The channel ID is required in the URL path',
-        };
-      }
-
-      const decodedChannelId = decodeURIComponent(channelId);
-
-      const page = query.page ? Number.parseInt(query.page as string, 10) : 1;
-      const limit = query.limit ? Number.parseInt(query.limit as string, 10) : 100;
-
-      if (Number.isNaN(page) || page < 1) {
-        set.status = 400;
-        set.headers = { 'Content-Type': 'application/json' };
-        return {
-          error: 'Invalid page parameter',
-          details: 'Page must be a positive integer',
-        };
-      }
-
-      if (Number.isNaN(limit) || limit < 1 || limit > 1000) {
-        set.status = 400;
-        set.headers = { 'Content-Type': 'application/json' };
-        return {
-          error: 'Invalid limit parameter',
-          details: 'Limit must be between 1 and 1000',
-        };
-      }
-
-      const skip = (page - 1) * limit;
-
-      const cacheKey = `messages:${decodedChannelId}:${page}:${limit}`;
-      const cached = await readFromRedis<CacheValue>(cacheKey);
-
-      if (cached?.type === 'messages') {
-        console.log('Cache hit for messages:', cacheKey);
-        set.headers = {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=60',
-        };
-        return cached.value;
-      }
-
-      console.log('Cache miss for messages:', cacheKey);
-      const db = await getDbo();
-
-      const queryObj = {
-        'MAP.type': 'message',
-        'MAP.channel': decodedChannelId,
-      };
-
-      const col = db.collection('message');
-
-      const count = await col.countDocuments(queryObj);
-
-      const results = (await col
-        .find(queryObj)
-        .sort({ 'blk.t': -1 })
-        .skip(skip)
-        .limit(limit)
-        .project({ _id: 0 })
-        .toArray()) as BmapTx[];
-
-      const response = {
-        channel: decodedChannelId,
-        page,
-        limit,
-        count,
-        results,
-      };
-
-      await saveToRedis<CacheValue>(cacheKey, {
-        type: 'messages',
-        value: response,
-      });
-
-      set.headers = {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=60',
-      };
-      return response;
-    } catch (error: unknown) {
-      console.error('Error processing messages request:', error);
-      const message = error instanceof Error ? error.message : String(error);
-
-      set.status = 500;
-      set.headers = {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-      };
-      return {
-        error: 'Failed to fetch messages',
-        details: message,
-        timestamp: new Date().toISOString(),
-      };
     }
   });
 
