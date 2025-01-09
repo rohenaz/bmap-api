@@ -1,5 +1,5 @@
 import type { Transaction } from '@gorillapool/js-junglebus';
-import bmapjs from 'bmapjs';
+import bmapjs, { type BobTx } from 'bmapjs';
 import { parse } from 'bpu-ts';
 import { saveTx } from './actions.js';
 
@@ -30,7 +30,7 @@ export const processTransaction = async (data: Partial<Transaction>) => {
 
     console.log('Transforming transaction with bmapjs...');
     const tx = await TransformTx(
-      bob,
+      bob as BobTx,
       allProtocols.map((p) => p.name)
     );
 

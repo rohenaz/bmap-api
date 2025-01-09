@@ -4,7 +4,7 @@ import { staticPlugin } from '@elysiajs/static';
 import type { Transaction } from '@gorillapool/js-junglebus';
 import type { Static } from '@sinclair/typebox';
 import bmapjs from 'bmapjs';
-import type { BmapTx } from 'bmapjs';
+import type { BmapTx, BobTx } from 'bmapjs';
 import { parse } from 'bpu-ts';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
@@ -602,7 +602,7 @@ const start = async () => {
 
           for (const collection of collections) {
             const result = await db.collection(collection).findOne({ 'tx.h': txid });
-            if (result) {
+            if (result && 'tx' in result && 'out' in result) {
               dbTx = result as BmapTx;
               console.log('Found tx in MongoDB collection:', collection);
               break;
@@ -616,7 +616,7 @@ const start = async () => {
             console.log('Processing new transaction:', txid);
             const bob = await bobFromTxid(txid);
             decoded = await TransformTx(
-              bob,
+              bob as BobTx,
               allProtocols.map((p) => p.name)
             );
 
