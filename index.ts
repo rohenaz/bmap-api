@@ -1,18 +1,24 @@
 import { fileURLToPath } from 'node:url';
 import { cors } from '@elysiajs/cors';
 import { staticPlugin } from '@elysiajs/static';
-import type { Transaction } from '@gorillapool/js-junglebus';
+import { swagger } from '@elysiajs/swagger';
 import type { Static } from '@sinclair/typebox';
-import bmapjs from 'bmapjs';
-import type { BmapTx, BobTx } from 'bmapjs';
-import { parse } from 'bpu-ts';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
 import { Elysia, NotFoundError, t } from 'elysia';
 import type { ChangeStreamDocument, Document, Sort, SortDirection } from 'mongodb';
+
+import type { Transaction } from '@gorillapool/js-junglebus';
+import type { BmapTx, BobTx } from 'bmapjs';
+import bmapjs from 'bmapjs';
+import { parse } from 'bpu-ts';
+
+import { registerSocialRoutes } from './social.js';
+import './p2p.js';
 import { type BapIdentity, getBAPIdByAddress, resolveSigners } from './bap.js';
 import {
   type CacheCount,
+  type CacheValue,
   client,
   deleteFromCache,
   getBlockHeightFromCache,
@@ -21,14 +27,11 @@ import {
 } from './cache.js';
 import { getBlocksRange, getTimeSeriesData } from './chart.js';
 import { getCollectionCounts, getDbo, getState } from './db.js';
-import { registerSocialRoutes } from './social.js';
-import './p2p.js';
-import { swagger } from '@elysiajs/swagger';
-import type { ChangeStream } from 'mongodb';
-import type { CacheValue } from './cache.js';
 import { processTransaction } from './process.js';
 import { explorerTemplate } from './src/components/explorer.js';
 import { Timeframe } from './types.js';
+
+import type { ChangeStream } from 'mongodb';
 
 dotenv.config();
 
@@ -49,10 +52,6 @@ const bitcoinSchemaCollections = [
 ];
 
 // Define request types
-const IngestBody = t.Object({
-  rawTx: t.String(),
-});
-
 const QueryParams = t.Object({
   collectionName: t.String(),
   base64Query: t.String(),
@@ -68,6 +67,12 @@ const ChartParams = t.Object({
   timeframe: t.Optional(t.String()),
 });
 
+const IngestBody = t.Object({
+  rawTx: t.String(),
+});
+
+type IngestRequest = Static<typeof IngestBody>;
+
 // Helper function to parse identity values
 function parseIdentity(identityValue: unknown): Record<string, unknown> {
   // If identity is already an object, return it as is
@@ -77,12 +82,10 @@ function parseIdentity(identityValue: unknown): Record<string, unknown> {
 
   // If it's a string, try to parse as JSON
   if (typeof identityValue === 'string') {
-    // Strip leading/trailing quotes if present
     let trimmed = identityValue.trim();
     if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
       trimmed = trimmed.slice(1, -1);
     }
-
     try {
       const parsed = JSON.parse(trimmed);
       if (typeof parsed === 'object' && parsed !== null) {
@@ -107,11 +110,7 @@ const bobFromRawTx = async (rawtx: string) => {
       tx: { r: rawtx },
       split: [{ token: { op: 106 }, include: 'l' }, { token: { s: '|' } }],
     });
-
-    if (!result) {
-      throw new Error('No result from parsing transaction');
-    }
-
+    if (!result) throw new Error('No result from parsing transaction');
     return result;
   } catch (error) {
     console.error('Error parsing raw transaction:', error);
@@ -166,7 +165,9 @@ const bobFromTxid = async (txid: string) => {
       return await bobFromRawTx(rawtx);
     } catch (e) {
       throw new Error(
-        `Failed to get rawtx from whatsonchain for ${txid}: ${e instanceof Error ? e.message : String(e)}`
+        `Failed to get rawtx from whatsonchain for ${txid}: ${
+          e instanceof Error ? e.message : String(e)
+        }`
       );
     }
   } catch (error) {
@@ -177,53 +178,10 @@ const bobFromTxid = async (txid: string) => {
   }
 };
 
+// Create and configure the Elysia app using method chaining
 const app = new Elysia()
+  // Plugins
   .use(cors())
-  .derive(() => ({
-    requestTimeout: 0, // Disable timeout for SSE
-  }))
-  .onRequest(({ request }) => {
-    // Only log 404s and errors
-    if (request.method === 'GET' && !request.url.includes('/favicon.ico')) {
-      console.log(chalk.gray(`${request.method} ${request.url}`));
-    }
-  })
-  .onError(({ error, request }) => {
-    // Handle 404 errors
-    if (error instanceof NotFoundError) {
-      console.log(chalk.yellow(`404: ${request.method} ${request.url}`));
-      return new Response(`<div class="text-yellow-500">Not Found: ${request.url}</div>`, {
-        status: 404,
-        headers: { 'Content-Type': 'text/html' },
-      });
-    }
-
-    // Handle validation errors
-    if ('code' in error && error.code === 'VALIDATION') {
-      const errorMessage = 'message' in error ? error.message : 'Validation Error';
-      return new Response(`<div class="text-orange-500">Validation Error: ${errorMessage}</div>`, {
-        status: 400,
-        headers: { 'Content-Type': 'text/html' },
-      });
-    }
-
-    // Handle parse errors
-    if ('code' in error && error.code === 'PARSE') {
-      const errorMessage = 'message' in error ? error.message : 'Parse Error';
-      return new Response(`<div class="text-red-500">Parse Error: ${errorMessage}</div>`, {
-        status: 400,
-        headers: { 'Content-Type': 'text/html' },
-      });
-    }
-
-    // Log and handle all other errors
-    console.error(chalk.red(`Error: ${request.method} ${request.url}`), error);
-    const errorMessage = 'message' in error ? error.message : 'Internal Server Error';
-    return new Response(`<div class="text-red-500">Server error: ${errorMessage}</div>`, {
-      status: 500,
-      headers: { 'Content-Type': 'text/html' },
-    });
-  })
   .use(staticPlugin({ assets: './public', prefix: '/' }))
   .use(
     swagger({
@@ -241,19 +199,61 @@ const app = new Elysia()
         ],
       },
     })
-  );
+  )
 
-const start = async () => {
-  console.log(chalk.magenta('BMAP API'), chalk.cyan('initializing machine...'));
-  await client.connect();
+  // Derived context, e.g. SSE request timeout
+  .derive(() => ({
+    requestTimeout: 0,
+  }))
 
-  const port = Number(process.env.PORT) || 3055;
-  const host = process.env.HOST || '127.0.0.1';
+  // Lifecycle hooks
+  .onRequest(({ request }) => {
+    // Only log 404s and errors, but we can log all requests if you prefer
+    console.log(chalk.gray(`${request.method} ${request.url}`));
+  })
+  .onError(({ error, request }) => {
+    console.log({ error });
 
-  // Register social routes
-  registerSocialRoutes(app);
+    if (error instanceof NotFoundError) {
+      console.log(chalk.yellow(`404: ${request.method} ${request.url}`));
+      return new Response(`<div class="text-yellow-500">Not Found: ${request.url}</div>`, {
+        status: 404,
+        headers: { 'Content-Type': 'text/html' },
+      });
+    }
 
-  app.get('/s/:collectionName?/:base64Query', async ({ params, set }) => {
+    // Handle validation errors
+    if ('code' in error && error.code === 'VALIDATION') {
+      console.log('Validation error details:', error);
+      console.log('Request URL:', request.url);
+      console.log('Request method:', request.method);
+      const errorMessage = 'message' in error ? error.message : 'Validation Error';
+      return new Response(`<div class="text-orange-500">Validation Error: ${errorMessage}</div>`, {
+        status: 400,
+        headers: { 'Content-Type': 'text/html' },
+      });
+    }
+
+    // Handle parse errors
+    if ('code' in error && error.code === 'PARSE') {
+      const errorMessage = 'message' in error ? error.message : 'Parse Error';
+      return new Response(`<div class="text-red-500">Parse Error: ${errorMessage}</div>`, {
+        status: 400,
+        headers: { 'Content-Type': 'text/html' },
+      });
+    }
+
+    // Other errors
+    console.error(chalk.red(`Error: ${request.method} ${request.url}`), error);
+    const errorMessage = 'message' in error ? error.message : 'Internal Server Error';
+    return new Response(`<div class="text-red-500">Server error: ${errorMessage}</div>`, {
+      status: 500,
+      headers: { 'Content-Type': 'text/html' },
+    });
+  })
+
+  // Routes
+  .get('/s/:collectionName?/:base64Query', async ({ params, set }) => {
     const { collectionName, base64Query: b64 } = params;
 
     set.headers = {
@@ -335,12 +335,14 @@ const start = async () => {
     } catch (error) {
       console.error(chalk.red('SSE setup error:'), error);
       throw new Error(
-        `Failed to initialize event stream: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to initialize event stream: ${
+          error instanceof Error ? error.message : String(error)
+        }`
       );
     }
-  });
+  })
 
-  app.get('/htmx-state', async () => {
+  .get('/htmx-state', async () => {
     const state = await getState();
     const crawlHeight = state.height;
 
@@ -356,16 +358,17 @@ const start = async () => {
     }
 
     const startHeight = 574287;
-    const pctComplete = `${Math.floor(((crawlHeight - startHeight) * 100) / (latestHeight - startHeight))}%`;
+    const pctComplete = `${Math.floor(
+      ((crawlHeight - startHeight) * 100) / (latestHeight - startHeight)
+    )}%`;
 
     return `<div class="flex flex-col">
-			<div class="text-gray-500">Sync Progress (${pctComplete})</div>
-			<div class="text-lg font-semibold">${crawlHeight} / ${latestHeight}</div>
-		</div>`;
-  });
+      <div class="text-gray-500">Sync Progress (${pctComplete})</div>
+      <div class="text-lg font-semibold">${crawlHeight} / ${latestHeight}</div>
+    </div>`;
+  })
 
-  // Only display known Bitcoin schema collections in htmx-collections
-  app.get('/htmx-collections', async () => {
+  .get('/htmx-collections', async () => {
     console.time('Total Execution Time');
     console.log('Starting htmx-collections request');
 
@@ -382,7 +385,6 @@ const start = async () => {
         counts = await getCollectionCounts(timestamp);
         await saveToRedis(countsKey, { type: 'count', value: counts } as CacheCount);
       }
-
       console.timeEnd('getCollectionCounts');
 
       let gridItemsHtml = '';
@@ -405,9 +407,9 @@ const start = async () => {
             <div class="chart-wrapper">
               <div class="small-chart-container">
                 <canvas id="chart-${collection}" 
-                       width="300" height="75"
-                       data-collection="${collection}"
-                       class="hover:opacity-80 transition-opacity"></canvas>
+                        width="300" height="75"
+                        data-collection="${collection}"
+                        class="hover:opacity-80 transition-opacity"></canvas>
               </div>
             </div>
             <div class="footer">Count: ${count}</div>
@@ -431,9 +433,9 @@ const start = async () => {
         headers: { 'Content-Type': 'text/html' },
       });
     }
-  });
+  })
 
-  app.get('/query/:collectionName', ({ params }) => {
+  .get('/query/:collectionName', ({ params }) => {
     const collectionName = params.collectionName;
     const q = { q: { find: { 'MAP.type': collectionName } } };
     const code = JSON.stringify(q, null, 2);
@@ -441,18 +443,18 @@ const start = async () => {
     return new Response(explorerTemplate('BMAP', code), {
       headers: { 'Content-Type': 'text/html' },
     });
-  });
+  })
 
-  app.get('/query/:collectionName/:base64Query', async ({ params }) => {
+  .get('/query/:collectionName/:base64Query', async ({ params }) => {
     const { base64Query: b64 } = params;
     const code = Buffer.from(b64, 'base64').toString();
 
     return new Response(explorerTemplate('BMAP', code), {
       headers: { 'Content-Type': 'text/html' },
     });
-  });
+  })
 
-  app.get(
+  .get(
     '/q/:collectionName/:base64Query',
     async ({ params }) => {
       console.log('Starting query execution');
@@ -522,7 +524,6 @@ const start = async () => {
           .toArray();
 
         console.log(`Query returned ${results.length} results`);
-
         return { [collectionName]: results };
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
@@ -530,82 +531,43 @@ const start = async () => {
       }
     },
     {
+      // Route-level schema for params
       params: QueryParams,
     }
-  );
+  )
 
-  app.post(
+  .post(
     '/ingest',
-    async (context: { body: { rawTx: string } }) => {
-      const { rawTx } = context.body;
-      console.log('Received ingest request with rawTx length:', rawTx?.length);
-
-      if (!rawTx) {
-        throw new Error('Missing rawTx in request body');
-      }
+    async ({ body }: { body: IngestRequest }) => {
+      const { rawTx } = body;
+      console.log('Received ingest request with rawTx length:', rawTx.length);
 
       try {
-        const tx = await processTransaction({
-          transaction: rawTx,
-        } as Partial<Transaction>);
-
-        if (!tx) {
-          console.error('Transaction processing returned null');
-          throw new Error('Transaction processing failed - no result returned');
-        }
+        const tx = await processTransaction({ transaction: rawTx });
+        if (!tx) throw new Error('No result returned');
 
         console.log('Transaction processed successfully:', tx.tx?.h);
         return tx;
-      } catch (e) {
-        console.error('Error processing transaction:', e);
-        throw new Error(
-          `Transaction processing failed: ${e instanceof Error ? e.message : String(e)}`
-        );
+      } catch (error) {
+        console.error('Error processing transaction:', error);
+        throw new Error(`Transaction processing failed: ${error}`);
       }
     },
     {
       body: IngestBody,
-      detail: {
-        tags: ['transactions'],
-        description: 'Ingest a raw transaction hex string for processing',
-        request: {
-          body: {
-            rawTx: 'Raw transaction hex string',
-          },
-        },
-        responses: {
-          '200': {
-            description: 'Transaction processed successfully',
-          },
-          '400': {
-            description: 'Invalid request body or missing rawTx',
-          },
-          '500': {
-            description: 'Server error during processing',
-          },
-        },
-      },
     }
-  );
+  )
 
-  app.get(
+  .get(
     '/tx/:tx/:format?',
     async ({ params }) => {
       const { tx: txid, format } = params;
-      if (!txid) {
-        throw new Error('Missing txid');
-      }
+      if (!txid) throw new Error('Missing txid');
 
       try {
         // Special formats that don't need processing
-        if (format === 'raw') {
-          return rawTxFromTxid(txid);
-        }
-
-        if (format === 'json') {
-          const jsonTx = await jsonFromTxid(txid);
-          return jsonTx;
-        }
+        if (format === 'raw') return rawTxFromTxid(txid);
+        if (format === 'json') return jsonFromTxid(txid);
 
         // Check Redis cache first
         const cacheKey = `tx:${txid}`;
@@ -728,13 +690,14 @@ const start = async () => {
     {
       params: TxParams,
     }
-  );
+  )
 
-  app.get('/', () => {
+  .get('/', () => {
+    // Serve index.html from public folder
     return new Response(Bun.file('./public/index.html'));
-  });
+  })
 
-  app.get(
+  .get(
     '/chart-data/:name?',
     async ({ params, query }) => {
       console.log('Starting chart-data request');
@@ -807,9 +770,9 @@ const start = async () => {
         timeframe: t.Optional(t.String()),
       }),
     }
-  );
+  )
 
-  app.get('/identities', async ({ set }) => {
+  .get('/identities', async ({ set }) => {
     try {
       console.log('=== Starting /identities request ===');
 
@@ -846,7 +809,6 @@ const start = async () => {
               console.log(`No value found for key: ${k}`);
               return null;
             }
-
             if (cachedValue.type !== 'signer') {
               console.log(`Invalid type for key ${k}:`, cachedValue.type);
               return null;
@@ -854,7 +816,6 @@ const start = async () => {
 
             const identity = cachedValue.value;
             console.log('Identity value:', identity);
-
             if (!identity || !identity.idKey) {
               console.log('Invalid identity structure:', identity);
               return null;
@@ -898,9 +859,20 @@ const start = async () => {
     }
   });
 
+// Function to start listening after any async initialization
+async function start() {
+  console.log(chalk.magenta('BMAP API'), chalk.cyan('initializing machine...'));
+  await client.connect();
+
+  // Register social routes (if it modifies `app` directly)
+  registerSocialRoutes(app);
+
+  const port = Number(process.env.PORT) || 3055;
+  const host = process.env.HOST || '127.0.0.1';
+
   app.listen({ port, hostname: host }, () => {
     console.log(chalk.magenta('BMAP API'), chalk.green(`listening on ${host}:${port}!`));
   });
-};
+}
 
 start();
