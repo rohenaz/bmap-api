@@ -565,6 +565,26 @@ const start = async () => {
     },
     {
       body: IngestBody,
+      detail: {
+        tags: ['transactions'],
+        description: 'Ingest a raw transaction hex string for processing',
+        request: {
+          body: {
+            rawTx: 'Raw transaction hex string',
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Transaction processed successfully',
+          },
+          '400': {
+            description: 'Invalid request body or missing rawTx',
+          },
+          '500': {
+            description: 'Server error during processing',
+          },
+        },
+      },
     }
   );
 
