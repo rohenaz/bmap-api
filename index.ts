@@ -16,6 +16,7 @@ import { parse } from 'bpu-ts';
 import { registerSocialRoutes } from './social.js';
 import './p2p.js';
 import { type BapIdentity, getBAPIdByAddress, resolveSigners } from './bap.js';
+import { parseIdentity } from './social.js';
 import {
   type CacheCount,
   type CacheValue,
@@ -73,36 +74,6 @@ const IngestBody = t.Object({
 });
 
 type IngestRequest = Static<typeof IngestBody>;
-
-// Helper function to parse identity values
-function parseIdentity(identityValue: unknown): Record<string, unknown> {
-  // If identity is already an object, return it as is
-  if (typeof identityValue === 'object' && identityValue !== null) {
-    return identityValue as Record<string, unknown>;
-  }
-
-  // If it's a string, try to parse as JSON
-  if (typeof identityValue === 'string') {
-    let trimmed = identityValue.trim();
-    if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-      trimmed = trimmed.slice(1, -1);
-    }
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (typeof parsed === 'object' && parsed !== null) {
-        return parsed;
-      }
-      // It's valid JSON but not an object, wrap it in an object
-      return { alternateName: parsed };
-    } catch {
-      // Not valid JSON, just treat it as a plain string in an object
-      return { alternateName: trimmed };
-    }
-  }
-
-  // Fallback: wrap whatever it is in an object
-  return { alternateName: String(identityValue) };
-}
 
 // Transaction utility functions
 const bobFromRawTx = async (rawtx: string) => {
@@ -771,94 +742,7 @@ const app = new Elysia()
         timeframe: t.Optional(t.String()),
       }),
     }
-  )
-
-  .get('/identities', async ({ set }) => {
-    try {
-      console.log('=== Starting /identities request ===');
-
-      // Check Redis connection
-      console.log('Checking Redis connection...');
-      if (!client.isReady) {
-        console.error('Redis client is not ready');
-        set.status = 503;
-        return { error: 'Redis client not ready', signers: [] };
-      }
-      console.log('Redis client is ready');
-
-      // Search for identity keys
-      console.log('Searching for Redis keys...');
-      const idCacheKey = 'signer-*';
-      const keys = await client.keys(idCacheKey);
-      console.log(`Found ${keys.length} Redis keys:`, keys);
-
-      if (!keys.length) {
-        console.log('No identity keys found in Redis');
-        return { message: 'No identities found', signers: [] };
-      }
-
-      // Process each identity
-      console.log('Processing identities...');
-      const identities = await Promise.all(
-        keys.map(async (k) => {
-          try {
-            console.log(`\nProcessing key: ${k}`);
-            const cachedValue = await readFromRedis<CacheValue>(k);
-            console.log('Raw cached value:', cachedValue);
-
-            if (!cachedValue) {
-              console.log(`No value found for key: ${k}`);
-              return null;
-            }
-            if (cachedValue.type !== 'signer') {
-              console.log(`Invalid type for key ${k}:`, cachedValue.type);
-              return null;
-            }
-
-            const identity = cachedValue.value;
-            console.log('Identity value:', identity);
-            if (!identity || !identity.idKey) {
-              console.log('Invalid identity structure:', identity);
-              return null;
-            }
-
-            // Parse the identity into an object
-            const identityObj = parseIdentity(identity.identity);
-            console.log('Parsed identity object:', identityObj);
-
-            // Return the shape that the frontend expects
-            return {
-              idKey: identity.idKey,
-              paymail: identityObj.paymail || identity.paymail,
-              displayName: identityObj.alternateName || identityObj.name || identity.idKey,
-              icon: identityObj.image || identityObj.icon || identityObj.avatar,
-            };
-          } catch (error) {
-            console.error(`Error processing key ${k}:`, error);
-            return null;
-          }
-        })
-      );
-
-      const filteredIdentities = identities.filter(
-        (id): id is NonNullable<typeof id> => id !== null
-      );
-
-      console.log('\n=== Identity Processing Summary ===');
-      console.log('Total keys found:', keys.length);
-      console.log('Successfully processed:', filteredIdentities.length);
-      console.log('Failed/invalid:', keys.length - filteredIdentities.length);
-      console.log('Final identities:', JSON.stringify(filteredIdentities, null, 2));
-
-      return { message: 'Success', signers: filteredIdentities };
-    } catch (e) {
-      console.error('=== Error in /identities endpoint ===');
-      console.error('Error details:', e);
-      console.error('Stack trace:', e instanceof Error ? e.stack : 'No stack trace');
-      set.status = 500;
-      return { error: 'Failed to get identities', signers: [] };
-    }
-  });
+  );
 
 // Function to start listening after any async initialization
 async function start() {
