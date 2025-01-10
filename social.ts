@@ -9,14 +9,16 @@ import { getBAPIdByAddress } from './bap.js';
 import type { BapIdentity, BapIdentityObject } from './bap.js';
 import { normalize } from './bmap.js';
 import { client, readFromRedis, saveToRedis } from './cache.js';
-import type { CacheError, CacheSigner, CacheValue as BaseCacheValue } from './cache.js';
+import type { CacheValue as BaseCacheValue, CacheError, CacheSigner } from './cache.js';
 import { getDbo } from './db.js';
 
 // Extend CacheValue type
-export type CacheValue = BaseCacheValue | {
-  type: 'identities';
-  value: Identity[];
-};
+export type CacheValue =
+  | BaseCacheValue
+  | {
+      type: 'identities';
+      value: Identity[];
+    };
 
 // Bitcoin schema collections to watch
 const _bitcoinSchemaCollections = [
@@ -537,7 +539,7 @@ export const IdentityResponse = t.Array(
     idKey: t.String(),
     paymail: t.Union([t.String(), t.Null()]),
     displayName: t.String(),
-    icon: t.Union([t.String(), t.Null()])
+    icon: t.Union([t.String(), t.Null()]),
   })
 );
 
@@ -1082,8 +1084,15 @@ export const socialRoutes = new Elysia()
               return {
                 idKey: identity.idKey,
                 paymail: (identityObj.paymail as string) || null,
-                displayName: (identityObj.alternateName as string) || (identityObj.name as string) || identity.idKey,
-                icon: (identityObj.image as string) || (identityObj.icon as string) || (identityObj.avatar as string) || null
+                displayName:
+                  (identityObj.alternateName as string) ||
+                  (identityObj.name as string) ||
+                  identity.idKey,
+                icon:
+                  (identityObj.image as string) ||
+                  (identityObj.icon as string) ||
+                  (identityObj.avatar as string) ||
+                  null,
               };
             } catch (error) {
               console.error(`Error processing key ${k}:`, error);
@@ -1116,7 +1125,9 @@ export const socialRoutes = new Elysia()
         console.error('Error details:', error);
         console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
         set.status = 500;
-        throw new Error(`Failed to fetch identities: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(
+          `Failed to fetch identities: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     },
     {
@@ -1125,101 +1136,98 @@ export const socialRoutes = new Elysia()
           idKey: t.String(),
           paymail: t.Union([t.String(), t.Null()]),
           displayName: t.String(),
-          icon: t.Union([t.String(), t.Null()])
+          icon: t.Union([t.String(), t.Null()]),
         })
       ),
     }
   );
 
+// .get('/identities', async ({ set }) => {
+//   try {
+//     console.log('=== Starting /identities request ===');
 
+//     // Check Redis connection
+//     console.log('Checking Redis connection...');
+//     if (!client.isReady) {
+//       console.error('Redis client is not ready');
+//       set.status = 503;
+//       return { error: 'Redis client not ready', signers: [] };
+//     }
+//     console.log('Redis client is ready');
 
-  // .get('/identities', async ({ set }) => {
-  //   try {
-  //     console.log('=== Starting /identities request ===');
+//     // Search for identity keys
+//     console.log('Searching for Redis keys...');
+//     const idCacheKey = 'signer-*';
+//     const keys = await client.keys(idCacheKey);
+//     console.log(`Found ${keys.length} Redis keys:`, keys);
 
-  //     // Check Redis connection
-  //     console.log('Checking Redis connection...');
-  //     if (!client.isReady) {
-  //       console.error('Redis client is not ready');
-  //       set.status = 503;
-  //       return { error: 'Redis client not ready', signers: [] };
-  //     }
-  //     console.log('Redis client is ready');
+//     if (!keys.length) {
+//       console.log('No identity keys found in Redis');
+//       return { message: 'No identities found', signers: [] };
+//     }
 
-  //     // Search for identity keys
-  //     console.log('Searching for Redis keys...');
-  //     const idCacheKey = 'signer-*';
-  //     const keys = await client.keys(idCacheKey);
-  //     console.log(`Found ${keys.length} Redis keys:`, keys);
+//     // Process each identity
+//     console.log('Processing identities...');
+//     const identities = await Promise.all(
+//       keys.map(async (k) => {
+//         try {
+//           console.log(`\nProcessing key: ${k}`);
+//           const cachedValue = await readFromRedis<CacheValue>(k);
+//           console.log('Raw cached value:', cachedValue);
 
-  //     if (!keys.length) {
-  //       console.log('No identity keys found in Redis');
-  //       return { message: 'No identities found', signers: [] };
-  //     }
+//           if (!cachedValue) {
+//             console.log(`No value found for key: ${k}`);
+//             return null;
+//           }
+//           if (cachedValue.type !== 'signer') {
+//             console.log(`Invalid type for key ${k}:`, cachedValue.type);
+//             return null;
+//           }
 
-  //     // Process each identity
-  //     console.log('Processing identities...');
-  //     const identities = await Promise.all(
-  //       keys.map(async (k) => {
-  //         try {
-  //           console.log(`\nProcessing key: ${k}`);
-  //           const cachedValue = await readFromRedis<CacheValue>(k);
-  //           console.log('Raw cached value:', cachedValue);
+//           const identity = cachedValue.value;
+//           console.log('Identity value:', identity);
+//           if (!identity || !identity.idKey) {
+//             console.log('Invalid identity structure:', identity);
+//             return null;
+//           }
 
-  //           if (!cachedValue) {
-  //             console.log(`No value found for key: ${k}`);
-  //             return null;
-  //           }
-  //           if (cachedValue.type !== 'signer') {
-  //             console.log(`Invalid type for key ${k}:`, cachedValue.type);
-  //             return null;
-  //           }
+//           // Parse the identity into an object
+//           const identityObj = parseIdentity(identity.identity);
+//           console.log('Parsed identity object:', identityObj);
 
-  //           const identity = cachedValue.value;
-  //           console.log('Identity value:', identity);
-  //           if (!identity || !identity.idKey) {
-  //             console.log('Invalid identity structure:', identity);
-  //             return null;
-  //           }
+//           // Return the shape that the frontend expects
+//           return {
+//             idKey: identity.idKey,
+//             paymail: identityObj.paymail || identity.paymail,
+//             displayName: identityObj.alternateName || identityObj.name || identity.idKey,
+//             icon: identityObj.image || identityObj.icon || identityObj.avatar,
+//           };
+//         } catch (error) {
+//           console.error(`Error processing key ${k}:`, error);
+//           return null;
+//         }
+//       })
+//     );
 
-  //           // Parse the identity into an object
-  //           const identityObj = parseIdentity(identity.identity);
-  //           console.log('Parsed identity object:', identityObj);
+//     const filteredIdentities = identities.filter(
+//       (id): id is NonNullable<typeof id> => id !== null
+//     );
 
-  //           // Return the shape that the frontend expects
-  //           return {
-  //             idKey: identity.idKey,
-  //             paymail: identityObj.paymail || identity.paymail,
-  //             displayName: identityObj.alternateName || identityObj.name || identity.idKey,
-  //             icon: identityObj.image || identityObj.icon || identityObj.avatar,
-  //           };
-  //         } catch (error) {
-  //           console.error(`Error processing key ${k}:`, error);
-  //           return null;
-  //         }
-  //       })
-  //     );
+//     console.log('\n=== Identity Processing Summary ===');
+//     console.log('Total keys found:', keys.length);
+//     console.log('Successfully processed:', filteredIdentities.length);
+//     console.log('Failed/invalid:', keys.length - filteredIdentities.length);
+//     console.log('Final identities:', JSON.stringify(filteredIdentities, null, 2));
 
-  //     const filteredIdentities = identities.filter(
-  //       (id): id is NonNullable<typeof id> => id !== null
-  //     );
-
-  //     console.log('\n=== Identity Processing Summary ===');
-  //     console.log('Total keys found:', keys.length);
-  //     console.log('Successfully processed:', filteredIdentities.length);
-  //     console.log('Failed/invalid:', keys.length - filteredIdentities.length);
-  //     console.log('Final identities:', JSON.stringify(filteredIdentities, null, 2));
-
-  //     return { message: 'Success', signers: filteredIdentities };
-  //   } catch (e) {
-  //     console.error('=== Error in /identities endpoint ===');
-  //     console.error('Error details:', e);
-  //     console.error('Stack trace:', e instanceof Error ? e.stack : 'No stack trace');
-  //     set.status = 500;
-  //     return { error: 'Failed to get identities', signers: [] };
-  //   }
-  // })
-
+//     return { message: 'Success', signers: filteredIdentities };
+//   } catch (e) {
+//     console.error('=== Error in /identities endpoint ===');
+//     console.error('Error details:', e);
+//     console.error('Stack trace:', e instanceof Error ? e.stack : 'No stack trace');
+//     set.status = 500;
+//     return { error: 'Failed to get identities', signers: [] };
+//   }
+// })
 
 // For backward compatibility
 export const registerSocialRoutes = (app: Elysia) => app.use(socialRoutes);

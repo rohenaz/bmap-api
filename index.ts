@@ -16,7 +16,6 @@ import { parse } from 'bpu-ts';
 import { registerSocialRoutes } from './social.js';
 import './p2p.js';
 import { type BapIdentity, getBAPIdByAddress, resolveSigners } from './bap.js';
-import { parseIdentity } from './social.js';
 import {
   type CacheCount,
   type CacheValue,
@@ -29,6 +28,7 @@ import {
 import { getBlocksRange, getTimeSeriesData } from './chart.js';
 import { getCollectionCounts, getDbo, getState } from './db.js';
 import { processTransaction } from './process.js';
+import { parseIdentity } from './social.js';
 import { explorerTemplate } from './src/components/explorer.js';
 import { Timeframe } from './types.js';
 
