@@ -1,6 +1,6 @@
 import type { BmapTx } from 'bmapjs';
 import chalk from 'chalk';
-import type { Elysia } from 'elysia';
+import { Elysia } from 'elysia';
 import { t } from 'elysia';
 import type { Document, WithId } from 'mongodb';
 import type { ChangeStreamDocument } from 'mongodb';
@@ -438,45 +438,26 @@ const MessageQuery = t.Object({
 });
 
 // Helper function to parse identity JSON
-function parseIdentity(identityValue: string | Record<string, unknown>): Record<string, unknown> {
+export function parseIdentity(
+  identityValue: string | Record<string, unknown>
+): Record<string, unknown> {
   if (typeof identityValue === 'object' && identityValue !== null) {
     return identityValue;
   }
 
   if (typeof identityValue === 'string') {
     try {
-      // Remove any wrapping quotes
-      const trimmed = identityValue.trim().replace(/^"|"$/g, '');
-      const parsed = JSON.parse(trimmed);
-      return typeof parsed === 'object' && parsed !== null ? parsed : { alternateName: parsed };
+      const parsed = JSON.parse(identityValue);
+      if (typeof parsed === 'object' && parsed !== null) {
+        return parsed;
+      }
+      return { alternateName: parsed };
     } catch {
-      // If it's not valid JSON, treat it as a display name
       return { alternateName: identityValue };
     }
   }
 
-  return {};
-}
-
-// Helper function to format identity for display
-function formatIdentityForDisplay(identity: BapIdentity): {
-  idKey: string;
-  paymail?: string;
-  displayName: string;
-  icon?: string;
-} {
-  const identityObj = parseIdentity(identity.identity);
-
-  return {
-    idKey: identity.idKey,
-    paymail: (identityObj.paymail as string) || identity.paymail,
-    displayName:
-      (identityObj.alternateName as string) || (identityObj.name as string) || identity.idKey,
-    icon:
-      (identityObj.image as string) ||
-      (identityObj.icon as string) ||
-      (identityObj.avatar as string),
-  };
+  return { alternateName: String(identityValue) };
 }
 
 // Helper function to merge new signers into cache
@@ -497,10 +478,11 @@ async function resolveSigners(messages: Message[]): Promise<BapIdentity[]> {
   const signerAddresses = new Set<string>();
 
   for (const msg of messages) {
-    if (msg.AIP) {
+    if (msg.AIP && Array.isArray(msg.AIP)) {
       for (const aip of msg.AIP) {
-        if (aip.algorithm_signing_component || aip.address) {
-          signerAddresses.add(aip.algorithm_signing_component || aip.address);
+        const address = aip.algorithm_signing_component || aip.address;
+        if (address) {
+          signerAddresses.add(address);
         }
       }
     }
@@ -534,26 +516,22 @@ async function resolveSigners(messages: Message[]): Promise<BapIdentity[]> {
   return validSigners;
 }
 
-// Update CacheValue type to include list response
-export interface CacheListResponse {
-  message: string;
-  signers: Array<{
-    idKey: string;
-    paymail?: string;
-    displayName: string;
-    icon?: string;
-  }>;
+// Define the Identity interface
+interface Identity {
+  name: string;
+  paymail?: string;
+  bapId?: string;
+  lastSeen?: string;
 }
 
-// Define Elysia type schemas
 const IdentityResponse = t.Object({
   message: t.String(),
   signers: t.Array(
     t.Object({
-      idKey: t.String(),
+      name: t.String(),
       paymail: t.Optional(t.String()),
-      displayName: t.String(),
-      icon: t.Optional(t.String()),
+      bapId: t.Optional(t.String()),
+      lastSeen: t.Optional(t.String()),
     })
   ),
 });
@@ -686,14 +664,21 @@ const FriendResponse = t.Object({
   outgoing: t.Array(t.String()),
 });
 
-export const registerSocialRoutes = (app: Elysia) => {
-  app.get(
+// Update CacheListResponse type
+export interface CacheListResponse {
+  message: string;
+  signers: Identity[];
+}
+
+export const socialRoutes = new Elysia()
+  .get(
     '/channels',
     async ({ set }) => {
       try {
         const cacheKey = 'channels';
         const cached = await readFromRedis<CacheValue>(cacheKey);
 
+        console.log('channels cache key', cacheKey);
         if (cached?.type === 'channels') {
           console.log('Cache hit for channels');
           set.headers = {
@@ -766,9 +751,8 @@ export const registerSocialRoutes = (app: Elysia) => {
     {
       response: ChannelResponse,
     }
-  );
-
-  app.get(
+  )
+  .get(
     '/channels/:channelId/messages',
     async ({ params, query, set }) => {
       try {
@@ -892,7 +876,7 @@ export const registerSocialRoutes = (app: Elysia) => {
         }));
 
         const response: MessageResponse = {
-          channel: decodedChannelId,
+          channel: channelId,
           page,
           limit,
           count,
@@ -938,9 +922,8 @@ export const registerSocialRoutes = (app: Elysia) => {
       query: MessageQuery,
       response: MessageResponse,
     }
-  );
-
-  app.post(
+  )
+  .post(
     '/likes',
     async ({ body }) => {
       try {
@@ -1005,9 +988,8 @@ export const registerSocialRoutes = (app: Elysia) => {
       body: LikeRequest,
       response: LikeResponse,
     }
-  );
-
-  app.get(
+  )
+  .get(
     '/friend/:bapId',
     async ({ params }) => {
       try {
@@ -1030,9 +1012,8 @@ export const registerSocialRoutes = (app: Elysia) => {
       }),
       response: FriendResponse,
     }
-  );
-
-  app.get(
+  )
+  .get(
     '/identities',
     async ({ set }) => {
       try {
@@ -1064,13 +1045,19 @@ export const registerSocialRoutes = (app: Elysia) => {
           keys.map(async (k) => {
             try {
               const cachedValue = await readFromRedis<CacheValue | CacheError>(k);
-              if (
-                cachedValue?.type === 'signer' &&
-                'value' in cachedValue &&
-                !('signers' in cachedValue.value)
-              ) {
+              if (cachedValue?.type === 'signer' && 'value' in cachedValue) {
                 const identity = cachedValue.value;
-                return formatIdentityForDisplay(identity);
+                const identityObj =
+                  typeof identity.identity === 'string'
+                    ? JSON.parse(identity.identity)
+                    : identity.identity;
+
+                return {
+                  name: identityObj.name || identityObj.alternateName || identity.idKey,
+                  paymail: identityObj.paymail || identity.paymail,
+                  bapId: identity.idKey,
+                  lastSeen: new Date().toISOString(),
+                } as Identity;
               }
               return null;
             } catch (error) {
@@ -1086,7 +1073,7 @@ export const registerSocialRoutes = (app: Elysia) => {
 
         console.log(`Successfully processed ${filteredIdentities.length} identities`);
 
-        const response: CacheListResponse = {
+        const response = {
           message: 'Success',
           signers: filteredIdentities,
         };
@@ -1113,4 +1100,6 @@ export const registerSocialRoutes = (app: Elysia) => {
       response: IdentityResponse,
     }
   );
-};
+
+// For backward compatibility
+export const registerSocialRoutes = (app: Elysia) => app.use(socialRoutes);

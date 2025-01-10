@@ -32,6 +32,7 @@ import { explorerTemplate } from './src/components/explorer.js';
 import { Timeframe } from './types.js';
 
 import type { ChangeStream } from 'mongodb';
+import { socialRoutes } from './social';
 
 dotenv.config();
 
@@ -251,7 +252,7 @@ const app = new Elysia()
       headers: { 'Content-Type': 'text/html' },
     });
   })
-
+  .use(socialRoutes)
   // Routes
   .get('/s/:collectionName?/:base64Query', async ({ params, set }) => {
     const { collectionName, base64Query: b64 } = params;
@@ -863,9 +864,6 @@ const app = new Elysia()
 async function start() {
   console.log(chalk.magenta('BMAP API'), chalk.cyan('initializing machine...'));
   await client.connect();
-
-  // Register social routes (if it modifies `app` directly)
-  registerSocialRoutes(app);
 
   const port = Number(process.env.PORT) || 3055;
   const host = process.env.HOST || '127.0.0.1';
