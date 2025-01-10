@@ -676,7 +676,6 @@ const FriendResponse = t.Object({
 export interface CacheListResponse extends Array<Identity> {}
 
 export const socialRoutes = new Elysia()
-  .use(cors())
   .get(
     '/channels',
     async ({ set }) => {
@@ -687,9 +686,9 @@ export const socialRoutes = new Elysia()
         console.log('channels cache key', cacheKey);
         if (cached?.type === 'channels') {
           console.log('Cache hit for channels');
-          set.headers = {
+          Object.assign(set.headers, {
             'Cache-Control': 'public, max-age=60',
-          };
+          });
           return cached.value;
         }
 
@@ -740,9 +739,9 @@ export const socialRoutes = new Elysia()
           value: channels,
         });
 
-        set.headers = {
+        Object.assign(set.headers, {
           'Cache-Control': 'public, max-age=60',
-        };
+        });
         return channels;
       } catch (error: unknown) {
         console.error('Error processing channels request:', error);
@@ -783,9 +782,9 @@ export const socialRoutes = new Elysia()
 
         if (cached?.type === 'messages') {
           console.log('Cache hit for messages:', cacheKey);
-          set.headers = {
+          Object.assign(set.headers, {
             'Cache-Control': 'public, max-age=60',
-          };
+          });
           const response: MessageResponse = {
             ...cached.value,
             signers: cached.value.signers || [],
@@ -889,9 +888,9 @@ export const socialRoutes = new Elysia()
           value: response,
         });
 
-        set.headers = {
+        Object.assign(set.headers, {
           'Cache-Control': 'public, max-age=60',
-        };
+        });
         return response;
       } catch (error: unknown) {
         console.error('Error fetching messages:', error);
@@ -1031,9 +1030,9 @@ export const socialRoutes = new Elysia()
 
         if (cached?.type === 'identities' && 'value' in cached && Array.isArray(cached.value)) {
           console.log('Cache hit for identities');
-          set.headers = {
+          Object.assign(set.headers, {
             'Cache-Control': 'public, max-age=60',
-          };
+          });
           return cached.value;
         }
 
@@ -1106,9 +1105,9 @@ export const socialRoutes = new Elysia()
           value: filteredIdentities,
         });
 
-        set.headers = {
+        Object.assign(set.headers, {
           'Cache-Control': 'public, max-age=60',
-        };
+        });
         return filteredIdentities;
       } catch (error: unknown) {
         console.error('=== Error in /identities endpoint ===');

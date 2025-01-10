@@ -228,12 +228,12 @@ const app = new Elysia()
   .get('/s/:collectionName?/:base64Query', async ({ params, set }) => {
     const { collectionName, base64Query: b64 } = params;
 
-    set.headers = {
+    Object.assign(set.headers, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'X-Accel-Buffering': 'no',
       Connection: 'keep-alive',
-    };
+    });
 
     try {
       const json = Buffer.from(b64, 'base64').toString();
