@@ -233,8 +233,6 @@ const app = new Elysia()
       'Cache-Control': 'no-cache',
       'X-Accel-Buffering': 'no',
       Connection: 'keep-alive',
-      'Access-Control-Allow-Origin': 'http://localhost:5173',
-      'Access-Control-Allow-Credentials': 'true',
     };
 
     try {
