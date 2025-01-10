@@ -687,8 +687,6 @@ export const socialRoutes = new Elysia()
           console.log('Cache hit for channels');
           set.headers = {
             'Cache-Control': 'public, max-age=60',
-            'Access-Control-Allow-Origin': 'http://localhost:5173',
-            'Access-Control-Allow-Credentials': 'true',
           };
           return cached.value;
         }
@@ -742,8 +740,6 @@ export const socialRoutes = new Elysia()
 
         set.headers = {
           'Cache-Control': 'public, max-age=60',
-          'Access-Control-Allow-Origin': 'http://localhost:5173',
-          'Access-Control-Allow-Credentials': 'true',
         };
         return channels;
       } catch (error: unknown) {
@@ -787,8 +783,6 @@ export const socialRoutes = new Elysia()
           console.log('Cache hit for messages:', cacheKey);
           set.headers = {
             'Cache-Control': 'public, max-age=60',
-            'Access-Control-Allow-Origin': 'http://localhost:5173',
-            'Access-Control-Allow-Credentials': 'true',
           };
           const response: MessageResponse = {
             ...cached.value,
@@ -895,8 +889,6 @@ export const socialRoutes = new Elysia()
 
         set.headers = {
           'Cache-Control': 'public, max-age=60',
-          'Access-Control-Allow-Origin': 'http://localhost:5173',
-          'Access-Control-Allow-Credentials': 'true',
         };
         return response;
       } catch (error: unknown) {
@@ -1039,8 +1031,6 @@ export const socialRoutes = new Elysia()
           console.log('Cache hit for identities');
           set.headers = {
             'Cache-Control': 'public, max-age=60',
-            'Access-Control-Allow-Origin': 'http://localhost:5173',
-            'Access-Control-Allow-Credentials': 'true',
           };
           return cached.value;
         }
@@ -1116,8 +1106,6 @@ export const socialRoutes = new Elysia()
 
         set.headers = {
           'Cache-Control': 'public, max-age=60',
-          'Access-Control-Allow-Origin': 'http://localhost:5173',
-          'Access-Control-Allow-Credentials': 'true',
         };
         return filteredIdentities;
       } catch (error: unknown) {
