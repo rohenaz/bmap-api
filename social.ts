@@ -1,3 +1,4 @@
+import cors from '@elysiajs/cors';
 import type { BmapTx } from 'bmapjs';
 import chalk from 'chalk';
 import { Elysia } from 'elysia';
@@ -675,6 +676,7 @@ const FriendResponse = t.Object({
 export interface CacheListResponse extends Array<Identity> {}
 
 export const socialRoutes = new Elysia()
+  .use(cors())
   .get(
     '/channels',
     async ({ set }) => {
