@@ -207,6 +207,9 @@ async function fetchBapIdentityData(bapId: string): Promise<BapIdentity> {
 async function fetchAllFriendsAndUnfriends(
   bapId: string
 ): Promise<{ allDocs: BmapTx[]; ownedAddresses: Set<string> }> {
+  console.log('\n=== fetchAllFriendsAndUnfriends ===');
+  console.log('BAP ID:', bapId);
+
   const dbo = await getDbo();
 
   const idData = await fetchBapIdentityData(bapId);
@@ -215,12 +218,27 @@ async function fetchAllFriendsAndUnfriends(
   }
 
   const ownedAddresses = new Set<string>(idData.addresses.map((a) => a.address));
+  console.log('Owned addresses:', [...ownedAddresses]);
 
   // Get incoming friend requests (where this BAP ID is the target)
   const incomingFriends = (await dbo
     .collection('friend')
     .find({ 'MAP.type': 'friend', 'MAP.bapID': bapId })
     .toArray()) as unknown as BmapTx[];
+
+  console.log('Incoming friends count:', incomingFriends.length);
+  console.log(
+    'Incoming friends:',
+    JSON.stringify(
+      incomingFriends.map((f) => ({
+        txid: f.tx?.h,
+        bapID: f.MAP?.[0]?.bapID,
+        address: f.AIP?.[0]?.algorithm_signing_component || f.AIP?.[0]?.address,
+      })),
+      null,
+      2
+    )
+  );
 
   // Get outgoing friend requests (where this BAP ID's addresses are the source)
   const outgoingFriends = (await dbo
@@ -263,6 +281,20 @@ async function fetchAllFriendsAndUnfriends(
     console.warn('Failed to query unfriend collection:', error);
   }
 
+  console.log('Outgoing friends count:', outgoingFriends.length);
+  console.log(
+    'Outgoing friends:',
+    JSON.stringify(
+      outgoingFriends.map((f) => ({
+        txid: f.tx?.h,
+        bapID: f.MAP?.[0]?.bapID,
+        address: f.AIP?.[0]?.algorithm_signing_component || f.AIP?.[0]?.address,
+      })),
+      null,
+      2
+    )
+  );
+
   const allDocs = [
     ...incomingFriends,
     ...incomingUnfriends,
@@ -271,6 +303,7 @@ async function fetchAllFriendsAndUnfriends(
   ];
   allDocs.sort((a, b) => (a.blk?.i ?? 0) - (b.blk?.i ?? 0));
 
+  console.log('Total documents:', allDocs.length);
   return { allDocs, ownedAddresses };
 }
 
@@ -279,47 +312,81 @@ async function processRelationships(
   docs: BmapTx[],
   ownedAddresses: Set<string>
 ): Promise<FriendshipResponse> {
+  console.log('\n=== processRelationships ===');
+  console.log('Processing relationships for BAP ID:', bapId);
+  console.log('Number of documents:', docs.length);
+  console.log('Owned addresses:', [...ownedAddresses]);
+
   const relationships = new Map<string, RelationshipState>();
 
   async function getRequestorBapId(doc: BmapTx): Promise<string | null> {
     // Check all possible address fields
     const address = doc?.AIP?.[0]?.algorithm_signing_component || doc?.AIP?.[0]?.address;
-    if (!address) return null;
+    if (!address) {
+      console.log('No address found in document:', doc.tx?.h);
+      return null;
+    }
 
     if (ownedAddresses.has(address)) {
+      console.log('Address matches owned address:', address);
       return bapId;
     }
+
+    console.log('Looking up BAP ID for address:', address);
     const otherIdentity = await getBAPIdByAddress(address);
-    if (!otherIdentity) return null;
+    if (!otherIdentity) {
+      console.log('No identity found for address:', address);
+      return null;
+    }
+    console.log('Found BAP ID for address:', otherIdentity.idKey);
     return otherIdentity.idKey;
   }
 
   const requestors = await Promise.all(docs.map((doc) => getRequestorBapId(doc)));
+  console.log('Resolved requestors:', requestors);
 
   for (let i = 0; i < docs.length; i++) {
     const doc = docs[i];
     const reqBap = requestors[i];
     const tgtBap = doc?.MAP?.[0]?.bapID;
 
-    if (!reqBap || !tgtBap || !Array.isArray(doc.MAP)) continue;
+    console.log('\nProcessing document:', doc.tx?.h);
+    console.log('Requestor BAP:', reqBap);
+    console.log('Target BAP:', tgtBap);
+
+    if (!reqBap || !tgtBap || !Array.isArray(doc.MAP)) {
+      console.log('Skipping document - missing required fields');
+      continue;
+    }
 
     const otherBapId = reqBap === bapId ? tgtBap : reqBap;
+    console.log('Other BAP ID:', otherBapId);
+
     if (otherBapId && typeof otherBapId === 'string' && !relationships.has(otherBapId)) {
+      console.log('Creating new relationship for:', otherBapId);
       relationships.set(otherBapId, { fromMe: false, fromThem: false, unfriended: false });
     }
 
     const rel = relationships.get(typeof otherBapId === 'string' ? otherBapId : '');
-    if (!rel) continue;
+    if (!rel) {
+      console.log('No relationship found for:', otherBapId);
+      continue;
+    }
 
     const isFriend = doc?.MAP?.[0]?.type === 'friend';
     const isUnfriend = doc?.MAP?.[0]?.type === 'unfriend';
     const isFromMe = reqBap === bapId;
 
+    console.log('Document type:', isFriend ? 'friend' : isUnfriend ? 'unfriend' : 'unknown');
+    console.log('Is from me:', isFromMe);
+
     if (isUnfriend) {
+      console.log('Processing unfriend');
       rel.unfriended = true;
       rel.fromMe = false;
       rel.fromThem = false;
     } else if (isFriend) {
+      console.log('Processing friend');
       if (rel.unfriended) {
         rel.unfriended = false;
       }
@@ -329,24 +396,46 @@ async function processRelationships(
         rel.fromThem = true;
       }
     }
+
+    console.log(
+      'Updated relationship:',
+      JSON.stringify({
+        otherBapId,
+        fromMe: rel.fromMe,
+        fromThem: rel.fromThem,
+        unfriended: rel.unfriended,
+      })
+    );
   }
 
   const friends: string[] = [];
   const incoming: string[] = [];
   const outgoing: string[] = [];
 
+  console.log('\nFinal relationships:');
   for (const [other, rel] of Object.entries(relationships)) {
+    console.log(other, JSON.stringify(rel));
+
     if (rel.unfriended) {
+      console.log('Skipping unfriended relationship:', other);
       continue;
     }
     if (rel.fromMe && rel.fromThem) {
+      console.log('Adding mutual friend:', other);
       friends.push(other);
     } else if (rel.fromMe && !rel.fromThem) {
+      console.log('Adding outgoing friend:', other);
       outgoing.push(other);
     } else if (!rel.fromMe && rel.fromThem) {
+      console.log('Adding incoming friend:', other);
       incoming.push(other);
     }
   }
+
+  console.log('\nFinal results:');
+  console.log('Friends:', friends);
+  console.log('Incoming:', incoming);
+  console.log('Outgoing:', outgoing);
 
   return { friends, incoming, outgoing };
 }
