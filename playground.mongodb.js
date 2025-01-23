@@ -1,5 +1,8 @@
 /* global use, db */
 // MongoDB Playground
+// To disable this template go to Settings | MongoDB | Use Default Template
+
+// Select the database to use.
 use('bmap');
 
 // Show indexes for our main collections
@@ -61,3 +64,34 @@ for (const collection of collections) {
     }
   }
 }
+
+const bapId = 'Go8vCHAa4S6AhXKTABGpANiz35J';
+
+// Check document structure
+print('\nSample friend documents:');
+const sampleDocs = db.friend.find({}).limit(3).toArray();
+printjson(sampleDocs);
+
+// Check if we have any documents with MAP.type = friend
+print('\nFriend documents with MAP.type = friend:');
+const friendDocs = db.friend
+  .find({
+    'MAP.type': 'friend',
+  })
+  .limit(3)
+  .toArray();
+printjson(friendDocs);
+
+// Check if we have any documents with the specific BAP ID
+print('\nDocuments with BAP ID:');
+const bapDocs = db.friend
+  .find({
+    $or: [{ 'MAP.bapID': bapId }, { 'MAP.target': bapId }, { 'MAP.to': bapId }],
+  })
+  .toArray();
+printjson(bapDocs);
+
+// Check if we have any documents with MAP field
+print('\nUnique MAP field values:');
+const mapFields = db.friend.distinct('MAP');
+printjson(mapFields);

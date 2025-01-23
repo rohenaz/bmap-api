@@ -216,31 +216,52 @@ async function fetchAllFriendsAndUnfriends(
 
   const ownedAddresses = new Set<string>(idData.addresses.map((a) => a.address));
 
+  // Get incoming friend requests (where this BAP ID is the target)
   const incomingFriends = (await dbo
     .collection('friend')
     .find({ 'MAP.type': 'friend', 'MAP.bapID': bapId })
     .toArray()) as unknown as BmapTx[];
 
-  const incomingUnfriends = (await dbo
-    .collection('unfriend')
-    .find({ 'MAP.type': 'unfriend', 'MAP.bapID': bapId })
-    .toArray()) as unknown as BmapTx[];
-
+  // Get outgoing friend requests (where this BAP ID's addresses are the source)
   const outgoingFriends = (await dbo
     .collection('friend')
     .find({
       'MAP.type': 'friend',
-      'AIP.algorithm_signing_component': { $in: [...ownedAddresses] },
+      $or: [
+        { 'AIP.algorithm_signing_component': { $in: [...ownedAddresses] } },
+        { 'AIP.address': { $in: [...ownedAddresses] } },
+      ],
     })
     .toArray()) as unknown as BmapTx[];
 
-  const outgoingUnfriends = (await dbo
-    .collection('unfriend')
-    .find({
-      'MAP.type': 'unfriend',
-      'AIP.algorithm_signing_component': { $in: [...ownedAddresses] },
-    })
-    .toArray()) as unknown as BmapTx[];
+  // Try to get unfriend documents if the collection exists
+  let incomingUnfriends: BmapTx[] = [];
+  let outgoingUnfriends: BmapTx[] = [];
+
+  try {
+    const collections = await dbo.listCollections().toArray();
+    const hasUnfriendCollection = collections.some((c) => c.name === 'unfriend');
+
+    if (hasUnfriendCollection) {
+      incomingUnfriends = (await dbo
+        .collection('unfriend')
+        .find({ 'MAP.type': 'unfriend', 'MAP.bapID': bapId })
+        .toArray()) as unknown as BmapTx[];
+
+      outgoingUnfriends = (await dbo
+        .collection('unfriend')
+        .find({
+          'MAP.type': 'unfriend',
+          $or: [
+            { 'AIP.algorithm_signing_component': { $in: [...ownedAddresses] } },
+            { 'AIP.address': { $in: [...ownedAddresses] } },
+          ],
+        })
+        .toArray()) as unknown as BmapTx[];
+    }
+  } catch (error) {
+    console.warn('Failed to query unfriend collection:', error);
+  }
 
   const allDocs = [
     ...incomingFriends,
@@ -261,7 +282,8 @@ async function processRelationships(
   const relationships = new Map<string, RelationshipState>();
 
   async function getRequestorBapId(doc: BmapTx): Promise<string | null> {
-    const address = doc?.AIP?.[0]?.address || doc?.AIP?.[0]?.signing_address;
+    // Check all possible address fields
+    const address = doc?.AIP?.[0]?.algorithm_signing_component || doc?.AIP?.[0]?.address;
     if (!address) return null;
 
     if (ownedAddresses.has(address)) {
@@ -530,17 +552,37 @@ async function resolveSigners(messages: Message[]): Promise<BapIdentity[]> {
 // Define the Identity interface
 export interface Identity {
   idKey: string;
-  paymail: string | null;
-  displayName: string;
-  icon: string | null;
+  rootAddress: string;
+  currentAddress: string;
+  addresses: {
+    address: string;
+    txId: string;
+    block: number | undefined;
+  }[];
+  identity: string;
+  identityTxId: string;
+  block: number;
+  timestamp: number;
+  valid: boolean;
 }
 
 export const IdentityResponse = t.Array(
   t.Object({
     idKey: t.String(),
-    paymail: t.Union([t.String(), t.Null()]),
-    displayName: t.String(),
-    icon: t.Union([t.String(), t.Null()]),
+    rootAddress: t.String(),
+    currentAddress: t.String(),
+    addresses: t.Array(
+      t.Object({
+        address: t.String(),
+        txId: t.String(),
+        block: t.Optional(t.Number()),
+      })
+    ),
+    identity: t.String(),
+    identityTxId: t.String(),
+    block: t.Number(),
+    timestamp: t.Number(),
+    valid: t.Boolean(),
   })
 );
 
@@ -1023,84 +1065,89 @@ export const socialRoutes = new Elysia()
           set.status = 503;
           return [];
         }
-        console.log('Redis client is ready');
 
-        const cacheKey = 'identities';
-        const cached = await readFromRedis<CacheValue | CacheError>(cacheKey);
+        // First try to get the cached identities list
+        const identitiesCacheKey = 'identities';
+        const cachedIdentities = await readFromRedis<CacheValue | CacheError>(identitiesCacheKey);
 
-        if (cached?.type === 'identities' && 'value' in cached && Array.isArray(cached.value)) {
-          console.log('Cache hit for identities');
+        if (cachedIdentities?.type === 'identities' && Array.isArray(cachedIdentities.value)) {
+          console.log('Using cached identities list');
           Object.assign(set.headers, {
             'Cache-Control': 'public, max-age=60',
           });
-          return cached.value;
+          return cachedIdentities.value;
         }
 
-        console.log('Cache miss for identities');
-        const idCacheKey = 'signer-*';
-        const keys = await client.keys(idCacheKey);
-        console.log(`Found ${keys.length} Redis keys:`, keys);
+        // If no cached list, get all signer-* keys from Redis
+        console.log('No cached identities list, checking individual signer caches');
+        const signerKeys = await client.keys('signer-*');
+        console.log(`Found ${signerKeys.length} cached signers`);
 
-        if (!keys.length) {
-          console.log('No identity keys found in Redis');
+        if (!signerKeys.length) {
+          console.log('No cached signers found');
           return [];
         }
 
+        // Get all cached signers
         const identities = await Promise.all(
-          keys.map(async (k) => {
+          signerKeys.map(async (key) => {
             try {
-              console.log(`\nProcessing key: ${k}`);
-              const cachedValue = await readFromRedis<CacheValue | CacheError>(k);
-              console.log('Raw cached value:', cachedValue);
-
-              if (!cachedValue) {
-                console.log(`No value found for key: ${k}`);
-                return null;
+              const cachedValue = await readFromRedis<CacheValue | CacheError>(key);
+              if (cachedValue?.type === 'signer' && 'value' in cachedValue) {
+                const identity = cachedValue.value;
+                if (identity && validateSignerData(identity).isValid) {
+                  return {
+                    idKey: identity.idKey || '',
+                    rootAddress: identity.rootAddress || '',
+                    currentAddress: identity.currentAddress || '',
+                    addresses: Array.isArray(identity.addresses)
+                      ? identity.addresses.map((addr) => ({
+                          address: addr.address || '',
+                          txId: addr.txId || '',
+                          block: typeof addr.block === 'number' ? addr.block : undefined,
+                        }))
+                      : [],
+                    identity:
+                      typeof identity.identity === 'string'
+                        ? identity.identity
+                        : JSON.stringify(identity.identity || {}),
+                    identityTxId: identity.identityTxId || '',
+                    block: typeof identity.block === 'number' ? identity.block : 0,
+                    timestamp: typeof identity.timestamp === 'number' ? identity.timestamp : 0,
+                    valid: typeof identity.valid === 'boolean' ? identity.valid : true,
+                  };
+                }
               }
-              if (cachedValue.type !== 'signer') {
-                console.log(`Invalid type for key ${k}:`, cachedValue.type);
-                return null;
-              }
-
-              const identity = cachedValue.value;
-              console.log('Identity value:', identity);
-              if (!identity || !identity.idKey) {
-                console.log('Invalid identity structure:', identity);
-                return null;
-              }
-
-              const identityObj = parseIdentity(identity.identity);
-              console.log('Parsed identity object:', identityObj);
-
-              return {
-                idKey: identity.idKey,
-                paymail: (identityObj.paymail as string) || null,
-                displayName:
-                  (identityObj.alternateName as string) ||
-                  (identityObj.name as string) ||
-                  identity.idKey,
-                icon:
-                  (identityObj.image as string) ||
-                  (identityObj.icon as string) ||
-                  (identityObj.avatar as string) ||
-                  null,
-              };
+              return null;
             } catch (error) {
-              console.error(`Error processing key ${k}:`, error);
+              console.error(`Error processing cached signer ${key}:`, error);
               return null;
             }
           })
         );
 
-        const filteredIdentities = identities.filter((id) => id !== null);
+        const filteredIdentities = identities.filter((id): id is Identity => {
+          if (!id) return false;
+          return (
+            typeof id.idKey === 'string' &&
+            typeof id.rootAddress === 'string' &&
+            typeof id.currentAddress === 'string' &&
+            Array.isArray(id.addresses) &&
+            typeof id.identity === 'string' &&
+            typeof id.identityTxId === 'string' &&
+            typeof id.block === 'number' &&
+            typeof id.timestamp === 'number' &&
+            typeof id.valid === 'boolean'
+          );
+        });
 
         console.log('\n=== Identity Processing Summary ===');
-        console.log('Total keys found:', keys.length);
+        console.log('Total cached signers:', signerKeys.length);
         console.log('Successfully processed:', filteredIdentities.length);
-        console.log('Failed/invalid:', keys.length - filteredIdentities.length);
-        console.log('Final identities:', JSON.stringify(filteredIdentities, null, 2));
+        console.log('Failed/invalid:', signerKeys.length - filteredIdentities.length);
 
-        await saveToRedis<CacheValue>(cacheKey, {
+        // Cache the filtered list
+        await saveToRedis<CacheValue>(identitiesCacheKey, {
           type: 'identities',
           value: filteredIdentities,
         });
@@ -1114,109 +1161,13 @@ export const socialRoutes = new Elysia()
         console.error('Error details:', error);
         console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
         set.status = 500;
-        throw new Error(
-          `Failed to fetch identities: ${error instanceof Error ? error.message : String(error)}`
-        );
+        return [];
       }
     },
     {
-      response: t.Array(
-        t.Object({
-          idKey: t.String(),
-          paymail: t.Union([t.String(), t.Null()]),
-          displayName: t.String(),
-          icon: t.Union([t.String(), t.Null()]),
-        })
-      ),
+      response: IdentityResponse,
     }
   );
-
-// .get('/identities', async ({ set }) => {
-//   try {
-//     console.log('=== Starting /identities request ===');
-
-//     // Check Redis connection
-//     console.log('Checking Redis connection...');
-//     if (!client.isReady) {
-//       console.error('Redis client is not ready');
-//       set.status = 503;
-//       return { error: 'Redis client not ready', signers: [] };
-//     }
-//     console.log('Redis client is ready');
-
-//     // Search for identity keys
-//     console.log('Searching for Redis keys...');
-//     const idCacheKey = 'signer-*';
-//     const keys = await client.keys(idCacheKey);
-//     console.log(`Found ${keys.length} Redis keys:`, keys);
-
-//     if (!keys.length) {
-//       console.log('No identity keys found in Redis');
-//       return { message: 'No identities found', signers: [] };
-//     }
-
-//     // Process each identity
-//     console.log('Processing identities...');
-//     const identities = await Promise.all(
-//       keys.map(async (k) => {
-//         try {
-//           console.log(`\nProcessing key: ${k}`);
-//           const cachedValue = await readFromRedis<CacheValue>(k);
-//           console.log('Raw cached value:', cachedValue);
-
-//           if (!cachedValue) {
-//             console.log(`No value found for key: ${k}`);
-//             return null;
-//           }
-//           if (cachedValue.type !== 'signer') {
-//             console.log(`Invalid type for key ${k}:`, cachedValue.type);
-//             return null;
-//           }
-
-//           const identity = cachedValue.value;
-//           console.log('Identity value:', identity);
-//           if (!identity || !identity.idKey) {
-//             console.log('Invalid identity structure:', identity);
-//             return null;
-//           }
-
-//           // Parse the identity into an object
-//           const identityObj = parseIdentity(identity.identity);
-//           console.log('Parsed identity object:', identityObj);
-
-//           // Return the shape that the frontend expects
-//           return {
-//             idKey: identity.idKey,
-//             paymail: identityObj.paymail || identity.paymail,
-//             displayName: identityObj.alternateName || identityObj.name || identity.idKey,
-//             icon: identityObj.image || identityObj.icon || identityObj.avatar,
-//           };
-//         } catch (error) {
-//           console.error(`Error processing key ${k}:`, error);
-//           return null;
-//         }
-//       })
-//     );
-
-//     const filteredIdentities = identities.filter(
-//       (id): id is NonNullable<typeof id> => id !== null
-//     );
-
-//     console.log('\n=== Identity Processing Summary ===');
-//     console.log('Total keys found:', keys.length);
-//     console.log('Successfully processed:', filteredIdentities.length);
-//     console.log('Failed/invalid:', keys.length - filteredIdentities.length);
-//     console.log('Final identities:', JSON.stringify(filteredIdentities, null, 2));
-
-//     return { message: 'Success', signers: filteredIdentities };
-//   } catch (e) {
-//     console.error('=== Error in /identities endpoint ===');
-//     console.error('Error details:', e);
-//     console.error('Stack trace:', e instanceof Error ? e.stack : 'No stack trace');
-//     set.status = 500;
-//     return { error: 'Failed to get identities', signers: [] };
-//   }
-// })
 
 // For backward compatibility
 export const registerSocialRoutes = (app: Elysia) => app.use(socialRoutes);

@@ -61,8 +61,8 @@ export const saveBobTx = async (tx: BobTx) => {
     // multiple AIP outputs
     for (const aip of tx.AIP) {
       console.log({ aip });
-      if (aip.address || aip.signing_address) {
-        bapId = await getBAPIdByAddress(aip.address || aip.signing_address);
+      if (aip.address) {
+        bapId = await getBAPIdByAddress(aip.address);
         if (bapId) break;
       }
     }

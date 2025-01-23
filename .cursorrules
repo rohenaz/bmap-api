@@ -160,3 +160,89 @@ Security:
 - Sanitize database queries
 - Use proper error messages
 - Implement rate limiting if needed
+
+# Elysia Header Handling
+
+Headers in Elysia must be handled carefully to avoid overwriting middleware headers:
+
+- NEVER use direct assignment with `set.headers = {...}` as this overwrites ALL headers including those set by middleware
+- ALWAYS use `Object.assign(set.headers, {...})` to merge new headers with existing ones
+- This is especially important when using plugins like CORS that set their own headers
+
+Example of correct header handling:
+```typescript
+// ❌ Wrong - overwrites CORS and other middleware headers
+set.headers = {
+  'Cache-Control': 'public, max-age=60'
+};
+
+// ✅ Correct - preserves existing headers
+Object.assign(set.headers, {
+  'Cache-Control': 'public, max-age=60'
+});
+```
+
+Common places to check for header handling:
+- SSE endpoints (Server-Sent Events)
+- Cache control headers
+- Content-Type headers
+- Custom response headers
+
+# Middleware Chaining
+
+Elysia uses a middleware chain where:
+- Plugins and middleware are executed in order of registration
+- Each middleware can modify the context including headers
+- Later middleware should not destroy earlier middleware's changes
+- Use `.use()` to add middleware in the correct order
+- Headers set by middleware (like CORS) must be preserved
+
+Example of proper middleware chain:
+```typescript
+const app = new Elysia()
+  .use(cors())           // Sets CORS headers
+  .use(staticPlugin())   // May set content-type headers
+  .use(swagger())        // Adds OpenAPI documentation
+  .get('/endpoint', ({ set }) => {
+    // Preserve existing headers while adding new ones
+    Object.assign(set.headers, {
+      'Cache-Control': 'no-cache'
+    });
+  });
+```
+
+# Elysia Validation
+
+Response validation is as strict as request validation:
+- All fields defined in response schema must be present
+- Optional fields must be explicitly marked as nullable using `t.Union([t.String(), t.Null()])`
+- Missing required fields will cause validation errors even in production
+- Always ensure response objects match schema exactly
+
+Example of proper response schema:
+```typescript
+const IdentityResponse = t.Array(
+  t.Object({
+    idKey: t.String(),
+    paymail: t.Union([t.String(), t.Null()]),  // Optional field must be explicitly nullable
+    displayName: t.String(),
+    icon: t.Union([t.String(), t.Null()])      // Optional field must be explicitly nullable
+  })
+);
+```
+
+When processing data for response:
+- Always include all required fields
+- Set optional fields to null if not present
+- Validate response shape matches schema
+- Handle missing or undefined values explicitly
+
+Example of proper response processing:
+```typescript
+return {
+  idKey: data.idKey,
+  paymail: data.paymail || null,    // Convert undefined to null
+  displayName: data.name || "Unknown",
+  icon: data.icon || null           // Convert undefined to null
+};
+```
