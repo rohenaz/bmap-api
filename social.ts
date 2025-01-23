@@ -413,8 +413,8 @@ async function processRelationships(
   const outgoing: string[] = [];
 
   console.log('\nFinal relationships:');
-  for (const [other, rel] of Object.entries(relationships)) {
-    console.log(other, JSON.stringify(rel));
+  for (const [other, rel] of relationships.entries()) {
+    console.log('Processing final relationship:', other, JSON.stringify(rel));
 
     if (rel.unfriended) {
       console.log('Skipping unfriended relationship:', other);
