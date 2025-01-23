@@ -1,11 +1,11 @@
 import type { Transaction } from '@gorillapool/js-junglebus';
-import bmapjs, { type BobTx } from 'bmapjs';
+import bmapjs, { type BmapTx, type BobTx } from 'bmapjs';
 import { parse } from 'bpu-ts';
 import { saveTx } from './actions.js';
 
 const { allProtocols, TransformTx } = bmapjs;
 
-export const processTransaction = async (data: Partial<Transaction>) => {
+export const processTransaction = async (data: Partial<Transaction>): Promise<BmapTx | null> => {
   try {
     console.log('Starting transaction processing...');
     console.log('Raw transaction:', data.transaction);

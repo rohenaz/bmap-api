@@ -1257,6 +1257,3 @@ export const socialRoutes = new Elysia()
       response: IdentityResponse,
     }
   );
-
-// For backward compatibility
-export const registerSocialRoutes = (app: Elysia) => app.use(socialRoutes);

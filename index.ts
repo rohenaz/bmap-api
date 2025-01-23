@@ -13,7 +13,6 @@ import type { BmapTx, BobTx } from 'bmapjs';
 import bmapjs from 'bmapjs';
 import { parse } from 'bpu-ts';
 
-import { registerSocialRoutes } from './social.js';
 import './p2p.js';
 import { type BapIdentity, getBAPIdByAddress, resolveSigners } from './bap.js';
 import {
@@ -152,80 +151,79 @@ const bobFromTxid = async (txid: string) => {
 
 // Create and configure the Elysia app using method chaining
 const app = new Elysia()
-  // Plugins
-  .use(cors())
-  .use(staticPlugin({ assets: './public', prefix: '/' }))
-  .use(
-    swagger({
-      documentation: {
-        info: {
-          title: 'BMAP API',
-          version: '1.0.0',
-          description: 'Bitcoin transaction processing and social features API',
-        },
-        tags: [
-          { name: 'transactions', description: 'Transaction related endpoints' },
-          { name: 'social', description: 'Social features like friends and likes' },
-          { name: 'charts', description: 'Chart generation endpoints' },
-          { name: 'identities', description: 'BAP identity management' },
-        ],
+// Plugins
+.use(cors())
+.use(staticPlugin({ assets: './public', prefix: '/' }))
+.use(
+  swagger({
+    documentation: {
+      info: {
+        title: 'BMAP API',
+        version: '1.0.0',
+        description: 'Bitcoin transaction processing and social features API',
       },
-    })
-  )
-
-  // Derived context, e.g. SSE request timeout
-  .derive(() => ({
-    requestTimeout: 0,
-  }))
-
-  // Lifecycle hooks
-  .onRequest(({ request }) => {
-    // Only log 404s and errors, but we can log all requests if you prefer
-    console.log(chalk.gray(`${request.method} ${request.url}`));
+      tags: [
+        { name: 'transactions', description: 'Transaction related endpoints' },
+        { name: 'social', description: 'Social features like friends and likes' },
+        { name: 'charts', description: 'Chart generation endpoints' },
+        { name: 'identities', description: 'BAP identity management' },
+      ],
+    },
   })
-  .onError(({ error, request }) => {
-    console.log({ error });
+)
+// Derived context, e.g. SSE request timeout
+.derive(() => ({
+  requestTimeout: 0,
+}))
 
-    if (error instanceof NotFoundError) {
-      console.log(chalk.yellow(`404: ${request.method} ${request.url}`));
-      return new Response(`<div class="text-yellow-500">Not Found: ${request.url}</div>`, {
-        status: 404,
-        headers: { 'Content-Type': 'text/html' },
-      });
-    }
-
-    // Handle validation errors
-    if ('code' in error && error.code === 'VALIDATION') {
-      console.log('Validation error details:', error);
-      console.log('Request URL:', request.url);
-      console.log('Request method:', request.method);
-      const errorMessage = 'message' in error ? error.message : 'Validation Error';
-      return new Response(`<div class="text-orange-500">Validation Error: ${errorMessage}</div>`, {
-        status: 400,
-        headers: { 'Content-Type': 'text/html' },
-      });
-    }
-
-    // Handle parse errors
-    if ('code' in error && error.code === 'PARSE') {
-      const errorMessage = 'message' in error ? error.message : 'Parse Error';
-      return new Response(`<div class="text-red-500">Parse Error: ${errorMessage}</div>`, {
-        status: 400,
-        headers: { 'Content-Type': 'text/html' },
-      });
-    }
-
-    // Other errors
-    console.error(chalk.red(`Error: ${request.method} ${request.url}`), error);
-    const errorMessage = 'message' in error ? error.message : 'Internal Server Error';
-    return new Response(`<div class="text-red-500">Server error: ${errorMessage}</div>`, {
-      status: 500,
+// Lifecycle hooks
+.onRequest(({ request }) => {
+  // Only log 404s and errors, but we can log all requests if you prefer
+  console.log(chalk.gray(`${request.method} ${request.url}`));
+})
+.onError(({ error, request }) => {
+  console.log({ error });
+  
+  if (error instanceof NotFoundError) {
+    console.log(chalk.yellow(`404: ${request.method} ${request.url}`));
+    return new Response(`<div class="text-yellow-500">Not Found: ${request.url}</div>`, {
+      status: 404,
       headers: { 'Content-Type': 'text/html' },
     });
-  })
-  .use(socialRoutes)
-  // Routes
-  .get('/s/:collectionName?/:base64Query', async ({ params, set }) => {
+  }
+  
+  // Handle validation errors
+  if ('code' in error && error.code === 'VALIDATION') {
+    console.log('Validation error details:', error);
+    console.log('Request URL:', request.url);
+    console.log('Request method:', request.method);
+    const errorMessage = 'message' in error ? error.message : 'Validation Error';
+    return new Response(`<div class="text-orange-500">Validation Error: ${errorMessage}</div>`, {
+      status: 400,
+      headers: { 'Content-Type': 'text/html' },
+    });
+  }
+  
+  // Handle parse errors
+  if ('code' in error && error.code === 'PARSE') {
+    const errorMessage = 'message' in error ? error.message : 'Parse Error';
+    return new Response(`<div class="text-red-500">Parse Error: ${errorMessage}</div>`, {
+      status: 400,
+      headers: { 'Content-Type': 'text/html' },
+    });
+  }
+  
+  // Other errors
+  console.error(chalk.red(`Error: ${request.method} ${request.url}`), error);
+  const errorMessage = 'message' in error ? error.message : 'Internal Server Error';
+  return new Response(`<div class="text-red-500">Server error: ${errorMessage}</div>`, {
+    status: 500,
+    headers: { 'Content-Type': 'text/html' },
+  });
+})
+.use(socialRoutes)
+// Routes
+.get('/s/:collectionName?/:base64Query', async ({ params, set }) => {
     const { collectionName, base64Query: b64 } = params;
 
     Object.assign(set.headers, {
@@ -488,7 +486,7 @@ const app = new Elysia()
       console.log('Received ingest request with rawTx length:', rawTx.length);
 
       try {
-        const tx = await processTransaction({ transaction: rawTx });
+        const tx: BmapTx | null = await processTransaction({ transaction: rawTx });
         if (!tx) throw new Error('No result returned');
 
         console.log('Transaction processed successfully:', tx.tx?.h);
