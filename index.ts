@@ -427,81 +427,56 @@ const app = new Elysia()
   .get(
     '/q/:collectionName/:base64Query',
     async ({ params }) => {
-      console.log('Starting query execution');
-      const { collectionName, base64Query } = params;
+      const { collectionName, base64Query: b64 } = params;
+      console.log(chalk.magenta('BMAP API'), chalk.cyan('query', collectionName));
+
+      const dbo = await getDbo();
+      const code = Buffer.from(b64, 'base64').toString();
+      const j = JSON.parse(code);
+
+      if (j.q.aggregate) {
+        try {
+          const pipeline = j.q.aggregate;
+          if (j.q.sort) {
+            pipeline.push({ $sort: j.q.sort });
+          }
+          if (j.q.limit) {
+            pipeline.push({ $limit: j.q.limit });
+          }
+
+          const c = await dbo
+            .collection(collectionName)
+            .aggregate(pipeline, {
+              allowDiskUse: true,
+              cursor: { batchSize: 1000 },
+            })
+            .toArray();
+
+          const signers = await resolveSigners(c as BmapTx[]);
+          return { [collectionName]: c, signers };
+        } catch (e) {
+          console.log(e);
+          throw new Error(String(e));
+        }
+      }
 
       try {
-        // Decode and parse query
-        const code = Buffer.from(base64Query, 'base64').toString();
-        console.log('Decoded query:', code);
-
-        type SortObject = { [key: string]: SortDirection };
-
-        let q: {
-          q: {
-            find: Record<string, unknown>;
-            limit?: number;
-            sort?: SortObject;
-            skip?: number;
-            project?: Document;
-          };
-        };
-
-        try {
-          q = JSON.parse(code);
-        } catch (_e) {
-          throw new Error('Invalid JSON query');
-        }
-
-        // Validate query structure
-        if (!q.q || typeof q.q !== 'object') {
-          throw new Error('Invalid query structure. Expected {q: {find: {...}}}');
-        }
-
-        const db = await getDbo();
-
-        // Extract query parameters with defaults
-        const query = q.q.find || {};
-        const limit = q.q.limit || 100;
-        const defaultSort: SortObject = { 'blk.i': -1 };
-        const sortParam = q.q.sort || defaultSort;
-
-        // Convert sort object to MongoDB sort format
-        const sortEntries = Object.entries(sortParam);
-        const sort: Sort =
-          sortEntries.length === 1 ? [sortEntries[0][0], sortEntries[0][1]] : sortEntries;
-
-        const skip = q.q.skip || 0;
-        const projection = q.q.project || null;
-
-        console.log('Executing query:', {
-          collection: collectionName,
-          query,
-          limit,
-          sort,
-          skip,
-          projection,
-        });
-
-        // Execute query with all parameters
-        const results = await db
+        const c = await dbo
           .collection(collectionName)
-          .find(query)
-          .sort(sort)
-          .skip(skip)
-          .limit(limit)
-          .project(projection)
+          .find(j.q.find)
+          .sort(j.q.sort || { _id: -1 })
+          .limit(j.q.limit ? j.q.limit : 10)
+          .project(j.q.project || { in: 0, out: 0 })
           .toArray();
-
-        console.log(`Query returned ${results.length} results`);
-        return { [collectionName]: results };
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : String(error);
-        throw new Error(`Failed to execute query: ${message}`);
+        const signers = await resolveSigners(c as BmapTx[]);
+        console.log({ signers });
+        return { [collectionName]: c, signers };
+      } catch (e) {
+        console.log(e);
+        throw new Error(String(e));
       }
     },
     {
-      // Route-level schema for params
       params: QueryParams,
     }
   )
