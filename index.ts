@@ -44,11 +44,6 @@ const QueryParams = t.Object({
   base64Query: t.String(),
 });
 
-const TxParams = t.Object({
-  tx: t.String(),
-  format: t.Optional(t.String()),
-});
-
 const ChartParams = t.Object({
   name: t.Optional(t.String()),
   timeframe: t.Optional(t.String()),
@@ -211,7 +206,8 @@ const app = new Elysia()
         },
       },
       path: '/docs',
-      excludeStaticFile: true, // Exclude static files from documentation
+      exclude: ['/', '/app/public/*'],
+      excludeStaticFile: true,
     })
   )
   // Derived context, e.g. SSE request timeout
@@ -401,11 +397,6 @@ const app = new Elysia()
                     },
                   },
                 },
-                example: [
-                  'data: {"type":"open","data":[]}\n\n',
-                  'data: {"type":"message","data":[{"tx":{"h":"..."},"blk":{"i":123,"t":456},"MAP":[...]}]}\n\n',
-                  ':heartbeat\n\n',
-                ],
               },
             },
           },
@@ -812,7 +803,18 @@ const app = new Elysia()
       }
     },
     {
-      params: TxParams,
+      params: t.Object({
+        tx: t.String({
+          description: 'Transaction ID to fetch',
+          examples: ['1234abcd'],
+        }),
+        format: t.Optional(
+          t.String({
+            description: 'Response format (bob, bmap, file, or protocol key)',
+            examples: ['bob', 'bmap', 'file'],
+          })
+        ),
+      }),
       detail: {
         tags: ['transactions'],
         description: 'Get transaction details in various formats',

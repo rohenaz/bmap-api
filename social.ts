@@ -21,19 +21,6 @@ export type CacheValue =
       value: Identity[];
     };
 
-// Bitcoin schema collections to watch
-const _bitcoinSchemaCollections = [
-  'follow',
-  'unfollow',
-  'unlike',
-  'like',
-  'message',
-  'repost',
-  'friend',
-  'post',
-  'ord',
-];
-
 interface SigmaIdentityAPIResponse {
   status: string;
   result?: SigmaIdentityResult;
