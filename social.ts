@@ -882,6 +882,44 @@ export const socialRoutes = new Elysia()
     },
     {
       response: ChannelResponse,
+      detail: {
+        tags: ['social'],
+        description: 'Get list of all message channels',
+        summary: 'List channels',
+        responses: {
+          200: {
+            description: 'List of channels with their latest messages',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      channel: { type: 'string', description: 'Channel identifier' },
+                      creator: {
+                        type: 'string',
+                        nullable: true,
+                        description: 'Channel creator paymail',
+                      },
+                      last_message: {
+                        type: 'string',
+                        nullable: true,
+                        description: 'Most recent message',
+                      },
+                      last_message_time: {
+                        type: 'number',
+                        description: 'Timestamp of last message',
+                      },
+                      messages: { type: 'number', description: 'Total message count' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     }
   )
   .get(
@@ -1049,6 +1087,98 @@ export const socialRoutes = new Elysia()
       params: ChannelParams,
       query: MessageQuery,
       response: MessageResponse,
+      detail: {
+        tags: ['social'],
+        description: 'Get messages from a specific channel',
+        summary: 'Get channel messages',
+        parameters: [
+          {
+            name: 'channelId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Channel identifier',
+          },
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Page number for pagination',
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Number of messages per page',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Channel messages with signer information',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    channel: { type: 'string' },
+                    page: { type: 'number' },
+                    limit: { type: 'number' },
+                    count: { type: 'number' },
+                    results: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          tx: { type: 'object', properties: { h: { type: 'string' } } },
+                          blk: {
+                            type: 'object',
+                            properties: {
+                              i: { type: 'number' },
+                              t: { type: 'number' },
+                            },
+                          },
+                          MAP: {
+                            type: 'array',
+                            items: {
+                              type: 'object',
+                              properties: {
+                                app: { type: 'string' },
+                                type: { type: 'string' },
+                                channel: { type: 'string' },
+                                paymail: { type: 'string' },
+                              },
+                            },
+                          },
+                          B: {
+                            type: 'array',
+                            items: {
+                              type: 'object',
+                              properties: {
+                                Data: {
+                                  type: 'object',
+                                  properties: {
+                                    utf8: { type: 'string' },
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                    signers: {
+                      type: 'array',
+                      items: {
+                        $ref: '#/components/schemas/BapIdentity',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     }
   )
   .post(
@@ -1115,6 +1245,87 @@ export const socialRoutes = new Elysia()
     {
       body: LikeRequest,
       response: LikeResponse,
+      detail: {
+        tags: ['social'],
+        description: 'Get likes for transactions or messages',
+        summary: 'Get likes',
+        requestBody: {
+          description: 'Transaction IDs or Message IDs to get likes for',
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  txids: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'List of transaction IDs',
+                  },
+                  messageIds: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'List of message IDs',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Likes with signer information',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      txid: { type: 'string' },
+                      likes: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            tx: { type: 'object', properties: { h: { type: 'string' } } },
+                            blk: {
+                              type: 'object',
+                              properties: {
+                                i: { type: 'number' },
+                                t: { type: 'number' },
+                              },
+                            },
+                            MAP: {
+                              type: 'array',
+                              items: {
+                                type: 'object',
+                                properties: {
+                                  type: { type: 'string' },
+                                  tx: { type: 'string' },
+                                  messageID: { type: 'string' },
+                                  emoji: { type: 'string' },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                      total: { type: 'number' },
+                      signers: {
+                        type: 'array',
+                        items: {
+                          $ref: '#/components/schemas/BapIdentity',
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     }
   )
   .get(
@@ -1139,6 +1350,49 @@ export const socialRoutes = new Elysia()
         bapId: t.String(),
       }),
       response: FriendResponse,
+      detail: {
+        tags: ['social'],
+        description: 'Get friend relationships for a BAP ID',
+        summary: 'Get friends',
+        parameters: [
+          {
+            name: 'bapId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'BAP Identity Key',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Friend relationships',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    friends: {
+                      type: 'array',
+                      items: { type: 'string' },
+                      description: 'Mutual friends (BAP IDs)',
+                    },
+                    incoming: {
+                      type: 'array',
+                      items: { type: 'string' },
+                      description: 'Incoming friend requests (BAP IDs)',
+                    },
+                    outgoing: {
+                      type: 'array',
+                      items: { type: 'string' },
+                      description: 'Outgoing friend requests (BAP IDs)',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     }
   )
   .get(
@@ -1255,5 +1509,25 @@ export const socialRoutes = new Elysia()
     },
     {
       response: IdentityResponse,
+      detail: {
+        tags: ['identities'],
+        description: 'Get all known BAP identities',
+        summary: 'List identities',
+        responses: {
+          200: {
+            description: 'List of BAP identities',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: {
+                    $ref: '#/components/schemas/BapIdentity',
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     }
   );

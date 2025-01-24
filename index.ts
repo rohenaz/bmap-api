@@ -151,79 +151,134 @@ const bobFromTxid = async (txid: string) => {
 
 // Create and configure the Elysia app using method chaining
 const app = new Elysia()
-// Plugins
-.use(cors())
-.use(staticPlugin({ assets: './public', prefix: '/' }))
-.use(
-  swagger({
-    documentation: {
-      info: {
-        title: 'BMAP API',
-        version: '1.0.0',
-        description: 'Bitcoin transaction processing and social features API',
+  // Plugins
+  .use(cors())
+  .use(staticPlugin({ assets: './public', prefix: '/' }))
+  .use(
+    swagger({
+      documentation: {
+        info: {
+          title: 'BMAP API',
+          version: '1.0.0',
+          description: 'Bitcoin transaction processing and social features API',
+        },
+        tags: [
+          { name: 'query', description: 'MongoDB query and text search endpoints' },
+          { name: 'transactions', description: 'Transaction processing and retrieval' },
+          { name: 'social', description: 'Social features like friends, likes, and channels' },
+          { name: 'charts', description: 'Chart data generation endpoints' },
+          { name: 'identities', description: 'BAP identity management' },
+        ],
+        security: [{ apiKey: [] }],
+        components: {
+          schemas: {
+            Query: {
+              type: 'object',
+              properties: {
+                v: { type: 'number' },
+                q: {
+                  type: 'object',
+                  properties: {
+                    find: { type: 'object' },
+                    aggregate: { type: 'array', items: { type: 'object' } },
+                    sort: { type: 'object' },
+                    limit: { type: 'number' },
+                    project: { type: 'object' },
+                  },
+                },
+              },
+            },
+            BapIdentity: {
+              type: 'object',
+              properties: {
+                idKey: { type: 'string', description: 'BAP Identity Key' },
+                rootAddress: { type: 'string', description: 'Root Bitcoin address' },
+                currentAddress: { type: 'string', description: 'Current active Bitcoin address' },
+                addresses: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      address: { type: 'string', description: 'Bitcoin address' },
+                      txId: {
+                        type: 'string',
+                        description: 'Transaction ID where address was claimed',
+                      },
+                      block: {
+                        type: 'number',
+                        description: 'Block height of claim',
+                        nullable: true,
+                      },
+                    },
+                  },
+                },
+                identity: { type: 'string', description: 'Identity data JSON string' },
+                identityTxId: { type: 'string', description: 'Transaction ID of identity claim' },
+                block: { type: 'number', description: 'Block height of identity registration' },
+                timestamp: { type: 'number', description: 'Unix timestamp of registration' },
+                valid: { type: 'boolean', description: 'Whether the identity is valid' },
+              },
+              required: ['idKey', 'rootAddress', 'currentAddress', 'addresses'],
+            },
+          },
+        },
       },
-      tags: [
-        { name: 'transactions', description: 'Transaction related endpoints' },
-        { name: 'social', description: 'Social features like friends and likes' },
-        { name: 'charts', description: 'Chart generation endpoints' },
-        { name: 'identities', description: 'BAP identity management' },
-      ],
-    },
-  })
-)
-// Derived context, e.g. SSE request timeout
-.derive(() => ({
-  requestTimeout: 0,
-}))
+      path: '/docs', // Serve Swagger UI at /docs
+    })
+  )
+  // Derived context, e.g. SSE request timeout
+  .derive(() => ({
+    requestTimeout: 0,
+  }))
 
-// Lifecycle hooks
-.onRequest(({ request }) => {
-  // Only log 404s and errors, but we can log all requests if you prefer
-  console.log(chalk.gray(`${request.method} ${request.url}`));
-})
-.onError(({ error, request }) => {
-  console.log({ error });
-  
-  if (error instanceof NotFoundError) {
-    console.log(chalk.yellow(`404: ${request.method} ${request.url}`));
-    return new Response(`<div class="text-yellow-500">Not Found: ${request.url}</div>`, {
-      status: 404,
+  // Lifecycle hooks
+  .onRequest(({ request }) => {
+    // Only log 404s and errors, but we can log all requests if you prefer
+    console.log(chalk.gray(`${request.method} ${request.url}`));
+  })
+  .onError(({ error, request }) => {
+    console.log({ error });
+
+    if (error instanceof NotFoundError) {
+      console.log(chalk.yellow(`404: ${request.method} ${request.url}`));
+      return new Response(`<div class="text-yellow-500">Not Found: ${request.url}</div>`, {
+        status: 404,
+        headers: { 'Content-Type': 'text/html' },
+      });
+    }
+
+    // Handle validation errors
+    if ('code' in error && error.code === 'VALIDATION') {
+      console.log('Validation error details:', error);
+      console.log('Request URL:', request.url);
+      console.log('Request method:', request.method);
+      const errorMessage = 'message' in error ? error.message : 'Validation Error';
+      return new Response(`<div class="text-orange-500">Validation Error: ${errorMessage}</div>`, {
+        status: 400,
+        headers: { 'Content-Type': 'text/html' },
+      });
+    }
+
+    // Handle parse errors
+    if ('code' in error && error.code === 'PARSE') {
+      const errorMessage = 'message' in error ? error.message : 'Parse Error';
+      return new Response(`<div class="text-red-500">Parse Error: ${errorMessage}</div>`, {
+        status: 400,
+        headers: { 'Content-Type': 'text/html' },
+      });
+    }
+
+    // Other errors
+    console.error(chalk.red(`Error: ${request.method} ${request.url}`), error);
+    const errorMessage = 'message' in error ? error.message : 'Internal Server Error';
+    return new Response(`<div class="text-red-500">Server error: ${errorMessage}</div>`, {
+      status: 500,
       headers: { 'Content-Type': 'text/html' },
     });
-  }
-  
-  // Handle validation errors
-  if ('code' in error && error.code === 'VALIDATION') {
-    console.log('Validation error details:', error);
-    console.log('Request URL:', request.url);
-    console.log('Request method:', request.method);
-    const errorMessage = 'message' in error ? error.message : 'Validation Error';
-    return new Response(`<div class="text-orange-500">Validation Error: ${errorMessage}</div>`, {
-      status: 400,
-      headers: { 'Content-Type': 'text/html' },
-    });
-  }
-  
-  // Handle parse errors
-  if ('code' in error && error.code === 'PARSE') {
-    const errorMessage = 'message' in error ? error.message : 'Parse Error';
-    return new Response(`<div class="text-red-500">Parse Error: ${errorMessage}</div>`, {
-      status: 400,
-      headers: { 'Content-Type': 'text/html' },
-    });
-  }
-  
-  // Other errors
-  console.error(chalk.red(`Error: ${request.method} ${request.url}`), error);
-  const errorMessage = 'message' in error ? error.message : 'Internal Server Error';
-  return new Response(`<div class="text-red-500">Server error: ${errorMessage}</div>`, {
-    status: 500,
-    headers: { 'Content-Type': 'text/html' },
-  });
-})
-.use(socialRoutes)
-// Routes
-.get('/s/:collectionName?/:base64Query', async ({ params, set }) => {
+  })
+  .use(socialRoutes)
+  // Routes
+  .get('/s/:collectionName?/:base64Query', async ({ params, set }) => {
     const { collectionName, base64Query: b64 } = params;
 
     Object.assign(set.headers, {
@@ -476,6 +531,51 @@ const app = new Elysia()
     },
     {
       params: QueryParams,
+      detail: {
+        tags: ['query'],
+        description: 'Execute MongoDB queries with text search support',
+        summary: 'Query MongoDB collections',
+        responses: {
+          200: {
+            description: 'Query results with resolved signers',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    collectionName: {
+                      type: 'array',
+                      items: { type: 'object' },
+                    },
+                    signers: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          idKey: { type: 'string' },
+                          rootAddress: { type: 'string' },
+                          currentAddress: { type: 'string' },
+                          addresses: {
+                            type: 'array',
+                            items: {
+                              type: 'object',
+                              properties: {
+                                address: { type: 'string' },
+                                txId: { type: 'string' },
+                                block: { type: 'number' },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     }
   )
 
@@ -486,7 +586,7 @@ const app = new Elysia()
       console.log('Received ingest request with rawTx length:', rawTx.length);
 
       try {
-        const tx: BmapTx | null = await processTransaction({ transaction: rawTx });
+        const tx = await processTransaction({ transaction: rawTx });
         if (!tx) throw new Error('No result returned');
 
         console.log('Transaction processed successfully:', tx.tx?.h);
@@ -498,6 +598,38 @@ const app = new Elysia()
     },
     {
       body: IngestBody,
+      detail: {
+        tags: ['transactions'],
+        description: 'Process and store a raw Bitcoin transaction',
+        summary: 'Ingest transaction',
+        responses: {
+          200: {
+            description: 'Transaction processed successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    tx: {
+                      type: 'object',
+                      properties: {
+                        h: { type: 'string', description: 'Transaction hash' },
+                      },
+                    },
+                    blk: {
+                      type: 'object',
+                      properties: {
+                        i: { type: 'number', description: 'Block height' },
+                        t: { type: 'number', description: 'Block timestamp' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     }
   )
 
@@ -611,10 +743,8 @@ const app = new Elysia()
 
         // Return the appropriate format
         switch (format) {
-          case 'bob': {
-            const bob = await bobFromTxid(txid);
-            return bob;
-          }
+          case 'bob':
+            return bobFromTxid(txid);
           case 'bmap':
             return decoded;
           default:
@@ -632,6 +762,54 @@ const app = new Elysia()
     },
     {
       params: TxParams,
+      detail: {
+        tags: ['transactions'],
+        description: 'Get transaction details in various formats',
+        summary: 'Get transaction',
+        responses: {
+          200: {
+            description: 'Transaction details in requested format',
+            content: {
+              'application/json': {
+                schema: {
+                  oneOf: [
+                    {
+                      type: 'object',
+                      description: 'BMAP format',
+                      properties: {
+                        tx: {
+                          type: 'object',
+                          properties: {
+                            h: { type: 'string', description: 'Transaction hash' },
+                          },
+                        },
+                        blk: {
+                          type: 'object',
+                          properties: {
+                            i: { type: 'number', description: 'Block height' },
+                            t: { type: 'number', description: 'Block timestamp' },
+                          },
+                        },
+                        MAP: { type: 'array', items: { type: 'object' } },
+                        AIP: { type: 'array', items: { type: 'object' } },
+                        B: { type: 'array', items: { type: 'object' } },
+                      },
+                    },
+                    {
+                      type: 'string',
+                      description: 'Raw transaction hex',
+                    },
+                    {
+                      type: 'object',
+                      description: 'BOB format',
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
     }
   )
 
