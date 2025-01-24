@@ -809,12 +809,48 @@ const app = new Elysia()
           examples: ['1234abcd'],
         }),
         format: t.Optional(
-          t.String({
-            description: 'Response format (bob, bmap, file, or protocol key)',
+          t.Union([t.Literal('bob'), t.Literal('bmap'), t.Literal('file')], {
+            description: 'Response format',
             examples: ['bob', 'bmap', 'file'],
           })
         ),
       }),
+      response: {
+        200: t.Union([
+          // BMAP format
+          t.Object({
+            tx: t.Object({
+              h: t.String(),
+            }),
+            blk: t.Object({
+              i: t.Number(),
+              t: t.Number(),
+            }),
+            MAP: t.Array(t.Object({})),
+            AIP: t.Array(t.Object({})),
+            B: t.Array(t.Object({})),
+          }),
+          // BOB format
+          t.Object({
+            _id: t.String(),
+            tx: t.Object({
+              h: t.String(),
+              r: t.String(),
+            }),
+            in: t.Array(t.Object({})),
+            out: t.Array(t.Object({})),
+            parts: t.Array(t.Object({})),
+          }),
+          // Protocol data or error message
+          t.Union([t.Array(t.Object({})), t.String()]),
+        ]),
+        400: t.Object({
+          error: t.String(),
+        }),
+        404: t.Object({
+          error: t.String(),
+        }),
+      },
       detail: {
         tags: ['transactions'],
         description: 'Get transaction details in various formats',
@@ -828,7 +864,7 @@ const app = new Elysia()
                   oneOf: [
                     {
                       type: 'object',
-                      description: 'BMAP format',
+                      description: 'BMAP format (when format=bmap or not specified)',
                       properties: {
                         tx: {
                           type: 'object',
@@ -849,14 +885,65 @@ const app = new Elysia()
                       },
                     },
                     {
-                      type: 'string',
-                      description: 'Raw transaction hex',
+                      type: 'object',
+                      description: 'BOB format (when format=bob)',
+                      properties: {
+                        _id: { type: 'string' },
+                        tx: {
+                          type: 'object',
+                          properties: {
+                            h: { type: 'string' },
+                            r: { type: 'string' },
+                          },
+                        },
+                        in: { type: 'array', items: { type: 'object' } },
+                        out: { type: 'array', items: { type: 'object' } },
+                        parts: { type: 'array', items: { type: 'object' } },
+                      },
                     },
                     {
-                      type: 'object',
-                      description: 'BOB format',
+                      type: 'array',
+                      description: 'Protocol-specific data (when format matches a protocol key)',
+                      items: { type: 'object' },
+                    },
+                    {
+                      type: 'string',
+                      description: 'Error message',
                     },
                   ],
+                },
+              },
+              'text/plain': {
+                schema: {
+                  type: 'string',
+                  format: 'binary',
+                  description: 'File content (when format=file)',
+                },
+              },
+            },
+          },
+          400: {
+            description: 'Invalid transaction ID or format',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    error: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+          404: {
+            description: 'Transaction not found',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    error: { type: 'string' },
+                  },
                 },
               },
             },

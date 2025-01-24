@@ -16,8 +16,6 @@ export interface TransformedTx extends BmapTx {
   }[];
 }
 
-export type BobTx = BmapTx;
-
 export enum Timeframe {
   Day = '24h',
   Week = 'week',

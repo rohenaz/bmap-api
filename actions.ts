@@ -1,10 +1,10 @@
-import type { BmapTx } from 'bmapjs';
+import type { BmapTx, BobTx } from 'bmapjs';
 import chalk from 'chalk';
 import { getBAPIdByAddress } from './bap';
 import type { BapIdentity } from './bap';
 import { normalize } from './bmap';
 import { getDbo } from './db';
-import type { BobTx, TransformedTx } from './types';
+import type { TransformedTx } from './types';
 
 export const saveTx = async (tx: BmapTx) => {
   const dbo = await getDbo();
