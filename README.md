@@ -102,12 +102,12 @@ The project uses several tools to maintain code quality:
 
 ## API Documentation
 
-The API is documented using Swagger/OpenAPI specification. You can access the interactive documentation at `/swagger` when the server is running.
+The API is documented using Swagger/OpenAPI specification. You can access the interactive documentation at `/docs` when the server is running.
 
 ### Available Documentation
 
-- **Interactive UI**: Available at `/swagger`
-- **OpenAPI Spec**: Available at `/swagger/json`
+- **Interactive UI**: Available at `/docs`
+- **OpenAPI Spec**: Available at `/docs/json`
 - **API Explorer**: Test endpoints directly from the browser
 
 ### API Categories

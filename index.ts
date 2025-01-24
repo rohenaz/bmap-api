@@ -8,7 +8,6 @@ import dotenv from 'dotenv';
 import { Elysia, NotFoundError, t } from 'elysia';
 import type { ChangeStreamDocument, Document, Sort, SortDirection } from 'mongodb';
 
-import type { Transaction } from '@gorillapool/js-junglebus';
 import type { BmapTx, BobTx } from 'bmapjs';
 import bmapjs from 'bmapjs';
 import { parse } from 'bpu-ts';
@@ -32,25 +31,13 @@ import { explorerTemplate } from './src/components/explorer.js';
 import { Timeframe } from './types.js';
 
 import type { ChangeStream } from 'mongodb';
-import { socialRoutes } from './social';
+import { htmxRoutes } from './htmx.js';
+import { socialRoutes } from './social.js';
 
 dotenv.config();
 
 const { allProtocols, TransformTx } = bmapjs;
 const __filename = fileURLToPath(import.meta.url);
-
-// Focus on these Bitcoin schema collections for the dashboard
-const bitcoinSchemaCollections = [
-  'follow',
-  'unfollow',
-  'unlike',
-  'like',
-  'message',
-  'repost',
-  'friend',
-  'post',
-  'ord',
-];
 
 // Define request types
 const QueryParams = t.Object({
@@ -168,6 +155,7 @@ const app = new Elysia()
           { name: 'social', description: 'Social features like friends, likes, and channels' },
           { name: 'charts', description: 'Chart data generation endpoints' },
           { name: 'identities', description: 'BAP identity management' },
+          { name: 'htmx', description: 'HTMX-powered dynamic UI updates' },
         ],
         security: [{ apiKey: [] }],
         components: {
@@ -277,186 +265,154 @@ const app = new Elysia()
     });
   })
   .use(socialRoutes)
+  .use(htmxRoutes)
   // Routes
-  .get('/s/:collectionName?/:base64Query', async ({ params, set }) => {
-    const { collectionName, base64Query: b64 } = params;
+  .get(
+    '/s/:collectionName?/:base64Query',
+    async ({ params, set }) => {
+      const { collectionName, base64Query: b64 } = params;
 
-    Object.assign(set.headers, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'X-Accel-Buffering': 'no',
-      Connection: 'keep-alive',
-    });
+      Object.assign(set.headers, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'X-Accel-Buffering': 'no',
+        Connection: 'keep-alive',
+      });
 
-    try {
-      const json = Buffer.from(b64, 'base64').toString();
-      const db = await getDbo();
+      try {
+        const json = Buffer.from(b64, 'base64').toString();
+        const db = await getDbo();
 
-      console.log(chalk.blue('New change stream subscription on', collectionName));
-      const query = JSON.parse(json);
+        console.log(chalk.blue('New change stream subscription on', collectionName));
+        const query = JSON.parse(json);
 
-      const pipeline = [{ $match: { operationType: 'insert' } }];
-      const keys = Object.keys(query.q.find || {});
-      for (const k of keys) {
-        pipeline[0].$match[`fullDocument.${k}`] = query.q.find[k];
-      }
+        const pipeline = [{ $match: { operationType: 'insert' } }];
+        const keys = Object.keys(query.q.find || {});
+        for (const k of keys) {
+          pipeline[0].$match[`fullDocument.${k}`] = query.q.find[k];
+        }
 
-      let changeStream: ChangeStream | undefined;
-      const messageQueue: string[] = [];
-      let isActive = true;
+        let changeStream: ChangeStream | undefined;
+        const messageQueue: string[] = [];
+        let isActive = true;
 
-      async function* eventGenerator() {
-        try {
-          if (collectionName === '$all') {
-            changeStream = db.watch(pipeline, { fullDocument: 'updateLookup' });
-          } else {
-            const target = db.collection(collectionName);
-            changeStream = target.watch(pipeline, { fullDocument: 'updateLookup' });
-          }
-
-          yield `data: ${JSON.stringify({ type: 'open', data: [] })}\n\n`;
-
-          changeStream.on('change', (next: ChangeStreamDocument<BmapTx>) => {
-            if (next.operationType === 'insert' && isActive) {
-              const eventType = collectionName === '$all' ? next.ns.coll : collectionName;
-              messageQueue.push(
-                `data: ${JSON.stringify({ type: eventType, data: [next.fullDocument] })}\n\n`
-              );
+        async function* eventGenerator() {
+          try {
+            if (collectionName === '$all') {
+              changeStream = db.watch(pipeline, { fullDocument: 'updateLookup' });
+            } else {
+              const target = db.collection(collectionName);
+              changeStream = target.watch(pipeline, { fullDocument: 'updateLookup' });
             }
-          });
 
-          changeStream.on('error', (error) => {
-            console.error(chalk.red('Change stream error:'), error);
-            isActive = false;
-          });
+            yield `data: ${JSON.stringify({ type: 'open', data: [] })}\n\n`;
 
-          changeStream.on('close', () => {
-            console.log(chalk.blue('Change stream closed'));
-            isActive = false;
-          });
+            changeStream.on('change', (next: ChangeStreamDocument<BmapTx>) => {
+              if (next.operationType === 'insert' && isActive) {
+                const eventType = collectionName === '$all' ? next.ns.coll : collectionName;
+                messageQueue.push(
+                  `data: ${JSON.stringify({ type: eventType, data: [next.fullDocument] })}\n\n`
+                );
+              }
+            });
 
-          while (isActive) {
-            while (messageQueue.length > 0) {
-              yield messageQueue.shift();
+            changeStream.on('error', (error) => {
+              console.error(chalk.red('Change stream error:'), error);
+              isActive = false;
+            });
+
+            changeStream.on('close', () => {
+              console.log(chalk.blue('Change stream closed'));
+              isActive = false;
+            });
+
+            while (isActive) {
+              while (messageQueue.length > 0) {
+                yield messageQueue.shift();
+              }
+              yield ':heartbeat\n\n';
+              await new Promise((resolve) => setTimeout(resolve, 1000));
             }
-            yield ':heartbeat\n\n';
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-          }
-        } finally {
-          isActive = false;
-          if (changeStream) {
-            try {
-              await changeStream.close();
-            } catch (e) {
-              console.error('Error during change stream closure:', e);
+          } finally {
+            isActive = false;
+            if (changeStream) {
+              try {
+                await changeStream.close();
+              } catch (e) {
+                console.error('Error during change stream closure:', e);
+              }
             }
           }
         }
+
+        return eventGenerator();
+      } catch (error) {
+        console.error(chalk.red('SSE setup error:'), error);
+        throw new Error(
+          `Failed to initialize event stream: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
       }
-
-      return eventGenerator();
-    } catch (error) {
-      console.error(chalk.red('SSE setup error:'), error);
-      throw new Error(
-        `Failed to initialize event stream: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
+    },
+    {
+      params: QueryParams,
+      detail: {
+        tags: ['query'],
+        description:
+          'Subscribe to real-time updates for MongoDB queries using Server-Sent Events (SSE)',
+        summary: 'Stream query results',
+        parameters: [
+          {
+            name: 'collectionName',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Collection to watch, use "$all" to watch all collections',
+          },
+          {
+            name: 'base64Query',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Base64-encoded MongoDB query (same format as /q endpoint)',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Server-Sent Events stream of query results',
+            content: {
+              'text/event-stream': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    type: {
+                      type: 'string',
+                      description: 'Event type (collection name or "open")',
+                      example: 'message',
+                    },
+                    data: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        description: 'BMAP transaction object',
+                      },
+                      description: 'Array of matching documents',
+                    },
+                  },
+                },
+                example: [
+                  'data: {"type":"open","data":[]}\n\n',
+                  'data: {"type":"message","data":[{"tx":{"h":"..."},"blk":{"i":123,"t":456},"MAP":[...]}]}\n\n',
+                  ':heartbeat\n\n',
+                ],
+              },
+            },
+          },
+        },
+      },
     }
-  })
-
-  .get('/htmx-state', async () => {
-    const state = await getState();
-    const crawlHeight = state.height;
-
-    // get latest block from whatsonchain
-    const url = 'https://api.whatsonchain.com/v1/bsv/main/chain/info';
-    const resp = await fetch(url);
-    const json = await resp.json();
-    const latestHeight = json.blocks;
-
-    const currentBlockHeight = await getBlockHeightFromCache();
-    if (latestHeight > currentBlockHeight) {
-      await deleteFromCache('currentBlockHeight');
-    }
-
-    const startHeight = 574287;
-    const pctComplete = `${Math.floor(
-      ((crawlHeight - startHeight) * 100) / (latestHeight - startHeight)
-    )}%`;
-
-    return `<div class="flex flex-col">
-      <div class="text-gray-500">Sync Progress (${pctComplete})</div>
-      <div class="text-lg font-semibold">${crawlHeight} / ${latestHeight}</div>
-    </div>`;
-  })
-
-  .get('/htmx-collections', async () => {
-    console.time('Total Execution Time');
-    console.log('Starting htmx-collections request');
-
-    try {
-      console.time('getCollectionCounts');
-      const timestamp = Math.floor(Date.now() / 1000) - 86400;
-      const countsKey = `counts-${timestamp}`;
-      const countsResult = await readFromRedis(countsKey);
-      let counts: Record<string, number>[] = [];
-
-      if (countsResult && countsResult.type === 'count') {
-        counts = countsResult.value;
-      } else {
-        counts = await getCollectionCounts(timestamp);
-        await saveToRedis(countsKey, { type: 'count', value: counts } as CacheCount);
-      }
-      console.timeEnd('getCollectionCounts');
-
-      let gridItemsHtml = '';
-      for (const collection of bitcoinSchemaCollections) {
-        const count = counts[collection] || 0;
-        const explorerUrl = `/query/${encodeURIComponent(collection)}`;
-
-        if (count === 0) {
-          gridItemsHtml += `
-            <div class="chart-card">
-              <a href="${explorerUrl}" class="title hover:text-blue-400 transition-colors">${collection}</a>
-              <div class="text-gray-400 text-sm">No data</div>
-            </div>`;
-          continue;
-        }
-
-        gridItemsHtml += `
-          <div class="chart-card">
-            <a href="${explorerUrl}" class="title hover:text-blue-400 transition-colors">${collection}</a>
-            <div class="chart-wrapper">
-              <div class="small-chart-container">
-                <canvas id="chart-${collection}" 
-                        width="300" height="75"
-                        data-collection="${collection}"
-                        class="hover:opacity-80 transition-opacity"></canvas>
-              </div>
-            </div>
-            <div class="footer">Count: ${count}</div>
-          </div>`;
-      }
-
-      const html = `
-        <h3 class="mb-4">Bitcoin Schema Types</h3>
-        <div class="grid grid-cols-4 gap-8 mb-8">
-          ${gridItemsHtml}
-        </div>`;
-
-      console.timeEnd('Total Execution Time');
-      return new Response(html, {
-        headers: { 'Content-Type': 'text/html' },
-      });
-    } catch (error: unknown) {
-      console.error('An error occurred in htmx-collections:', error);
-      const message = error instanceof Error ? error.message : String(error);
-      return new Response(`<div class="text-red-500">Error loading collections: ${message}</div>`, {
-        headers: { 'Content-Type': 'text/html' },
-      });
-    }
-  })
+  )
 
   .get('/query/:collectionName', ({ params }) => {
     const collectionName = params.collectionName;
