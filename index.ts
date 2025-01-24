@@ -26,12 +26,11 @@ import {
 import { getBlocksRange, getTimeSeriesData } from './chart.js';
 import { getCollectionCounts, getDbo, getState } from './db.js';
 import { processTransaction } from './process.js';
-import { parseIdentity } from './social.js';
 import { explorerTemplate } from './src/components/explorer.js';
 import { Timeframe } from './types.js';
 
 import type { ChangeStream } from 'mongodb';
-import { htmxRoutes } from './htmx.js';
+import { bitcoinSchemaCollections, htmxRoutes } from './htmx.js';
 import { socialRoutes } from './social.js';
 
 dotenv.config();
@@ -150,7 +149,7 @@ const app = new Elysia()
           description: 'Bitcoin transaction processing and social features API',
         },
         tags: [
-          { name: 'query', description: 'MongoDB query and text search endpoints' },
+          { name: 'explorer', description: 'Visual query builder and data exploration tools' },
           { name: 'transactions', description: 'Transaction processing and retrieval' },
           { name: 'social', description: 'Social features like friends, likes, and channels' },
           { name: 'charts', description: 'Chart data generation endpoints' },
@@ -211,7 +210,8 @@ const app = new Elysia()
           },
         },
       },
-      path: '/docs', // Serve Swagger UI at /docs
+      path: '/docs',
+      excludeStaticFile: true, // Exclude static files from documentation
     })
   )
   // Derived context, e.g. SSE request timeout
@@ -414,24 +414,119 @@ const app = new Elysia()
     }
   )
 
-  .get('/query/:collectionName', ({ params }) => {
-    const collectionName = params.collectionName;
-    const q = { q: { find: { 'MAP.type': collectionName } } };
-    const code = JSON.stringify(q, null, 2);
+  .get(
+    '/',
+    () => {
+      return new Response(Bun.file('./public/index.html'));
+    },
+    {
+      detail: {
+        tags: ['explorer'],
+        description: 'Main dashboard page showing collection statistics and sync status',
+        summary: 'Dashboard',
+        responses: {
+          200: {
+            description: 'HTML dashboard page',
+            content: {
+              'text/html': {
+                schema: {
+                  type: 'string',
+                },
+              },
+            },
+          },
+        },
+      },
+    }
+  )
 
-    return new Response(explorerTemplate('BMAP', code), {
-      headers: { 'Content-Type': 'text/html' },
-    });
-  })
+  .get(
+    '/query/:collectionName',
+    ({ params }) => {
+      const collectionName = params.collectionName;
+      const q = { q: { find: { 'MAP.type': collectionName } } };
+      const code = JSON.stringify(q, null, 2);
 
-  .get('/query/:collectionName/:base64Query', async ({ params }) => {
-    const { base64Query: b64 } = params;
-    const code = Buffer.from(b64, 'base64').toString();
+      return new Response(explorerTemplate('BMAP', code), {
+        headers: { 'Content-Type': 'text/html' },
+      });
+    },
+    {
+      detail: {
+        tags: ['explorer'],
+        description: 'Visual query builder for a specific collection',
+        summary: 'Collection explorer',
+        parameters: [
+          {
+            name: 'collectionName',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Name of the collection to explore',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'HTML query builder page',
+            content: {
+              'text/html': {
+                schema: {
+                  type: 'string',
+                },
+              },
+            },
+          },
+        },
+      },
+    }
+  )
 
-    return new Response(explorerTemplate('BMAP', code), {
-      headers: { 'Content-Type': 'text/html' },
-    });
-  })
+  .get(
+    '/query/:collectionName/:base64Query',
+    async ({ params }) => {
+      const { base64Query: b64 } = params;
+      const code = Buffer.from(b64, 'base64').toString();
+
+      return new Response(explorerTemplate('BMAP', code), {
+        headers: { 'Content-Type': 'text/html' },
+      });
+    },
+    {
+      detail: {
+        tags: ['explorer'],
+        description: 'Visual query builder with pre-filled query',
+        summary: 'Query explorer',
+        parameters: [
+          {
+            name: 'collectionName',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Name of the collection to explore',
+          },
+          {
+            name: 'base64Query',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Base64-encoded MongoDB query',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'HTML query builder page',
+            content: {
+              'text/html': {
+                schema: {
+                  type: 'string',
+                },
+              },
+            },
+          },
+        },
+      },
+    }
+  )
 
   .get(
     '/q/:collectionName/:base64Query',
@@ -769,17 +864,12 @@ const app = new Elysia()
     }
   )
 
-  .get('/', () => {
-    // Serve index.html from public folder
-    return new Response(Bun.file('./public/index.html'));
-  })
-
   .get(
     '/chart-data/:name?',
-    async ({ params, query }) => {
+    async ({ params }) => {
       console.log('Starting chart-data request');
       try {
-        const timeframe = (query.timeframe as string) || Timeframe.Day;
+        const timeframe = (params.timeframe as string) || Timeframe.Day;
         const collectionName = params.name;
         console.log('Chart data request for:', { collectionName, timeframe });
 
@@ -843,9 +933,52 @@ const app = new Elysia()
     },
     {
       params: ChartParams,
-      query: t.Object({
-        timeframe: t.Optional(t.String()),
-      }),
+      detail: {
+        tags: ['explorer'],
+        description: 'Get time series data for charts',
+        summary: 'Chart data',
+        parameters: [
+          {
+            name: 'name',
+            in: 'path',
+            required: false,
+            schema: {
+              type: 'string',
+              enum: bitcoinSchemaCollections,
+            },
+            description: 'Collection name to get chart data for',
+          },
+          {
+            name: 'timeframe',
+            in: 'query',
+            required: false,
+            schema: {
+              type: 'string',
+              enum: Object.values(Timeframe),
+            },
+            description: 'Time range for the chart data',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Chart data points',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      t: { type: 'number', description: 'Timestamp' },
+                      y: { type: 'number', description: 'Value' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     }
   );
 

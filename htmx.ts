@@ -9,7 +9,7 @@ import { getState } from './db.js';
 import { getCollectionCounts } from './db.js';
 
 // Focus on these Bitcoin schema collections for the dashboard
-const bitcoinSchemaCollections = [
+export const bitcoinSchemaCollections = [
   'follow',
   'unfollow',
   'unlike',

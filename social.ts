@@ -559,29 +559,6 @@ const MessageQuery = t.Object({
   limit: t.Optional(t.String()),
 });
 
-// Helper function to parse identity JSON
-export function parseIdentity(
-  identityValue: string | Record<string, unknown>
-): Record<string, unknown> {
-  if (typeof identityValue === 'object' && identityValue !== null) {
-    return identityValue;
-  }
-
-  if (typeof identityValue === 'string') {
-    try {
-      const parsed = JSON.parse(identityValue);
-      if (typeof parsed === 'object' && parsed !== null) {
-        return parsed;
-      }
-      return { alternateName: parsed };
-    } catch {
-      return { alternateName: identityValue };
-    }
-  }
-
-  return { alternateName: String(identityValue) };
-}
-
 // Helper function to merge new signers into cache
 async function updateSignerCache(newSigners: BapIdentity[]): Promise<void> {
   for (const signer of newSigners) {
