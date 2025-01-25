@@ -9,6 +9,7 @@ import { getCurrentBlockHeight } from './db.js';
 import type {
   CacheListResponse,
   ChannelInfo,
+  DMResponse,
   LikeInfo,
   MessageResponse,
   Reactions,
@@ -57,7 +58,8 @@ export type CacheValue =
   | { type: 'chart'; value: ChartCacheData }
   | { type: 'timeSeriesData'; value: TimeSeriesData }
   | { type: 'reactions'; value: Reactions }
-  | { type: 'identities'; value: CacheListResponse };
+  | { type: 'identities'; value: CacheListResponse }
+  | { type: 'messages'; value: DMResponse };
 
 export async function saveToRedis<T extends CacheValue>(key: string, value: T): Promise<void> {
   await client.set(key, JSON.stringify(value));
