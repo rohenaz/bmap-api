@@ -99,7 +99,7 @@ interface Message {
   MAP: {
     app: string;
     type: string;
-    paymail: string;
+    paymail?: string;
     context?: string;
     channel?: string;
     bapID?: string;
@@ -679,7 +679,7 @@ const DMResponse = t.Object({
           app: t.String(),
           type: t.String(),
           bapID: t.String(),
-          paymail: t.String(),
+          paymail: t.Optional(t.String()),
         })
       ),
       B: t.Array(
@@ -1520,7 +1520,6 @@ export const socialRoutes = new Elysia()
             MAP: msg.MAP.map((m) => ({
               ...m,
               bapID: m.bapID || '',
-              paymail: m.paymail || '',
             })),
             B: msg.B.map((b) => ({
               Data: {
