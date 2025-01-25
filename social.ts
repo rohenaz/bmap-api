@@ -90,8 +90,10 @@ interface Message {
   MAP: {
     app: string;
     type: string;
-    channel: string;
     paymail: string;
+    context?: string;
+    channel?: string;
+    bapID?: string;
   }[];
   B: {
     Data: {
@@ -1356,6 +1358,124 @@ export const socialRoutes = new Elysia()
             },
           },
         },
+      },
+    }
+  )
+  .get(
+    '/@/:bapId/messages',
+    async ({ params, query, set }) => {
+      try {
+        const { bapId } = params;
+        if (!bapId) throw new Error('Missing BAP ID');
+
+        // Get current address for BAP ID
+        const identity = await fetchBapIdentityData(bapId);
+        if (!identity?.currentAddress) {
+          throw new Error('Invalid BAP identity');
+        }
+
+        const page = query.page ? Number.parseInt(query.page, 10) : 1;
+        const limit = query.limit ? Number.parseInt(query.limit, 10) : 100;
+        const skip = (page - 1) * limit;
+
+        const cacheKey = `dms:${bapId}:${page}:${limit}`;
+        const cached = await readFromRedis<CacheValue>(cacheKey);
+
+        if (cached?.type === 'messages') {
+          Object.assign(set.headers, { 'Cache-Control': 'public, max-age=60' });
+          return { ...cached.value, signers: cached.value.signers || [] };
+        }
+
+        const db = await getDbo();
+        const queryObj = {
+          MAP: {
+            $elemMatch: {
+              type: 'message',
+              context: bapId, // Match BAP ID in context field
+            },
+          },
+          $or: [
+            // Messages where recipient is this BAP ID
+            { 'AIP.algorithm_signing_component': identity.currentAddress },
+            // Messages signed by this BAP ID's current address
+            { 'AIP.algorithm_signing_component': identity.currentAddress },
+          ],
+        };
+
+        const col = db.collection('message');
+        const count = await col.countDocuments(queryObj);
+        const results = (await col
+          .find(queryObj)
+          .sort({ 'blk.t': -1 })
+          .skip(skip)
+          .limit(limit)
+          .project({ _id: 0 })
+          .toArray()) as Message[];
+
+        // Process messages with proper protocol structure
+        const validatedResults = results.map((msg) => {
+          const map = msg.MAP?.find((m) => m.type === 'message' && m.context === bapId);
+          return {
+            ...msg,
+            tx: { h: msg.tx?.h || '' },
+            blk: { i: msg.blk?.i || 0, t: msg.blk?.t || 0 },
+            MAP: [map],
+            B: msg.B?.map((b) => ({
+              Data: { utf8: b.Data?.utf8 || '' },
+            })),
+          };
+        });
+
+        let signers: BapIdentity[] = [];
+        const messagesWithAIP = results.filter((msg) => msg.AIP?.length);
+        if (messagesWithAIP.length) {
+          signers = await resolveSigners(messagesWithAIP);
+        }
+
+        const response: MessageResponse = {
+          channel: bapId,
+          page,
+          limit,
+          count,
+          results: validatedResults,
+          signers: signers.map((s) => ({
+            ...s,
+            identity: typeof s.identity === 'string' ? s.identity : JSON.stringify(s.identity),
+          })),
+        };
+
+        await saveToRedis(cacheKey, { type: 'messages', value: response });
+        Object.assign(set.headers, { 'Cache-Control': 'public, max-age=60' });
+        return response;
+      } catch (error) {
+        console.error('DM messages error:', error);
+        set.status = 500;
+        return {
+          channel: params.bapId || '',
+          page: 1,
+          limit: 100,
+          count: 0,
+          results: [],
+          signers: [],
+        };
+      }
+    },
+    {
+      params: t.Object({ bapId: t.String() }),
+      query: MessageQuery,
+      response: MessageResponse,
+      detail: {
+        tags: ['social'],
+        description: 'Get encrypted direct messages for a BAP ID',
+        parameters: [
+          {
+            name: 'bapId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Recipient BAP Identity Key',
+          },
+        ],
       },
     }
   )
