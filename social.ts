@@ -107,6 +107,7 @@ interface Message {
   B: {
     Data: {
       utf8: string;
+      data?: string;
     };
   }[];
   AIP?: {
@@ -667,6 +668,7 @@ const DMResponse = t.Object({
   count: t.Number(),
   results: t.Array(
     t.Object({
+      timestamp: t.Number(),
       tx: t.Object({
         h: t.String(),
       }),
@@ -679,7 +681,6 @@ const DMResponse = t.Object({
           app: t.String(),
           type: t.String(),
           bapID: t.String(),
-          paymail: t.Optional(t.String()),
         })
       ),
       B: t.Array(
@@ -746,6 +747,7 @@ const MessageResponse = t.Object({
         t.Object({
           Data: t.Object({
             utf8: t.String(),
+            data: t.Optional(t.String()),
           }),
         })
       ),
@@ -1038,6 +1040,7 @@ export const socialRoutes = new Elysia()
           B: msg.B?.map((b) => ({
             Data: {
               utf8: b.Data?.utf8 || '',
+              data: b.Data?.data,
             },
           })) || [
             {
