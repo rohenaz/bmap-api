@@ -6,3 +6,6 @@ persist
 build
 .env
 .bitcoin
+
+
+playground.mongodb.js
