@@ -113,9 +113,9 @@ interface Message {
     bapID?: string;
   }[];
   B: {
+    encoding: string;
     Data: {
       utf8: string;
-      encoding: string;
       data?: string;
     };
   }[];
@@ -706,9 +706,9 @@ const DMResponse = t.Object({
         t.Object({
           Data: t.Object({
             utf8: t.String(),
-            data: t.String(),
-            encoding: t.String(),
+            data: t.Optional(t.String()),
           }),
+          encoding: t.String(),
         })
       ),
       AIP: t.Optional(
@@ -767,10 +767,10 @@ const MessageResponse = t.Object({
       ),
       B: t.Array(
         t.Object({
+          encoding: t.String(),
           Data: t.Object({
             utf8: t.String(),
             data: t.Optional(t.String()),
-            encoding: t.String(),
           }),
         })
       ),
@@ -1067,16 +1067,16 @@ export const socialRoutes = new Elysia()
             },
           ],
           B: msg.B?.map((b) => ({
+            encoding: b?.encoding || '',
             Data: {
               utf8: b.Data?.utf8 || '',
               data: b.Data?.data,
-              encoding: b.Data?.encoding || '',
             },
           })) || [
             {
+              encoding: '',
               Data: {
                 utf8: '',
-                encoding: '',
                 data: '',
               },
             },
@@ -1146,7 +1146,7 @@ export const socialRoutes = new Elysia()
               tx: { h: '' },
               blk: { i: 0, t: 0 },
               MAP: [{ app: '', type: '', channel: '', paymail: '' }],
-              B: [{ Data: { utf8: '', encoding: '', data: '' } }],
+              B: [{ encoding: '', Data: { utf8: '', data: '' } }],
             },
           ],
           signers: [],
@@ -1225,12 +1225,12 @@ export const socialRoutes = new Elysia()
                             items: {
                               type: 'object',
                               properties: {
+                                encoding: { type: 'string' },
                                 Data: {
                                   type: 'object',
                                   properties: {
                                     utf8: { type: 'string' },
                                     data: { type: 'string' },
-                                    encoding: { type: 'string' },
                                   },
                                 },
                               },
@@ -1783,10 +1783,10 @@ async function getDirectMessages({
         bapID: m.bapID || '',
       })),
       B: msg.B.map((b) => ({
+        encoding: b?.encoding || '',
         Data: {
           utf8: b.Data?.utf8 || '',
           data: b.Data?.data || '',
-          encoding: b.Data?.encoding || '',
         },
       })),
     })),
