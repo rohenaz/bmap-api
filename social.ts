@@ -851,11 +851,11 @@ const LikeResponse = t.Array(
 
 const FriendResponse = t.Object({
   friends: t.Array(
-      t.Object({
-        bapID: t.String(),
-        mePublicKey: t.String(),
-        themPublicKey: t.String(),
-      })
+    t.Object({
+      bapID: t.String(),
+      mePublicKey: t.String(),
+      themPublicKey: t.String(),
+    })
   ),
   incoming: t.Array(t.String()),
   outgoing: t.Array(t.String()),
@@ -1459,107 +1459,12 @@ export const socialRoutes = new Elysia()
     '/@/:bapId/messages',
     async ({ params, query, set }) => {
       try {
-        const { bapId } = params;
-        console.log('=== BAP ID ===', bapId);
-        if (!bapId) throw new Error('Missing BAP ID');
+        const response = await getDirectMessages({
+          bapId: params.bapId,
+          page: query.page ? Number.parseInt(query.page, 10) : 1,
+          limit: query.limit ? Number.parseInt(query.limit, 10) : 100,
+        });
 
-        // Get current address for BAP ID
-        const identity = await fetchBapIdentityData(bapId);
-        if (!identity?.currentAddress) {
-          throw new Error('Invalid BAP identity');
-        }
-
-        const page = query.page ? Number.parseInt(query.page, 10) : 1;
-        const limit = query.limit ? Number.parseInt(query.limit, 10) : 100;
-        const skip = (page - 1) * limit;
-
-        const cacheKey = `dms:${bapId}:${page}:${limit}`;
-        // const cached = await readFromRedis<CacheValue>(cacheKey);
-        // console.log('=== CACHED ===', cached);
-        // if (cached?.type === 'messages') {
-        //   Object.assign(set.headers, { 'Cache-Control': 'public, max-age=60' });
-        //   return { ...cached.value, signers: cached.value.signers || [] };
-        // }
-
-        console.log('=== GETTING MESSAGES ===');
-
-        const db = await getDbo();
-        const messageQuery = {
-          'MAP.type': 'message',
-          'MAP.bapID': bapId,
-        };
-        // const queryObj = {
-        //   MAP: {
-        //     $elemMatch: {
-        //       type: 'message',
-        //       context: bapId, // Match BAP ID in context field
-        //     },
-        //   },
-        //   $or: [
-        //     // Messages where recipient is this BAP ID
-        //     { 'AIP.algorithm_signing_component': identity.currentAddress },
-        //     // Messages signed by this BAP ID's current address
-        //     { 'AIP.algorithm_signing_component': identity.currentAddress },
-        //   ],
-        // };
-
-        const col = db.collection('message');
-        const results = (await col
-          .find(messageQuery)
-          .sort({ 'blk.t': -1 })
-          .skip(skip)
-          .limit(limit)
-          .project({ _id: 0 })
-          .toArray()) as Message[];
-
-        const count = results.length;
-        console.log('=== COUNT ===', results);
-        // Process messages with proper protocol structure
-        // const validatedResults = results.map((msg) => {
-        //   const map = msg.MAP?.find((m) => m.type === 'message' && m.bapID === bapId);
-        //   return {
-        //     ...msg,
-        //     tx: { h: msg.tx?.h || '' },
-        //     blk: { i: msg.blk?.i || 0, t: msg.blk?.t || 0 },
-        //     MAP: [map],
-        //     B: msg.B?.map((b) => ({
-        //       Data: { utf8: b.Data?.utf8 || '' },
-        //     })),
-        //   };
-        // });
-
-        let signers: BapIdentity[] = [];
-        const messagesWithAIP = results.filter((msg) => msg.AIP?.length);
-        if (messagesWithAIP.length) {
-          signers = await resolveSigners(messagesWithAIP);
-        }
-
-        const response: DMResponse = {
-          bapID: bapId,
-          page,
-          limit,
-          count,
-          results: results.map((msg) => ({
-            ...msg,
-            MAP: msg.MAP.map((m) => ({
-              ...m,
-              bapID: m.bapID || '',
-            })),
-            B: msg.B.map((b) => ({
-              Data: {
-                utf8: b.Data?.utf8 || '',
-              },
-            })),
-          })),
-          signers: signers.map((s) => ({
-            ...s,
-            identityTxId: s.identityTxId || '',
-            identity:
-              typeof s.identity === 'string' ? s.identity : JSON.stringify(s.identity) || '',
-          })),
-        };
-
-        await saveToRedis(cacheKey, { type: 'messages', value: response });
         Object.assign(set.headers, { 'Cache-Control': 'public, max-age=60' });
         return response;
       } catch (error) {
@@ -1589,6 +1494,58 @@ export const socialRoutes = new Elysia()
             required: true,
             schema: { type: 'string' },
             description: 'Recipient BAP Identity Key',
+          },
+        ],
+      },
+    }
+  )
+  .get(
+    '/@/:bapId/messages/:targetBapId',
+    async ({ params, query, set }) => {
+      try {
+        const response = await getDirectMessages({
+          bapId: params.bapId,
+          targetBapId: params.targetBapId,
+          page: query.page ? Number.parseInt(query.page, 10) : 1,
+          limit: query.limit ? Number.parseInt(query.limit, 10) : 100,
+        });
+
+        Object.assign(set.headers, { 'Cache-Control': 'public, max-age=60' });
+        return response;
+      } catch (error) {
+        console.error('DM messages error:', error);
+        set.status = 500;
+        return {
+          bapID: params.bapId,
+          page: 1,
+          limit: 100,
+          count: 0,
+          results: [],
+          signers: [],
+        };
+      }
+    },
+    {
+      params: t.Object({ bapId: t.String(), targetBapId: t.String() }),
+      query: MessageQuery,
+      response: DMResponse,
+      detail: {
+        tags: ['social'],
+        description: 'Get encrypted direct messages between two BAP IDs',
+        parameters: [
+          {
+            name: 'bapId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Recipient BAP Identity Key',
+          },
+          {
+            name: 'targetBapId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Target BAP Identity Key',
           },
         ],
       },
@@ -1730,3 +1687,96 @@ export const socialRoutes = new Elysia()
       },
     }
   );
+
+// Shared function for fetching messages
+async function getDirectMessages({
+  bapId,
+  targetBapId = null,
+  page = 1,
+  limit = 100,
+}: {
+  bapId: string;
+  targetBapId?: string | null;
+  page: number;
+  limit: number;
+}): Promise<DMResponse> {
+  const skip = (page - 1) * limit;
+
+  // Get current address for BAP ID
+  const identity = await fetchBapIdentityData(bapId);
+  if (!identity?.currentAddress) {
+    throw new Error('Invalid BAP identity');
+  }
+
+  // Add this block to fetch target identity
+  let targetIdentity: BapIdentity | null = null;
+  if (targetBapId) {
+    targetIdentity = await fetchBapIdentityData(targetBapId);
+    if (!targetIdentity?.currentAddress) {
+      throw new Error('Invalid target BAP identity');
+    }
+  }
+
+  const db = await getDbo();
+  const messageQuery = targetBapId
+    ? {
+        $and: [
+          { 'MAP.type': 'message' },
+          {
+            $or: [
+              {
+                'MAP.bapID': targetBapId,
+                'AIP.algorithm_signing_component': identity.currentAddress,
+              },
+              {
+                'MAP.bapID': bapId,
+                'AIP.algorithm_signing_component': targetIdentity.currentAddress,
+              },
+            ],
+          },
+        ],
+      }
+    : {
+        'MAP.type': 'message',
+        'MAP.bapID': bapId,
+      };
+
+  const col = db.collection('message');
+  const results = (await col
+    .find(messageQuery)
+    .sort({ 'blk.t': -1 })
+    .skip(skip)
+    .limit(limit)
+    .project({ _id: 0 })
+    .toArray()) as Message[];
+
+  const count = results.length;
+
+  let signers: BapIdentity[] = [];
+  const messagesWithAIP = results.filter((msg) => msg.AIP?.length);
+  if (messagesWithAIP.length) {
+    signers = await resolveSigners(messagesWithAIP);
+  }
+
+  return {
+    bapID: bapId,
+    page,
+    limit,
+    count,
+    results: results.map((msg) => ({
+      ...msg,
+      MAP: msg.MAP.map((m) => ({
+        ...m,
+        bapID: m.bapID || '',
+      })),
+      B: msg.B.map((b) => ({
+        Data: { utf8: b.Data?.utf8 || '' },
+      })),
+    })),
+    signers: signers.map((s) => ({
+      ...s,
+      identityTxId: s.identityTxId || '',
+      identity: typeof s.identity === 'string' ? s.identity : JSON.stringify(s.identity) || '',
+    })),
+  };
+}
