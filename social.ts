@@ -45,13 +45,21 @@ interface SigmaIdentityResult {
 interface RelationshipState {
   fromMe: boolean;
   fromThem: boolean;
+  mePublicKey?: string;
+  themPublicKey?: string;
   unfriended: boolean;
 }
 
 interface FriendshipResponse {
-  friends: string[];
+  friends: Friend[];
   incoming: string[];
   outgoing: string[];
+}
+
+interface Friend {
+  bapID: string;
+  themPublicKey: string;
+  mePublicKey: string;
 }
 
 export interface Reactions {
@@ -348,6 +356,7 @@ async function processRelationships(
     const doc = docs[i];
     const reqBap = requestors[i];
     const tgtBap = doc?.MAP?.[0]?.bapID;
+    const publicKey = doc?.MAP?.[0]?.publicKey;
 
     console.log('\nProcessing document:', doc.tx?.h);
     console.log('Requestor BAP:', reqBap);
@@ -391,8 +400,10 @@ async function processRelationships(
       }
       if (isFromMe) {
         rel.fromMe = true;
+        rel.mePublicKey = publicKey;
       } else {
         rel.fromThem = true;
+        rel.themPublicKey = publicKey;
       }
     }
 
@@ -407,7 +418,7 @@ async function processRelationships(
     );
   }
 
-  const friends: string[] = [];
+  const friends: Friend[] = [];
   const incoming: string[] = [];
   const outgoing: string[] = [];
 
@@ -421,7 +432,11 @@ async function processRelationships(
     }
     if (rel.fromMe && rel.fromThem) {
       console.log('Adding mutual friend:', other);
-      friends.push(other);
+      friends.push({
+        bapID: other,
+        mePublicKey: rel.mePublicKey || '',
+        themPublicKey: rel.themPublicKey || '',
+      });
     } else if (rel.fromMe && !rel.fromThem) {
       console.log('Adding outgoing friend:', other);
       outgoing.push(other);
@@ -835,7 +850,13 @@ const LikeResponse = t.Array(
 );
 
 const FriendResponse = t.Object({
-  friends: t.Array(t.String()),
+  friends: t.Array(
+      t.Object({
+        bapID: t.String(),
+        mePublicKey: t.String(),
+        themPublicKey: t.String(),
+      })
+  ),
   incoming: t.Array(t.String()),
   outgoing: t.Array(t.String()),
 });
