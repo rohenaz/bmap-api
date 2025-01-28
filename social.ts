@@ -696,6 +696,8 @@ const DMResponse = t.Object({
           app: t.String(),
           type: t.String(),
           bapID: t.String(),
+          encrypted: t.Optional(t.String()),
+          context: t.Literal('bapID'),
         })
       ),
       B: t.Array(
@@ -709,6 +711,7 @@ const DMResponse = t.Object({
       AIP: t.Optional(
         t.Array(
           t.Object({
+            algorithm: t.String(),
             address: t.Optional(t.String()),
             algorithm_signing_component: t.Optional(t.String()),
           })
