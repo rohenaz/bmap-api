@@ -115,10 +115,12 @@ interface Message {
   B: {
     Data: {
       utf8: string;
+      encoding: string;
       data?: string;
     };
   }[];
   AIP?: {
+    algorithm: string;
     address: string;
     algorithm_signing_component: string;
   }[];
@@ -705,6 +707,7 @@ const DMResponse = t.Object({
           Data: t.Object({
             utf8: t.String(),
             data: t.String(),
+            encoding: t.String(),
           }),
         })
       ),
@@ -767,6 +770,7 @@ const MessageResponse = t.Object({
           Data: t.Object({
             utf8: t.String(),
             data: t.Optional(t.String()),
+            encoding: t.String(),
           }),
         })
       ),
@@ -1066,11 +1070,14 @@ export const socialRoutes = new Elysia()
             Data: {
               utf8: b.Data?.utf8 || '',
               data: b.Data?.data,
+              encoding: b.Data?.encoding || '',
             },
           })) || [
             {
               Data: {
                 utf8: '',
+                encoding: '',
+                data: '',
               },
             },
           ],
@@ -1139,7 +1146,7 @@ export const socialRoutes = new Elysia()
               tx: { h: '' },
               blk: { i: 0, t: 0 },
               MAP: [{ app: '', type: '', channel: '', paymail: '' }],
-              B: [{ Data: { utf8: '', data: '' } }],
+              B: [{ Data: { utf8: '', encoding: '', data: '' } }],
             },
           ],
           signers: [],
@@ -1223,6 +1230,7 @@ export const socialRoutes = new Elysia()
                                   properties: {
                                     utf8: { type: 'string' },
                                     data: { type: 'string' },
+                                    encoding: { type: 'string' },
                                   },
                                 },
                               },
@@ -1778,6 +1786,7 @@ async function getDirectMessages({
         Data: {
           utf8: b.Data?.utf8 || '',
           data: b.Data?.data || '',
+          encoding: b.Data?.encoding || '',
         },
       })),
     })),
