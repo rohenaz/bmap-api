@@ -702,6 +702,7 @@ const DMResponse = t.Object({
         t.Object({
           Data: t.Object({
             utf8: t.String(),
+            data: t.String(),
           }),
         })
       ),
@@ -1135,7 +1136,7 @@ export const socialRoutes = new Elysia()
               tx: { h: '' },
               blk: { i: 0, t: 0 },
               MAP: [{ app: '', type: '', channel: '', paymail: '' }],
-              B: [{ Data: { utf8: '' } }],
+              B: [{ Data: { utf8: '', data: '' } }],
             },
           ],
           signers: [],
@@ -1218,6 +1219,7 @@ export const socialRoutes = new Elysia()
                                   type: 'object',
                                   properties: {
                                     utf8: { type: 'string' },
+                                    data: { type: 'string' },
                                   },
                                 },
                               },
@@ -1770,7 +1772,10 @@ async function getDirectMessages({
         bapID: m.bapID || '',
       })),
       B: msg.B.map((b) => ({
-        Data: { utf8: b.Data?.utf8 || '' },
+        Data: {
+          utf8: b.Data?.utf8 || '',
+          data: b.Data?.data || '',
+        },
       })),
     })),
     signers: signers.map((s) => ({
