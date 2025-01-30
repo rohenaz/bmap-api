@@ -1,11 +1,10 @@
 import type { BmapTx } from 'bmapjs';
-import { Elysia } from 'elysia';
-import { t } from 'elysia';
-import type { Document, WithId } from 'mongodb';
-import type { ChangeStreamDocument } from 'mongodb';
-import type { ChangeStream } from 'mongodb';
+import { Elysia, t } from 'elysia';
+import { InternalServerError, error } from 'elysia';
+import * as mongo from 'mongodb';
+import type { Db } from 'mongodb';
 import { getBAPIdByAddress } from './bap.js';
-import type { BapIdentity, BapIdentityObject } from './bap.js';
+import type { BapIdentity } from './bap.js';
 import { normalize } from './bmap.js';
 import { client, readFromRedis, saveToRedis } from './cache.js';
 import type { CacheValue as BaseCacheValue, CacheError, CacheSigner } from './cache.js';
@@ -788,83 +787,110 @@ const LikeResponse = t.Array(
 // Update CacheListResponse type
 export interface CacheListResponse extends Array<Identity> {}
 
+async function getChannels() {
+  try {
+    const cacheKey = 'channels';
+    const cached = await readFromRedis<CacheValue>(cacheKey);
+
+    console.log('channels cache key', cacheKey);
+    if (cached?.type === 'channels') {
+      console.log('Cache hit for channels');
+      return cached.value;
+    }
+
+    console.log('Cache miss for channels');
+    const db = await getDbo();
+
+    try {
+      const pipeline = [
+        {
+          $match: {
+            'MAP.channel': { $exists: true, $ne: '' },
+          },
+        },
+        {
+          $unwind: '$MAP',
+        },
+        {
+          $unwind: '$B',
+        },
+        {
+          $group: {
+            _id: '$MAP.channel',
+            channel: { $first: '$MAP.channel' },
+            creator: { $first: { $ifNull: ['$MAP.paymail', null] } },
+            last_message: { $last: { $ifNull: ['$B.Data.utf8', null] } },
+            last_message_time: { $max: '$blk.t' },
+            messages: { $sum: 1 },
+          },
+        },
+        {
+          $sort: { last_message_time: -1 },
+        },
+        {
+          $limit: 100,
+        },
+      ];
+
+      console.log('Executing MongoDB aggregation');
+      const results = await db.collection('message').aggregate(pipeline).toArray();
+      console.log('Aggregation results:', results.length);
+
+      const channels = results.map((r) => ({
+        channel: r.channel,
+        creator: r.creator || null,
+        last_message: r.last_message || null,
+        last_message_time: r.last_message_time,
+        messages: r.messages,
+      }));
+
+      await saveToRedis<CacheValue>(cacheKey, {
+        type: 'channels',
+        value: channels,
+      });
+
+      return channels;
+    } catch (dbError) {
+      console.error('MongoDB operation failed:', dbError);
+      throw new Error('Failed to fetch channels');
+    }
+  } catch (error) {
+    console.error('getChannels error:', error);
+    throw error;
+  }
+}
+
 export const socialRoutes = new Elysia()
   .get(
     '/channels',
     async ({ set }) => {
       try {
-        const cacheKey = 'channels';
-        const cached = await readFromRedis<CacheValue>(cacheKey);
-
-        console.log('channels cache key', cacheKey);
-        if (cached?.type === 'channels') {
-          console.log('Cache hit for channels');
-          Object.assign(set.headers, {
-            'Cache-Control': 'public, max-age=60',
-          });
-          return cached.value;
-        }
-
-        console.log('Cache miss for channels');
-        const db = await getDbo();
-
-        const pipeline = [
-          {
-            $match: {
-              'MAP.channel': { $exists: true, $ne: '' },
-            },
-          },
-          {
-            $unwind: '$MAP',
-          },
-          {
-            $unwind: '$B',
-          },
-          {
-            $group: {
-              _id: '$MAP.channel',
-              channel: { $first: '$MAP.channel' },
-              creator: { $first: { $ifNull: ['$MAP.paymail', null] } },
-              last_message: { $last: { $ifNull: ['$B.Data.utf8', null] } },
-              last_message_time: { $max: '$blk.t' },
-              messages: { $sum: 1 },
-            },
-          },
-          {
-            $sort: { last_message_time: -1 },
-          },
-          {
-            $limit: 100,
-          },
-        ];
-
-        const results = await db.collection('message').aggregate(pipeline).toArray();
-        const channels = results.map((r) => ({
-          channel: r.channel,
-          creator: r.creator || null,
-          last_message: r.last_message || null,
-          last_message_time: r.last_message_time,
-          messages: r.messages,
-        }));
-
-        await saveToRedis<CacheValue>(cacheKey, {
-          type: 'channels',
-          value: channels,
-        });
-
+        const channels = await getChannels();
         Object.assign(set.headers, {
           'Cache-Control': 'public, max-age=60',
         });
         return channels;
-      } catch (error: unknown) {
-        console.error('Error processing channels request:', error);
-        const message = error instanceof Error ? error.message : String(error);
-        throw new Error(`Failed to fetch channels: ${message}`);
+      } catch (err) {
+        console.error('Route handler error:', err);
+        set.status = 500;
+        Object.assign(set.headers, {
+          'Cache-Control': 'no-store',
+        });
+        return {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch channels',
+        };
       }
     },
     {
-      response: ChannelResponseSchema,
       detail: channelsEndpointDetail,
+      response: t.Union([
+        ChannelResponseSchema,
+        t.Object({
+          code: t.String(),
+          message: t.String(),
+        }),
+      ]),
     }
   )
   .get(
