@@ -1495,6 +1495,87 @@ export const socialRoutes = new Elysia()
               },
             },
           },
+          400: {
+            description: 'Bad Request - Missing BAP ID parameter',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    friends: {
+                      type: 'array',
+                      items: { type: 'string' },
+                      description: 'Empty array',
+                    },
+                    incoming: {
+                      type: 'array',
+                      items: { type: 'string' },
+                      description: 'Empty array',
+                    },
+                    outgoing: {
+                      type: 'array',
+                      items: { type: 'string' },
+                      description: 'Empty array',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          404: {
+            description: 'Not Found - BAP ID does not exist or cannot be found',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    friends: {
+                      type: 'array',
+                      items: { type: 'string' },
+                      description: 'Empty array',
+                    },
+                    incoming: {
+                      type: 'array',
+                      items: { type: 'string' },
+                      description: 'Empty array',
+                    },
+                    outgoing: {
+                      type: 'array',
+                      items: { type: 'string' },
+                      description: 'Empty array',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          500: {
+            description: 'Internal Server Error',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    friends: {
+                      type: 'array',
+                      items: { type: 'string' },
+                      description: 'Empty array',
+                    },
+                    incoming: {
+                      type: 'array',
+                      items: { type: 'string' },
+                      description: 'Empty array',
+                    },
+                    outgoing: {
+                      type: 'array',
+                      items: { type: 'string' },
+                      description: 'Empty array',
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     }
