@@ -1,6 +1,4 @@
-import cors from '@elysiajs/cors';
 import type { BmapTx } from 'bmapjs';
-import chalk from 'chalk';
 import { Elysia } from 'elysia';
 import { t } from 'elysia';
 import type { Document, WithId } from 'mongodb';
@@ -12,6 +10,13 @@ import { normalize } from './bmap.js';
 import { client, readFromRedis, saveToRedis } from './cache.js';
 import type { CacheValue as BaseCacheValue, CacheError, CacheSigner } from './cache.js';
 import { getDbo } from './db.js';
+import { ChannelResponseSchema, channelsEndpointDetail } from './swagger/channels.js';
+import { FriendResponseSchema, friendEndpointDetail } from './swagger/friend.js';
+import {
+  ChannelMessageSchema,
+  MessageQuery,
+  channelMessagesEndpointDetail,
+} from './swagger/messages.js';
 
 // Extend CacheValue type
 export type CacheValue =
@@ -87,7 +92,7 @@ export interface DMResponse {
   signers: BapIdentity[];
 }
 
-export interface MessageResponse {
+export interface ChannelMessage {
   channel: string;
   page: number;
   limit: number;
@@ -570,11 +575,6 @@ const ChannelParams = t.Object({
   channelId: t.String(),
 });
 
-const MessageQuery = t.Object({
-  page: t.Optional(t.String()),
-  limit: t.Optional(t.String()),
-});
-
 // Helper function to merge new signers into cache
 async function updateSignerCache(newSigners: BapIdentity[]): Promise<void> {
   for (const signer of newSigners) {
@@ -668,16 +668,6 @@ export const IdentityResponse = t.Array(
   })
 );
 
-const ChannelResponse = t.Array(
-  t.Object({
-    channel: t.String(),
-    creator: t.Union([t.String(), t.Null()]),
-    last_message: t.Union([t.String(), t.Null()]),
-    last_message_time: t.Number(),
-    messages: t.Number(),
-  })
-);
-
 const DMResponse = t.Object({
   bapID: t.String(),
   page: t.Number(),
@@ -715,68 +705,6 @@ const DMResponse = t.Object({
         t.Array(
           t.Object({
             algorithm: t.String(),
-            address: t.Optional(t.String()),
-            algorithm_signing_component: t.Optional(t.String()),
-          })
-        )
-      ),
-    })
-  ),
-  signers: t.Array(
-    t.Object({
-      idKey: t.String(),
-      rootAddress: t.String(),
-      currentAddress: t.String(),
-      addresses: t.Array(
-        t.Object({
-          address: t.String(),
-          txId: t.String(),
-          block: t.Optional(t.Number()),
-        })
-      ),
-      identity: t.String(),
-      identityTxId: t.String(),
-      block: t.Number(),
-      timestamp: t.Number(),
-      valid: t.Boolean(),
-    })
-  ),
-});
-
-const MessageResponse = t.Object({
-  channel: t.String(),
-  page: t.Number(),
-  limit: t.Number(),
-  count: t.Number(),
-  results: t.Array(
-    t.Object({
-      tx: t.Object({
-        h: t.String(),
-      }),
-      blk: t.Object({
-        i: t.Number(),
-        t: t.Number(),
-      }),
-      MAP: t.Array(
-        t.Object({
-          app: t.String(),
-          type: t.String(),
-          channel: t.String(),
-          paymail: t.String(),
-        })
-      ),
-      B: t.Array(
-        t.Object({
-          encoding: t.String(),
-          Data: t.Object({
-            utf8: t.String(),
-            data: t.Optional(t.String()),
-          }),
-        })
-      ),
-      AIP: t.Optional(
-        t.Array(
-          t.Object({
             address: t.Optional(t.String()),
             algorithm_signing_component: t.Optional(t.String()),
           })
@@ -857,18 +785,6 @@ const LikeResponse = t.Array(
   })
 );
 
-const FriendResponse = t.Object({
-  friends: t.Array(
-    t.Object({
-      bapID: t.String(),
-      mePublicKey: t.String(),
-      themPublicKey: t.String(),
-    })
-  ),
-  incoming: t.Array(t.String()),
-  outgoing: t.Array(t.String()),
-});
-
 // Update CacheListResponse type
 export interface CacheListResponse extends Array<Identity> {}
 
@@ -947,45 +863,8 @@ export const socialRoutes = new Elysia()
       }
     },
     {
-      response: ChannelResponse,
-      detail: {
-        tags: ['social'],
-        description: 'Get list of all message channels',
-        summary: 'List channels',
-        responses: {
-          200: {
-            description: 'List of channels with their latest messages',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      channel: { type: 'string', description: 'Channel identifier' },
-                      creator: {
-                        type: 'string',
-                        nullable: true,
-                        description: 'Channel creator paymail',
-                      },
-                      last_message: {
-                        type: 'string',
-                        nullable: true,
-                        description: 'Most recent message',
-                      },
-                      last_message_time: {
-                        type: 'number',
-                        description: 'Timestamp of last message',
-                      },
-                      messages: { type: 'number', description: 'Total message count' },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
+      response: ChannelResponseSchema,
+      detail: channelsEndpointDetail,
     }
   )
   .get(
@@ -1020,7 +899,7 @@ export const socialRoutes = new Elysia()
           Object.assign(set.headers, {
             'Cache-Control': 'public, max-age=60',
           });
-          const response: MessageResponse = {
+          const response: ChannelMessage = {
             ...cached.value,
             channel: channelId,
             signers: cached.value.signers || [],
@@ -1101,20 +980,13 @@ export const socialRoutes = new Elysia()
         }
 
         // Ensure signers array is properly initialized with all required fields
-        const validatedSigners: BapIdentity[] = signers.map((signer) => ({
-          idKey: signer.idKey || '',
-          rootAddress: signer.rootAddress || '',
-          currentAddress: signer.currentAddress || '',
-          addresses: signer.addresses || [],
-          identity:
-            typeof signer.identity === 'string' ? signer.identity : JSON.stringify(signer.identity),
-          identityTxId: signer.identityTxId || '',
-          block: signer.block || 0,
-          timestamp: signer.timestamp || 0,
-          valid: signer.valid ?? true,
+        const validatedSigners: BapIdentity[] = signers.map((s) => ({
+          ...s,
+          identityTxId: s.identityTxId || '',
+          identity: typeof s.identity === 'string' ? s.identity : JSON.stringify(s.identity) || '',
         }));
 
-        const response: MessageResponse = {
+        const response: ChannelMessage = {
           channel: channelId,
           page,
           limit,
@@ -1136,7 +1008,7 @@ export const socialRoutes = new Elysia()
         console.error('Error fetching messages:', error);
         set.status = 500;
         // Return a properly structured response with empty arrays
-        const errorResponse: MessageResponse = {
+        const errorResponse: ChannelMessage = {
           channel: params.channelId || '',
           page: 1,
           limit: 100,
@@ -1157,101 +1029,8 @@ export const socialRoutes = new Elysia()
     {
       params: ChannelParams,
       query: MessageQuery,
-      response: MessageResponse,
-      detail: {
-        tags: ['social'],
-        description: 'Get messages from a specific channel',
-        summary: 'Get channel messages',
-        parameters: [
-          {
-            name: 'channelId',
-            in: 'path',
-            required: true,
-            schema: { type: 'string' },
-            description: 'Channel identifier',
-          },
-          {
-            name: 'page',
-            in: 'query',
-            schema: { type: 'string' },
-            description: 'Page number for pagination',
-          },
-          {
-            name: 'limit',
-            in: 'query',
-            schema: { type: 'string' },
-            description: 'Number of messages per page',
-          },
-        ],
-        responses: {
-          200: {
-            description: 'Channel messages with signer information',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    channel: { type: 'string' },
-                    page: { type: 'number' },
-                    limit: { type: 'number' },
-                    count: { type: 'number' },
-                    results: {
-                      type: 'array',
-                      items: {
-                        type: 'object',
-                        properties: {
-                          tx: { type: 'object', properties: { h: { type: 'string' } } },
-                          blk: {
-                            type: 'object',
-                            properties: {
-                              i: { type: 'number' },
-                              t: { type: 'number' },
-                            },
-                          },
-                          MAP: {
-                            type: 'array',
-                            items: {
-                              type: 'object',
-                              properties: {
-                                app: { type: 'string' },
-                                type: { type: 'string' },
-                                channel: { type: 'string' },
-                                paymail: { type: 'string' },
-                              },
-                            },
-                          },
-                          B: {
-                            type: 'array',
-                            items: {
-                              type: 'object',
-                              properties: {
-                                encoding: { type: 'string' },
-                                Data: {
-                                  type: 'object',
-                                  properties: {
-                                    utf8: { type: 'string' },
-                                    data: { type: 'string' },
-                                  },
-                                },
-                              },
-                            },
-                          },
-                        },
-                      },
-                    },
-                    signers: {
-                      type: 'array',
-                      items: {
-                        $ref: '#/components/schemas/BapIdentity',
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
+      response: ChannelMessageSchema,
+      detail: channelMessagesEndpointDetail,
     }
   )
   .post(
@@ -1453,131 +1232,8 @@ export const socialRoutes = new Elysia()
       params: t.Object({
         bapId: t.String(),
       }),
-      response: FriendResponse,
-      detail: {
-        tags: ['social'],
-        description: 'Get friend relationships for a BAP ID',
-        summary: 'Get friends',
-        parameters: [
-          {
-            name: 'bapId',
-            in: 'path',
-            required: true,
-            schema: { type: 'string' },
-            description: 'BAP Identity Key',
-          },
-        ],
-        responses: {
-          200: {
-            description: 'Friend relationships',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    friends: {
-                      type: 'array',
-                      items: { type: 'string' },
-                      description: 'Mutual friends (BAP IDs)',
-                    },
-                    incoming: {
-                      type: 'array',
-                      items: { type: 'string' },
-                      description: 'Incoming friend requests (BAP IDs)',
-                    },
-                    outgoing: {
-                      type: 'array',
-                      items: { type: 'string' },
-                      description: 'Outgoing friend requests (BAP IDs)',
-                    },
-                  },
-                },
-              },
-            },
-          },
-          400: {
-            description: 'Bad Request - Missing BAP ID parameter',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    friends: {
-                      type: 'array',
-                      items: { type: 'string' },
-                      description: 'Empty array',
-                    },
-                    incoming: {
-                      type: 'array',
-                      items: { type: 'string' },
-                      description: 'Empty array',
-                    },
-                    outgoing: {
-                      type: 'array',
-                      items: { type: 'string' },
-                      description: 'Empty array',
-                    },
-                  },
-                },
-              },
-            },
-          },
-          404: {
-            description: 'Not Found - BAP ID does not exist or cannot be found',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    friends: {
-                      type: 'array',
-                      items: { type: 'string' },
-                      description: 'Empty array',
-                    },
-                    incoming: {
-                      type: 'array',
-                      items: { type: 'string' },
-                      description: 'Empty array',
-                    },
-                    outgoing: {
-                      type: 'array',
-                      items: { type: 'string' },
-                      description: 'Empty array',
-                    },
-                  },
-                },
-              },
-            },
-          },
-          500: {
-            description: 'Internal Server Error',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    friends: {
-                      type: 'array',
-                      items: { type: 'string' },
-                      description: 'Empty array',
-                    },
-                    incoming: {
-                      type: 'array',
-                      items: { type: 'string' },
-                      description: 'Empty array',
-                    },
-                    outgoing: {
-                      type: 'array',
-                      items: { type: 'string' },
-                      description: 'Empty array',
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
+      response: FriendResponseSchema,
+      detail: friendEndpointDetail,
     }
   )
   .get(

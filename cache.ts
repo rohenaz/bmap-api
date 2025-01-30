@@ -9,9 +9,9 @@ import { getCurrentBlockHeight } from './db.js';
 import type {
   CacheListResponse,
   ChannelInfo,
+  ChannelMessage,
   DMResponse,
   LikeInfo,
-  MessageResponse,
   Reactions,
 } from './social.js';
 
@@ -52,14 +52,13 @@ export type CacheValue =
   | { type: 'signer'; value: BapIdentity }
   | { type: 'likes'; value: LikeInfo }
   | { type: 'channels'; value: ChannelInfo[] }
-  | { type: 'messages'; value: MessageResponse }
+  | { type: 'messages'; value: ChannelMessage | DMResponse }
   | { type: 'blockHeight'; value: number }
   | { type: 'ingest'; value: string[] }
   | { type: 'chart'; value: ChartCacheData }
   | { type: 'timeSeriesData'; value: TimeSeriesData }
   | { type: 'reactions'; value: Reactions }
-  | { type: 'identities'; value: CacheListResponse }
-  | { type: 'messages'; value: DMResponse };
+  | { type: 'identities'; value: CacheListResponse };
 
 export async function saveToRedis<T extends CacheValue>(key: string, value: T): Promise<void> {
   await client.set(key, JSON.stringify(value));
