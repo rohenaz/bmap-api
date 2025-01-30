@@ -1403,19 +1403,50 @@ export const socialRoutes = new Elysia()
   )
   .get(
     '/friend/:bapId',
-    async ({ params }) => {
+    async ({ params, set }) => {
       try {
         const { bapId } = params;
         if (!bapId) {
-          throw new Error('Missing BAP ID');
+          set.status = 400;
+          return {
+            friends: [],
+            incoming: [],
+            outgoing: [],
+          };
         }
 
-        const { allDocs, ownedAddresses } = await fetchAllFriendsAndUnfriends(bapId);
-        return processRelationships(bapId, allDocs, ownedAddresses);
+        try {
+          // First verify the BAP ID exists by trying to fetch its identity
+          const identity = await fetchBapIdentityData(bapId);
+          if (!identity) {
+            set.status = 404;
+            return {
+              friends: [],
+              incoming: [],
+              outgoing: [],
+            };
+          }
+
+          const { allDocs, ownedAddresses } = await fetchAllFriendsAndUnfriends(bapId);
+          return processRelationships(bapId, allDocs, ownedAddresses);
+        } catch (error) {
+          // If we get an error fetching the BAP identity, return 404
+          console.error('Error fetching BAP identity:', error);
+          set.status = 404;
+          return {
+            friends: [],
+            incoming: [],
+            outgoing: [],
+          };
+        }
       } catch (error: unknown) {
         console.error('Error processing friend request:', error);
-        const message = error instanceof Error ? error.message : String(error);
-        throw new Error(`Failed to process friend request: ${message}`);
+        set.status = 500;
+        return {
+          friends: [],
+          incoming: [],
+          outgoing: [],
+        };
       }
     },
     {
